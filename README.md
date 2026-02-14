@@ -8,11 +8,11 @@ This repository centralizes the knowledge and patterns required to manage the Do
 
 ## Available Skills
 
-| Skill                 | Description                                                                                       | Location                                               |
-| :-------------------- | :------------------------------------------------------------------------------------------------ | :----------------------------------------------------- |
-| **Docyrus Architect** | Manage platform resources: data sources, fields, enums, apps, and perform advanced data analysis. | [SKILL.md](./docyrus-architect/SKILL.md)               |
-| **Docyrus API Dev**   | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./docyrus-api-dev/docyrus-api-dev/SKILL.md) |
-| **Docyrus App Dev**   | Build React TypeScript web applications following Docyrus-specific development patterns.          | [SKILL.md](./docyrus-app-dev/docyrus-app-dev/SKILL.md) |
+| Skill                 | Description                                                                                       | Location                                 |
+| :-------------------- | :------------------------------------------------------------------------------------------------ | :--------------------------------------- |
+| **Docyrus Architect** | Manage platform resources: data sources, fields, enums, apps, and perform advanced data analysis. | [SKILL.md](./docyrus-architect/SKILL.md) |
+| **Docyrus API Dev**   | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./docyrus-api-dev/SKILL.md)   |
+| **Docyrus App Dev**   | Build React TypeScript web applications following Docyrus-specific development patterns.          | [SKILL.md](./docyrus-app-dev/SKILL.md)   |
 
 ## Repository Structure
 

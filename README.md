@@ -8,11 +8,11 @@ This repository centralizes the knowledge and patterns required to manage the Do
 
 ## Available Skills
 
-| Skill                 | Description                                                                                       | Location                                 |
-| :-------------------- | :------------------------------------------------------------------------------------------------ | :--------------------------------------- |
-| **Docyrus Architect** | Manage platform resources: data sources, fields, enums, apps, and perform advanced data analysis. | [SKILL.md](./docyrus-architect/SKILL.md) |
-| **Docyrus API Dev**   | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./docyrus-api-dev/SKILL.md)   |
-| **Docyrus App Dev**   | Build React TypeScript web applications following Docyrus-specific development patterns.          | [SKILL.md](./docyrus-app-dev/SKILL.md)   |
+| Skill                 | Description                                                                                       | Location                                        |
+| :-------------------- | :------------------------------------------------------------------------------------------------ | :---------------------------------------------- |
+| **Docyrus Architect** | Manage platform resources: data sources, fields, enums, apps, and perform advanced data analysis. | [SKILL.md](./skills/docyrus-architect/SKILL.md) |
+| **Docyrus API Dev**   | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./skills/docyrus-api-dev/SKILL.md)   |
+| **Docyrus App Dev**   | Build React TypeScript web applications following Docyrus-specific development patterns.          | [SKILL.md](./skills/docyrus-app-dev/SKILL.md)   |
 
 ## Repository Structure
 
@@ -28,6 +28,22 @@ When tasked with work related to Docyrus, AI agents should:
 1. Identify the relevant skill directory.
 2. Read the `SKILL.md` file using the `view_file` tool.
 3. Consult the files in the `references/` directory as needed for deep-dives into specific functionality.
+
+---
+
+## Development
+
+### Commit Messages
+
+This repository follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification. Commit messages are linted using `commitlint` and `husky`.
+
+Standard types include:
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `chore`: Changes to the build process or auxiliary tools and libraries
+- `docs`: Documentation only changes
+- `refactor`: A code change that neither fixes a bug nor adds a feature
 
 ---
 

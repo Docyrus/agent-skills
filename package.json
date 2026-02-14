@@ -1,0 +1,27 @@
+{
+  "name": "agent-skills",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A comprehensive library of instructions and reference materials designed for AI agents (and developers) working with the Docyrus platform.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Docyrus/agent-skills.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Docyrus/agent-skills/issues"
+  },
+  "homepage": "https://github.com/Docyrus/agent-skills#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
+    "husky": "^9.1.7"
+  }
+}

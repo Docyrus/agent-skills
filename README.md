@@ -6,6 +6,14 @@ A comprehensive library of instructions and reference materials designed for AI 
 
 This repository centralizes the knowledge and patterns required to manage the Docyrus platform, integrate with its APIs, and develop React-based applications using Docyrus as a backend.
 
+## Installation
+
+To add these skills to your environment, run:
+
+```bash
+npx skills add docyrus/agent-skills
+```
+
 ## Available Skills
 
 | Skill                 | Description                                                                                       | Location                                        |
@@ -25,7 +33,7 @@ Each skill directory is organized as follows:
 
 When tasked with work related to Docyrus, AI agents should:
 
-1. Identify the relevant skill directory.
+1. Identify the relevant skill directory within the `skills/` folder.
 2. Read the `SKILL.md` file using the `view_file` tool.
 3. Consult the files in the `references/` directory as needed for deep-dives into specific functionality.
 

@@ -73,6 +73,22 @@ const { data: projects } = useQuery({
 6. **Formula keys must appear in `columns`** — e.g., if formula key is `total`, include `'total'` in the columns array.
 7. **Use `UsersCollection.getMyInfo()`** for current user profile, not a direct API call.
 
+## Regenerating Collections After Schema Changes
+
+When data sources or fields are created, updated, or deleted via the `docyrus-architect` MCP tools, the app's auto-generated collections become stale. To resync:
+
+1. Call `regenerate_openapi_spec` (architect MCP) to rebuild and upload the tenant's OpenAPI spec
+2. Download the new spec into the repo, overwriting the existing file:
+   ```bash
+   curl -o openapi.json "<publicUrl returned from step 1>"
+   ```
+3. Regenerate collections:
+   ```bash
+   pnpx @docyrus/tanstack-db-generator openapi.json
+   ```
+
+Always run all three steps together — a stale `openapi.json` or outdated collections will cause missing or incorrect endpoints at runtime.
+
 ## Collection CRUD Methods
 
 Every generated collection provides:

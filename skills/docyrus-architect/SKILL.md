@@ -32,6 +32,9 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 - `update_enums` — Update enum option name/slug/color/icon.
 - `delete_enums` — Delete enum options.
 
+### OpenAPI Spec
+- `regenerate_openapi_spec` — Regenerate and upload the tenant's OpenAPI spec after data source or field changes. Accepts optional `dataSourceSlugs` (string array) to limit scope; omit to include all data sources. Returns the `publicUrl` of the uploaded spec. **Call this after any `create_data_source`, `update_data_source`, `delete_data_source`, `create_fields`, `update_fields`, or `delete_fields` operation** to keep the spec in sync.
+
 ### Query & Compute
 - `query_data_source` — Read data with filtering, sorting, aggregation, formulas, pivots, child queries. **See [references/data-source-query-guide.md](references/data-source-query-guide.md) for complete query syntax.**
 - `evaluate_jsonata` — Test JSONata expressions. Use for validating computed field formulas.
@@ -44,6 +47,7 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 2. Call `create_data_source` with title (plural), name (singular), slug (singular snake_case)
 3. Call `create_fields` with all custom fields (default fields already exist)
 4. For select/tagSelect/status fields, call `create_enums` with the field ID from step 3
+5. Call `regenerate_openapi_spec` to update the OpenAPI spec
 
 ### Query Data
 
@@ -56,6 +60,7 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 1. Call `get_data_source_metadata` to see current fields
 2. Use `create_fields` / `update_fields` / `delete_fields` as needed
 3. For enum changes, use `get_enums_by_field_id` first, then `create_enums` / `update_enums` / `delete_enums`
+4. Call `regenerate_openapi_spec` to update the OpenAPI spec
 
 ## Key Rules
 

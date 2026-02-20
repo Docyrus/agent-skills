@@ -138,7 +138,9 @@ The GET items endpoint accepts a powerful query payload:
 | `pivot` | Cross-tab matrix queries with date range series |
 | `expand` | Return full objects for relation/user/enum fields instead of IDs |
 
-**For full query reference, read**: `references/query-and-formulas.md`
+**For full query and formula references, read**:
+- `references/data-source-query-guide.md`
+- `references/formula-design-guide-llm.md`
 
 ## Critical Rules
 
@@ -155,4 +157,5 @@ Read these files when you need detailed information:
 
 - **`references/api-client.md`** — Full RestApiClient API, OAuth2Client (all flows: PKCE, client credentials, device code), token managers, interceptors, error classes, SSE/streaming, file upload/download, HTML to PDF, retry logic
 - **`references/authentication.md`** — @docyrus/signin React provider, useDocyrusAuth/useDocyrusClient hooks, SignInButton, standalone vs iframe auth modes, env vars, module-level API client pattern
-- **`references/query-and-formulas.md`** — Complete query payload reference: column syntax, all 50+ filter operators, aggregations, simple formulas, block (AST) formulas with all block kinds, subquery formulas, child queries, pivot tables, expand, allowed SQL functions, cast types, full examples
+- **`references/data-source-query-guide.md`** — Up-to-date query payload guide: columns, filters, orderBy, pagination, calculations, formulas, child queries, pivots, and operator reference
+- **`references/formula-design-guide-llm.md`** — Up-to-date formula design guide for building and validating `formulas` payloads

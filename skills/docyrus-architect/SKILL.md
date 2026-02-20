@@ -1,6 +1,6 @@
 ---
 name: docyrus-architect
-description: Use the Docyrus Architect MCP tools to manage data sources, fields, enums, apps, and query data in the Docyrus platform. Use when the user asks to create, update, delete, or query data sources, fields, enum options, or apps via the docyrus-architect MCP server. Also use when building reports, dashboards, or performing data analysis that requires querying Docyrus data sources with filters, aggregations, formulas, pivots, or child queries.
+description: Use the Docyrus Architect MCP tools to manage data sources, fields, enums, apps, custom queries, and query data in the Docyrus platform. Use when the user asks to create, update, delete, or query data sources, fields, enum options, apps, or custom query templates via the docyrus-architect MCP server. Also use when building reports, dashboards, or performing data analysis that requires querying Docyrus data sources or running custom SQL templates with filters, aggregations, formulas, pivots, or child queries.
 ---
 
 # Docyrus Architect
@@ -39,6 +39,14 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 - `query_data_source` — Read data with filtering, sorting, aggregation, formulas, pivots, child queries. **See [references/data-source-query-guide.md](references/data-source-query-guide.md) for complete query syntax.**
 - `evaluate_jsonata` — Test JSONata expressions. Use for validating computed field formulas.
 
+### Custom Queries
+- `get_custom_queries` — List non-archived custom queries for the tenant.
+- `get_custom_query_by_id` — Read full custom query definition (`name`, `description`, `query`, `filters`).
+- `create_custom_query` — Create a saved SQL template using Handlebars variables and optional filter definitions.
+- `update_custom_query` — Update selected fields of an existing custom query (partial update).
+- `delete_custom_query` — Soft-delete (archive) a custom query.
+- `run_custom_query` — Execute a saved custom query with runtime filters, pagination offset, and optional simulate mode.
+
 ## Common Workflows
 
 ### Create a Data Source with Fields and Enums
@@ -61,6 +69,22 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 2. Use `create_fields` / `update_fields` / `delete_fields` as needed
 3. For enum changes, use `get_enums_by_field_id` first, then `create_enums` / `update_enums` / `delete_enums`
 4. Call `regenerate_openapi_spec` to update the OpenAPI spec
+
+### Manage a Custom Query Lifecycle
+
+1. Call `get_custom_queries` to find an existing query or confirm naming
+2. Call `create_custom_query` with `name`, `query`, and optional `description`/`filters`
+3. Call `get_custom_query_by_id` to verify the saved template and filter definitions
+4. Use `update_custom_query` for targeted edits (rename, revise SQL template, update filter definitions)
+5. Use `delete_custom_query` only when archival is explicitly requested
+
+### Run and Debug a Custom Query
+
+1. Call `get_custom_query_by_id` first to inspect SQL template and available filter slugs
+2. Build runtime `filters` with `rules[].field` values that match the query's filter slugs
+3. Call `run_custom_query` with `simulate: true` for complex or untrusted queries to inspect plan output
+4. Call `run_custom_query` with `simulate: false` (or omitted) to fetch real data
+5. Use `offset` for pagination and expect a max of 50,000 rows per execution
 
 ## Key Rules
 
@@ -106,7 +130,21 @@ All parameters are required in the MCP tool schema (most accept `null`):
 - `childQueries`: array | null
 - `pivot`: object | null
 
+### Custom Query Rules
+- Treat custom query `query` content as a Handlebars SQL template, not static SQL.
+- Use built-in context variables in templates when relevant: `TENANT_ID`, `TENANT_SCHEMA`, `USER_ID`, `USER_EMAIL`, `USER_FIRSTNAME`, `USER_LASTNAME`, `USER_FULLNAME`.
+- Use `{{filter FILTERS.<slug> <column_expression>}}` for optional runtime filtering. If no runtime value is provided, the helper resolves to `1=1`.
+- Keep `filters` definitions in `create_custom_query` / `update_custom_query` aligned with template usage:
+  - template usage: `FILTERS.<slug>`
+  - runtime rule field: `<slug>`
+  - filter definition slug: `<slug>`
+- Prefer `simulate: true` before running expensive queries to inspect `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` output.
+- Respect runtime limits on `run_custom_query`: 50,000 row cap, 15s timeout for normal execution, 30s timeout for simulate mode.
+- Use `delete_custom_query` as an archival action (soft delete), not permanent deletion.
+- For JSONB-backed simple data sources, access custom fields with `(table_alias."data"->>'field-uuid')::type`.
+
 ## References
 
-- **[Data Source Query Guide](references/data-source-query-guide.md)** — Complete reference for `query_data_source` including columns, filters, aggregations, formulas (simple + block AST), pivots, child queries, and full operator reference. Read this when building complex queries.
-- **[Formula Reference](references/formula-reference.md)** — Compact reference for SQL block formulas (inline and subquery). Read this when working with computed formula columns in queries.
+- **[Data Source Query Guide](references/data-source-query-guide.md)** — Up-to-date reference for `query_data_source` including columns, filters, orderBy, pagination, calculations, formulas, pivots, child queries, and operator details.
+- **[Formula Design Guide (LLM)](references/formula-design-guide-llm.md)** — Up-to-date guide for designing formula payloads used in query requests.
+- **[Custom Query Guide](references/custom-query-guide.md)** — Full lifecycle and execution reference for `get_custom_queries`, `get_custom_query_by_id`, `create_custom_query`, `update_custom_query`, `delete_custom_query`, and `run_custom_query`.

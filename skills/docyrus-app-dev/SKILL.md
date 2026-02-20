@@ -122,7 +122,9 @@ The `.list()` method supports:
 | `pivot` | Cross-tab matrix queries with date range series |
 | `expand` | Return full objects for relation/user/enum fields instead of IDs |
 
-**For query details, read**: `references/query-guide.md`
+**For query/formula details, read**:
+- `references/data-source-query-guide.md`
+- `references/formula-design-guide-llm.md`
 
 ## TanStack Query Pattern
 
@@ -150,5 +152,6 @@ function useCreateItem() {
 Read these files when you need detailed information:
 
 - **`references/api-client-and-auth.md`** — RestApiClient API, @docyrus/signin hooks, auth provider config, interceptors, error handling, SSE/streaming, file upload/download
-- **`references/query-guide.md`** — Full query payload reference: column syntax, all filter operators, aggregations, simple/block/subquery formulas, child queries, pivot tables, expand
+- **`references/data-source-query-guide.md`** — Up-to-date query payload guide: columns, filters, orderBy, pagination, calculations, formulas, child queries, pivots, and operator reference
+- **`references/formula-design-guide-llm.md`** — Up-to-date formula design guide for building and validating `formulas` payloads
 - **`references/collections-and-patterns.md`** — Generated collection structure, UsersCollection, TanStack Query/mutation hook patterns, query key factories, app bootstrap flow, routing setup, API endpoints

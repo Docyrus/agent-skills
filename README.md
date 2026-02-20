@@ -16,11 +16,12 @@ npx skills add docyrus/agent-skills
 
 ## Available Skills
 
-| Skill                 | Description                                                                                       | Location                                        |
-| :-------------------- | :------------------------------------------------------------------------------------------------ | :---------------------------------------------- |
-| **Docyrus Architect** | Manage platform resources: data sources, fields, enums, apps, custom queries, and perform advanced data analysis. | [SKILL.md](./skills/docyrus-architect/SKILL.md) |
-| **Docyrus API Dev**   | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./skills/docyrus-api-dev/SKILL.md)   |
-| **Docyrus App Dev**   | Build React TypeScript web applications following Docyrus-specific development patterns.          | [SKILL.md](./skills/docyrus-app-dev/SKILL.md)   |
+| Skill                     | Description                                                                                       | Location                                            |
+| :------------------------ | :------------------------------------------------------------------------------------------------ | :-------------------------------------------------- |
+| **Docyrus Architect**     | Manage platform resources: data sources, fields, enums, apps, custom queries, and perform advanced data analysis. | [SKILL.md](./skills/docyrus-architect/SKILL.md)     |
+| **Docyrus API Dev**       | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./skills/docyrus-api-dev/SKILL.md)       |
+| **Docyrus App Dev**       | Build React TypeScript web applications following Docyrus-specific development patterns.          | [SKILL.md](./skills/docyrus-app-dev/SKILL.md)       |
+| **Docyrus App UI Design** | Design and build production-grade UI components using 127 preferred components from shadcn, diceui, animate-ui, docyrus-ui, and reui. | [SKILL.md](./skills/docyrus-app-ui-design/SKILL.md) |
 
 ## Repository Structure
 

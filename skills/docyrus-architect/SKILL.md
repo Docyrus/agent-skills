@@ -19,6 +19,7 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 
 ### Data Source CRUD
 - `create_data_source` — Create a new data source (table). Default fields auto-created: `id`, `autonumber_id`, `name`, `record_owner`, `created_on`, `created_by`, `last_modified_by`, `last_modified_on`.
+- `create_data_sources_batch` — Create multiple data sources with fields and enum options in a single atomic transaction. Supports cross-referencing data sources within the batch by slug for `field-relation` types. Max 20 data sources per batch.
 - `update_data_source` — Update data source properties.
 - `delete_data_source` — Delete a data source and all its data.
 
@@ -51,11 +52,21 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 
 ### Create a Data Source with Fields and Enums
 
+**Single data source approach:**
 1. Call `get_apps` to find the target app ID
 2. Call `create_data_source` with title (plural), name (singular), slug (singular snake_case)
 3. Call `create_fields` with all custom fields (default fields already exist)
 4. For select/tagSelect/status fields, call `create_enums` with the field ID from step 3
 5. Call `regenerate_openapi_spec` to update the OpenAPI spec
+
+**Batch approach (recommended for multiple data sources):**
+1. Call `get_apps` to find the target app ID (optional, defaults to "Default Customizations App")
+2. Call `create_data_sources_batch` with an array of data source definitions (max 20)
+   - Each data source includes `title`, `name`, `slug`, and `fields` array
+   - Fields can include inline `enumOptions` for select/status/tagSelect fields
+   - Use slug references for `relationDataSourceId` to reference other data sources in the same batch
+   - All data sources, fields, and enums are created in a single atomic transaction
+3. Call `regenerate_openapi_spec` to update the OpenAPI spec
 
 ### Query Data
 
@@ -97,12 +108,25 @@ Guide for using `docyrus-architect` MCP tools to manage and query data sources i
 - Enable `pluginDocyment` when users need rich text documents per record
 
 ### Field Types
-- `field-relation` requires `relationDataSourceId` — the ID of the related data source
+- `field-relation` requires `relationDataSourceId` — the ID (UUID) of the related data source, or in batch operations, the slug of another data source in the same batch
 - `field-list` is a virtual field showing child records (one-to-many) — not stored in DB
-- `field-select` / `field-tagSelect` / `field-status` need enum options created after the field
+- `field-select` / `field-tagSelect` / `field-status` need enum options:
+  - In `create_fields`: call `create_enums` after field creation
+  - In `create_data_sources_batch`: include inline `enumOptions` array in the field definition
 - `field-formula` uses JSONata expressions — test with `evaluate_jsonata` first
 - `field-inlineData` stores array of objects, `field-inlineForm` stores single nested object
 - Field `slug` must be snake_case matching `^[a-z][a-z0-9_]*$`
+- Enum option `slug` must be snake_case matching `^[a-z][a-z0-9_]*$` (auto-generated from name if not provided)
+
+### Batch Operations
+- `create_data_sources_batch` creates up to 20 data sources in a single transaction
+- Within a batch, reference other data sources using their `slug` for `relationDataSourceId`
+- For external data sources (created outside the batch), use the UUID for `relationDataSourceId`
+- Data source slugs must be unique within the batch (validation error otherwise)
+- Inline enum options are defined per-field using the `enumOptions` array
+- Each enum option in `enumOptions` can specify: `name`, `slug`, `color`, `icon`, `sortOrder`
+- If a batch operation fails, all changes are rolled back (atomic transaction)
+- Use batch operations when creating related data sources to avoid multiple API calls and ensure consistency
 
 ### Querying
 - Use `dataSourceId` (UUID) to identify which data source to query

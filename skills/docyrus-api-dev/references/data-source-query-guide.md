@@ -128,6 +128,14 @@ These parameters identify which data source to query.
 
 Use a comma-separated list of field slugs to select specific columns.
 
+### Rules
+
+- Use `()` to select specific columns from a related record (`field-relation`, `field-select`, `field-userSelect` type fields).
+- Use `...` (spread operator) to flatten related columns into the root object. **Always flatten related columns when fetching data for charts** to avoid object nesting and parsing overhead.
+- Use `:` to alias a column. The alias goes on the left side (e.g. `tn:task_name`).
+- Use `@` to apply a pre-defined function. **Always use with an alias** (e.g. `name:upper@account_name`).
+- **Do not** use aggregation functions (count, sum, etc.) via `@` syntax — use `calculations` instead.
+
 ### Basic Selection
 
 ```
@@ -143,6 +151,7 @@ Use `:` to give a column an alias (shorter name in the result).
 ```
 
 **Result:**
+
 ```json
 [
   {
@@ -163,6 +172,7 @@ Use parentheses to select specific columns from a related record. Works with `fi
 ```
 
 **Result:**
+
 ```json
 [
   {
@@ -184,6 +194,7 @@ Use the spread operator to flatten selected columns from a related record into t
 ```
 
 **Result:**
+
 ```json
 [
   {
@@ -196,13 +207,14 @@ Use the spread operator to flatten selected columns from a related record into t
 
 ### Functions with `@`
 
-Use `@` to apply a pre-defined function to a column.
+Use `@` to apply a pre-defined function to a column, specified as `<function>@<field>`.
 
 ```
-"columns": "task_name, ...related_account(an:account_name@upper, ap:account_phone)"
+"columns": "task_name, ...related_account(an:upper@account_name, ap:account_phone)"
 ```
 
 **Result:**
+
 ```json
 [
   {
@@ -220,7 +232,7 @@ Use the `@` symbol with special date formulas to format date intervals. These ar
 **Format:** `<formula>@<date_or_datetime_field>`
 
 | Formula | Description | Example |
-|---|---|---|
+| ------- | ----------- | ------- |
 | `hours_of_today` | Groups by hour for today | `hours_of_today@created_on` |
 | `days_of_week` | Groups by day for the current week | `days_of_week@created_on` |
 | `days_of_month` | Groups by day for the current month | `days_of_month@created_on` |
@@ -247,6 +259,8 @@ This formats the `created_on` field as `DD/MM/YYYY` and aliases it as `day`.
 **Parameter:** `filters` — `IQueryFilterGroup | null`
 
 Filters use a recursive group structure with combinators (`and` / `or`) and rules.
+
+> **Tip:** If you are asked to find records that contain a specific string, prefer using `filterKeyword` instead of `filters` for that filter. `filterKeyword` performs full-text search across all searchable fields.
 
 ### Filter Group Structure
 
@@ -330,6 +344,34 @@ Filter records created between two dates, AND where either email is empty OR pho
             "operator": "not empty"
           }
         ]
+      }
+    ]
+  }
+}
+```
+
+### Example: Filtering by Related Record's Field (String Match)
+
+Use `filterKeyword` when searching for a specific substring across all searchable fields:
+
+```json
+{
+  "filterKeyword": "John",
+  "columns": "id, name, email"
+}
+```
+
+Alternatively, use `rel_{{relation_field_slug}}/{{field_slug}}` with `like` operator to filter by a specific related field:
+
+```json
+{
+  "filters": {
+    "combinator": "and",
+    "rules": [
+      {
+        "field": "rel_client/name",
+        "operator": "like",
+        "value": "John"
       }
     ]
   }
@@ -554,6 +596,7 @@ interface ISelectQueryCalculationRule {
 - Use the aggregated field's slug for other functions (sum, avg, etc.).
 - Skip `numberType` unless it is specifically required.
 - Use `name` to alias the calculation result column (keep it short).
+- **Do not** use `distinctColumns` together with `calculations`. Prefer `calculations` to aggregate data.
 
 ### Example: Count per Group
 
@@ -583,6 +626,7 @@ Count open tasks per user:
 ```
 
 **Result:**
+
 ```json
 [
   {
@@ -612,6 +656,7 @@ Count unique emails:
 ```
 
 **Result:**
+
 ```json
 [
   {
@@ -938,7 +983,7 @@ Requires at least 2 operands. For 3+: `((a op b) op c)`.
 
 > SQL: `"t0"."status" in ($1, $2)`
 
-Operators: `=`, `!=`, `<>`, `>`, `<`, `>=`, `<=`, `like`, `ilike`, `in`, `not in`
+Operators: `=`, `!=`, `<>`, `>`, `<`, `>=`, `<=`, `like`, `ilike`, `in`, `not in`, `not_in`
 
 #### `boolean` — Logical Operations
 
@@ -1191,6 +1236,7 @@ interface ISelectPivotMatrixQuery {
 2. **Second matrix** (`using: "record_owner"`): Fetches users filtered by role. Even if a user has no orders on a day, they still appear in the cross-join.
 
 **Result:**
+
 ```json
 [
   {
@@ -1287,6 +1333,7 @@ interface IQueryChildQueryParams {
 ```
 
 **Result:**
+
 ```json
 [
   {
@@ -1394,7 +1441,21 @@ List of specific field slugs to expand. Expanded fields return their full object
 
 **Parameter:** `distinctColumns` — `string[] | null`
 
-List of columns to deduplicate results on. Should be avoided unless strictly necessary for performance reasons.
+List of columns to deduplicate results on. Use only for simple queries when you need exactly one deterministic row per group and the winner is defined by a simple `ORDER BY`.
+
+> **Important:** Do **not** use `distinctColumns` together with `calculations`. Prefer `calculations` to aggregate data.
+
+### Example: Last Invoice Date per Client
+
+```json
+{
+  "columns": "...client(client_name:name), invoice_date",
+  "distinctColumns": ["client"],
+  "orderBy": "invoice_date DESC"
+}
+```
+
+### Example: Deduplicate by Email
 
 ```json
 {
@@ -1470,6 +1531,7 @@ Used for incremental data synchronization, fetching only records modified within
 |---|---|---|
 | `in` | Value is in list | array |
 | `not in` | Value is not in list | array |
+| `not_in` | Alias for `not in` | array |
 | `exists` | Record exists | — |
 | `contains any` | Contains any of the values | array |
 | `contains all` | Contains all of the values | array |

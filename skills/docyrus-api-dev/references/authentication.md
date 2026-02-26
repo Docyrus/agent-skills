@@ -214,41 +214,17 @@ function App() {
 }
 ```
 
-### Module-Level API Client (for non-React code)
+### Accessing the API Client
 
-When code outside React components needs the API client (utilities, API wrappers):
+In React components, use `useDocyrusClient()` to get the authenticated client. Generated collections are hooks that call `useDocyrusClient()` internally, so no manual client syncing is needed:
 
 ```typescript
-// src/lib/api.ts
-import type { RestApiClient } from '@docyrus/api-client'
+// Generated collections use useDocyrusClient() internally
+const { list, get, create } = useBaseProjectCollection()
 
-let apiClient: RestApiClient | null = null
-
-const apiClientProxy = new Proxy({} as RestApiClient, {
-  get(_target, prop) {
-    if (!apiClient) throw new Error('API client not initialized. Ensure DocyrusAuthProvider is mounted.')
-    const value = apiClient[prop as keyof RestApiClient]
-    if (typeof value === 'function') return value.bind(apiClient)
-    return value
-  },
-})
-
-export function setApiClient(client: RestApiClient) {
-  apiClient = client
-}
-
-export function getApiClient(): RestApiClient {
-  if (!apiClient) throw new Error('API client not initialized.')
-  return apiClient
-}
-
-export { apiClientProxy as apiClient }
-```
-
-Sync from React:
-```tsx
+// For direct API access in React components
 const client = useDocyrusClient()
-useEffect(() => { if (client) setApiClient(client) }, [client])
+const data = await client!.get('/v1/custom-endpoint')
 ```
 
 ---

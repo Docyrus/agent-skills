@@ -5,7 +5,7 @@
 1. [Collection Architecture](#collection-architecture)
 2. [Generated Collection Structure](#generated-collection-structure)
 3. [Collection Types](#collection-types)
-4. [UsersCollection](#userscollection)
+4. [useUsersCollection](#useuserscollection)
 5. [TanStack Query Hooks Pattern](#tanstack-query-hooks-pattern)
 6. [Query Key Factory Pattern](#query-key-factory-pattern)
 7. [Mutation Pattern](#mutation-pattern)
@@ -22,20 +22,19 @@ Collections are auto-generated from `openapi.json` using `@docyrus/tanstack-db-g
 **Generate command**: `pnpm generate-orm` (runs `@docyrus/tanstack-db-generator openapi.json`)
 
 **Key files:**
-- `src/collections/<app>-<entity>.collection.ts` — generated CRUD methods + entity types
+- `src/collections/<app>-<entity>.collection.ts` — generated React hooks with CRUD methods + entity types
 - `src/collections/types.ts` — shared query types (filters, calculations, formulas, etc.)
-- `src/collections/users.collection.ts` — special system users collection
-- `src/lib/api.ts` — module-level API client proxy used by all collections
+- `src/collections/users.collection.ts` — special system users collection hook
 
 ---
 
 ## Generated Collection Structure
 
-Each collection exports an entity interface and a collection object:
+Each collection exports an entity interface and a React hook that returns CRUD methods:
 
 ```typescript
 // Generated collection for base/project
-import { apiClient } from '../lib/api'
+import { useDocyrusClient } from '@docyrus/signin'
 import type { ICollectionListParams } from './types'
 
 export interface BaseProjectEntity {
@@ -51,26 +50,32 @@ export interface BaseProjectEntity {
   organization?: { id: string; name: string } | string
 }
 
-export const baseProjectCollection = {
-  list: (params?: ICollectionListParams): Promise<Array<BaseProjectEntity>> =>
-    apiClient.get('/v1/apps/base/data-sources/project/items', params as any),
+export function useBaseProjectCollection() {
+  const client = useDocyrusClient()
 
-  get: (recordId: string, params?: { columns?: Array<string> }): Promise<BaseProjectEntity> =>
-    apiClient.get(`/v1/apps/base/data-sources/project/items/${recordId}`, params),
+  return {
+    list: (params?: ICollectionListParams): Promise<Array<BaseProjectEntity>> =>
+      client!.get('/v1/apps/base/data-sources/project/items', params as any),
 
-  create: (data: Record<string, any>): Promise<BaseProjectEntity> =>
-    apiClient.post('/v1/apps/base/data-sources/project/items', data),
+    get: (recordId: string, params?: { columns?: Array<string> }): Promise<BaseProjectEntity> =>
+      client!.get(`/v1/apps/base/data-sources/project/items/${recordId}`, params),
 
-  update: (recordId: string, data: Record<string, any>): Promise<BaseProjectEntity> =>
-    apiClient.patch(`/v1/apps/base/data-sources/project/items/${recordId}`, data),
+    create: (data: Record<string, any>): Promise<BaseProjectEntity> =>
+      client!.post('/v1/apps/base/data-sources/project/items', data),
 
-  delete: (recordId: string): Promise<void> =>
-    apiClient.delete(`/v1/apps/base/data-sources/project/items/${recordId}`),
+    update: (recordId: string, data: Record<string, any>): Promise<BaseProjectEntity> =>
+      client!.patch(`/v1/apps/base/data-sources/project/items/${recordId}`, data),
 
-  deleteMany: (data: { recordIds: Array<string> }): Promise<void> =>
-    apiClient.delete('/v1/apps/base/data-sources/project/items', data),
+    delete: (recordId: string): Promise<void> =>
+      client!.delete(`/v1/apps/base/data-sources/project/items/${recordId}`),
+
+    deleteMany: (data: { recordIds: Array<string> }): Promise<void> =>
+      client!.delete('/v1/apps/base/data-sources/project/items', data),
+  }
 }
 ```
+
+Collections are hooks because they use `useDocyrusClient()` internally, which provides the authenticated `RestApiClient` from `DocyrusAuthProvider`. This means collections must be called inside React components.
 
 ### Default Fields (always present)
 Every data source entity includes: `id`, `record_owner`, `created_on`, `created_by`, `last_modified_on`, `last_modified_by`, `name`
@@ -93,55 +98,63 @@ Shared query parameter types in `src/collections/types.ts`:
 
 ---
 
-## UsersCollection
+## useUsersCollection
 
-System users collection with special methods:
+System users collection hook with special methods:
 
 ```typescript
-export const UsersCollection = {
-  getUsers: (): Promise<Array<UserEntity>> =>
-    apiClient.get('/v1/users'),
+export function useUsersCollection() {
+  const client = useDocyrusClient()
 
-  getMyInfo: (): Promise<UserEntity> =>
-    apiClient.get('/v1/users/me'),
+  return {
+    getUsers: (): Promise<Array<UserEntity>> =>
+      client!.get('/v1/users'),
 
-  createUser: (data: UserCreateParams): Promise<UserEntity> =>
-    apiClient.post('/v1/users', data),
+    getMyInfo: (): Promise<UserEntity> =>
+      client!.get('/v1/users/me'),
 
-  updateMe: (data: UserUpdateParams): Promise<UserEntity> =>
-    apiClient.patch('/v1/users/me', data),
+    createUser: (data: UserCreateParams): Promise<UserEntity> =>
+      client!.post('/v1/users', data),
 
-  updateUser: (userId: string, data: UserUpdateParams): Promise<UserEntity> =>
-    apiClient.patch(`/v1/users/${userId}`, data),
+    updateMe: (data: UserUpdateParams): Promise<UserEntity> =>
+      client!.patch('/v1/users/me', data),
 
-  changeUserStatus: (userId: string, status: number) =>
-    apiClient.put(`/v1/users/${userId}/status/${status}`),
+    updateUser: (userId: string, data: UserUpdateParams): Promise<UserEntity> =>
+      client!.patch(`/v1/users/${userId}`, data),
 
-  saveUserDevice: (data: UserDeviceDto) =>
-    apiClient.post('/v1/users/device', data),
+    changeUserStatus: (userId: string, status: number) =>
+      client!.put(`/v1/users/${userId}/status/${status}`),
+
+    saveUserDevice: (data: UserDeviceDto) =>
+      client!.post('/v1/users/device', data),
+
+    getMyTenants: () =>
+      client!.get('/v1/users/me/tenants'),
+  }
 }
 ```
 
-Use `UsersCollection.getMyInfo()` for current user profile.
+Use `useUsersCollection().getMyInfo()` for current user profile.
 
 ---
 
 ## TanStack Query Hooks Pattern
 
-Wrap collection calls in TanStack Query hooks:
+Wrap collection hook methods in TanStack Query hooks. Since collections are themselves hooks, call them inside the component/hook, then pass the returned methods to TanStack Query:
 
 ```typescript
 import { useQuery } from '@tanstack/react-query'
-import { baseProjectCollection } from '@/collections/base-project.collection'
+import { useBaseProjectCollection } from '@/collections/base-project.collection'
 import { queryKeys } from '@/lib/query-keys'
 
 const PROJECT_COLUMNS = ['name', 'status', 'description', 'record_owner(id,firstname,lastname)']
 
 export function useProjects(params?: ICollectionListParams) {
+  const { list } = useBaseProjectCollection()
   return useQuery({
     queryKey: queryKeys.projects.list(params ?? {}),
     queryFn: () =>
-      baseProjectCollection.list({
+      list({
         columns: PROJECT_COLUMNS,  // ALWAYS specify columns
         ...params,
       }),
@@ -149,10 +162,11 @@ export function useProjects(params?: ICollectionListParams) {
 }
 
 export function useProject(projectId: string) {
+  const { get } = useBaseProjectCollection()
   return useQuery({
     queryKey: queryKeys.projects.detail(projectId),
     queryFn: () =>
-      baseProjectCollection.get(projectId, {
+      get(projectId, {
         columns: PROJECT_COLUMNS,
       }),
     enabled: !!projectId,
@@ -187,12 +201,13 @@ export const queryKeys = {
 
 ```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useBaseProjectCollection } from '@/collections/base-project.collection'
 
 export function useCreateProject() {
+  const { create } = useBaseProjectCollection()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Record<string, unknown>) =>
-      baseProjectCollection.create(data),
+    mutationFn: (data: Record<string, unknown>) => create(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.projects.all,
@@ -202,10 +217,11 @@ export function useCreateProject() {
 }
 
 export function useUpdateProject() {
+  const { update } = useBaseProjectCollection()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      baseProjectCollection.update(id, data),
+      update(id, data),
     onSuccess: (_data, { id }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) })
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.lists() })
@@ -214,9 +230,10 @@ export function useUpdateProject() {
 }
 
 export function useDeleteProject() {
+  const { delete: deleteProject } = useBaseProjectCollection()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => baseProjectCollection.delete(id),
+    mutationFn: (id: string) => deleteProject(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
     },
@@ -230,19 +247,15 @@ export function useDeleteProject() {
 
 1. `main.tsx`: Mount `DocyrusAuthProvider` → `QueryClientProvider` → `RouterProvider`
 2. `App.tsx`: Check `useDocyrusAuth()` status
-3. If authenticated: call `setApiClient(client)` to enable collections
-4. Fetch user profile via `UsersCollection.getMyInfo()`
+3. Use collection hooks (e.g., `useUsersCollection()`) for data access — they get the authenticated client via `useDocyrusClient()` internally
+4. Fetch user profile via `useUsersCollection().getMyInfo()`
 5. Render protected routes
 
 ```typescript
 // App.tsx
 function App() {
   const { status, signOut } = useDocyrusAuth()
-  const client = useDocyrusClient()
-
-  useEffect(() => {
-    if (client) setApiClient(client)
-  }, [client])
+  const { getMyInfo } = useUsersCollection()
 
   if (status === 'loading') return <LoadingSpinner />
   if (status === 'unauthenticated') return <LoginPage />

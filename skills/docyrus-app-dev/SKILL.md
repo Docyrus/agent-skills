@@ -35,26 +35,24 @@ import { DocyrusAuthProvider } from '@docyrus/signin'
 </DocyrusAuthProvider>
 ```
 
-2. In App.tsx, sync API client for collections:
+2. In App.tsx, check auth and use collection hooks:
 
 ```tsx
 const { status } = useDocyrusAuth()
-const client = useDocyrusClient()
-
-useEffect(() => {
-  if (client) setApiClient(client)
-}, [client])
+const { getMyInfo } = useUsersCollection()
 
 if (status === 'loading') return <Spinner />
 if (status === 'unauthenticated') return <SignInButton />
 ```
 
-3. Use collections in hooks:
+3. Use collection hooks in components:
 
 ```tsx
+const { list } = useBaseProjectCollection()
+
 const { data: projects } = useQuery({
   queryKey: ['projects'],
-  queryFn: () => baseProjectCollection.list({
+  queryFn: () => list({
     columns: ['name', 'status', 'record_owner(firstname,lastname)'],
     filters: { rules: [{ field: 'status', operator: '!=', value: 'archived' }] },
     orderBy: 'created_on DESC',
@@ -66,12 +64,12 @@ const { data: projects } = useQuery({
 ## Critical Rules
 
 1. **Always send `columns`** in `.list()` and `.get()` calls. Without it, only `id` is returned.
-2. **Collections only work after auth** — `setApiClient(client)` must be called first.
+2. **Collections are React hooks** — call `useBaseProjectCollection()`, `useUsersCollection()`, etc. inside React components. They use `useDocyrusClient()` internally for authenticated API access.
 3. **Data source endpoints are dynamic** — they only exist if the data source is defined in the tenant's OpenAPI spec.
 4. **Use `id` field** for `count` calculations. Use the actual field slug for `sum`, `avg`, `min`, `max`.
 5. **Child query keys must appear in `columns`** — e.g., if childQuery key is `orders`, include `'orders'` in the columns array.
 6. **Formula keys must appear in `columns`** — e.g., if formula key is `total`, include `'total'` in the columns array.
-7. **Use `UsersCollection.getMyInfo()`** for current user profile, not a direct API call.
+7. **Use `useUsersCollection().getMyInfo()`** for current user profile, not a direct API call.
 
 ## Regenerating Collections After Schema Changes
 
@@ -91,15 +89,17 @@ Always run all three steps together — a stale `openapi.json` or outdated colle
 
 ## Collection CRUD Methods
 
-Every generated collection provides:
+Every generated collection is a React hook that returns CRUD methods:
 
 ```typescript
-collection.list(params?: ICollectionListParams)  // Query with filters, sort, pagination
-collection.get(id, { columns })                   // Single record
-collection.create(data)                           // Create
-collection.update(id, data)                       // Partial update
-collection.delete(id)                             // Delete one
-collection.deleteMany({ recordIds })              // Delete many
+const { list, get, create, update, delete: deleteOne, deleteMany } = useBaseProjectCollection()
+
+list(params?: ICollectionListParams)   // Query with filters, sort, pagination
+get(id, { columns })                    // Single record
+create(data)                            // Create
+update(id, data)                        // Partial update
+deleteOne(id)                           // Delete one
+deleteMany({ recordIds })               // Delete many
 ```
 
 API endpoint pattern: `/v1/apps/{appSlug}/data-sources/{slug}/items`
@@ -129,20 +129,22 @@ The `.list()` method supports:
 ## TanStack Query Pattern
 
 ```typescript
-// Query hook
-function useItems(params?: ICollectionListParams) {
+// Query hook — call collection hook inside the component, pass methods to TanStack Query
+function useProjects(params?: ICollectionListParams) {
+  const { list } = useBaseProjectCollection()
   return useQuery({
-    queryKey: ['items', 'list', params],
-    queryFn: () => collection.list({ columns: COLUMNS, ...params }),
+    queryKey: ['projects', 'list', params],
+    queryFn: () => list({ columns: PROJECT_COLUMNS, ...params }),
   })
 }
 
 // Mutation hook
-function useCreateItem() {
+function useCreateProject() {
+  const { create } = useBaseProjectCollection()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Record<string, unknown>) => collection.create(data),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['items'] }) },
+    mutationFn: (data: Record<string, unknown>) => create(data),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['projects'] }) },
   })
 }
 ```
@@ -154,4 +156,4 @@ Read these files when you need detailed information:
 - **`references/api-client-and-auth.md`** — RestApiClient API, @docyrus/signin hooks, auth provider config, interceptors, error handling, SSE/streaming, file upload/download
 - **`references/data-source-query-guide.md`** — Up-to-date query payload guide: columns, filters, orderBy, pagination, calculations, formulas, child queries, pivots, and operator reference
 - **`references/formula-design-guide-llm.md`** — Up-to-date formula design guide for building and validating `formulas` payloads
-- **`references/collections-and-patterns.md`** — Generated collection structure, UsersCollection, TanStack Query/mutation hook patterns, query key factories, app bootstrap flow, routing setup, API endpoints
+- **`references/collections-and-patterns.md`** — Generated collection hooks, useUsersCollection, TanStack Query/mutation hook patterns, query key factories, app bootstrap flow, routing setup, API endpoints

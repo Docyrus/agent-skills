@@ -1,13 +1,13 @@
 # Preferred Components Catalog
 
-Complete reference of all 127 available components across shadcn, diceui, animate-ui, docyrus, and reui libraries.
+Complete reference of all 140 available components across shadcn, diceui, animate-ui, docyrus, and reui libraries.
 
 ## Table of Contents
 
 1. [shadcn Components (43)](#shadcn-components-43)
 2. [diceui Components (42)](#diceui-components-42)
 3. [animate-ui Components (21)](#animate-ui-components-21)
-4. [docyrus Components (19)](#docyrus-components-19)
+4. [docyrus Components (32)](#docyrus-components-32)
 5. [reui Components (2)](#reui-components-2)
 
 ---
@@ -145,30 +145,43 @@ Animated components with smooth transitions and interactions.
 
 ---
 
-## docyrus Components (19)
+## docyrus Components (32)
 
-Docyrus-specific components for data handling, forms, and business logic.
+Docyrus-specific components for data handling, forms, dialogs, editing, and business logic.
 
 | Component | Description | Install Command | Docs |
 |-----------|-------------|-----------------|------|
+| Awesome Dialog | Advanced dialog system with three container modes (modal, sheet, drawer), side positioning, size presets, pattern backgrounds, fullscreen/minimize/resize support, and global dialog management via GlobalDialogProvider. The primary dialog system for item creation forms and small item detail views. | `pnpm dlx shadcn@latest add @docyrus/ui-awesome-dialog` | docs/components/awesome-dialog.md |
 | Avatar Select | Avatar Select component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-avatar-select` | docs/components/avatar-select.md |
 | Avatar Thumbnail | Avatar Thumbnail component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-avatar-thumbnail` | docs/components/avatar-thumbnail.md |
 | Awesome Card | A card with a hatched-stripe header and an inset content area, perfect for displaying stats and metrics. | `pnpm dlx shadcn@latest add @docyrus/ui-awesome-card` | docs/components/awesome-card.md |
-| Calendar | Calendar component. | `pnpm dlx shadcn@latest add @docyrus/ui-calendar` | docs/components/calendar.md |
-| Comments Panel | Comments Panel component. | `pnpm dlx shadcn@latest add @docyrus/ui-comments-panel` | docs/components/comments-panel.md |
+| Calendar | Advanced calendar with month/week/day/agenda views, drag-and-drop event management, multi-user support, and loading states. | `pnpm dlx shadcn@latest add @docyrus/ui-calendar` | docs/components/calendar.md |
+| Comments Panel | Comment discussion panel with threaded conversations, mention input, and editor support. | `pnpm dlx shadcn@latest add @docyrus/ui-comments-panel` | docs/components/comments-panel.md |
+| Confirmation Button | Button with built-in confirmation dialog for destructive or important actions. | `pnpm dlx shadcn@latest add @docyrus/ui-confirmation-button` | docs/components/confirmation-button.md |
 | Cropper | Cropper component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-cropper` | docs/components/cropper.md |
-| Data Grid | A virtualized, editable spreadsheet-like data grid with sorting, filtering, grouping, cell selection, and keyboard navigation. | `pnpm dlx shadcn@latest add @docyrus/ui-data-grid` | docs/components/data-grid.md |
+| Data Grid | A virtualized, editable spreadsheet-like data grid with sorting, filtering, grouping, cell selection, and keyboard navigation. Supports grid/gallery/card display modes. | `pnpm dlx shadcn@latest add @docyrus/ui-data-grid` | docs/components/data-grid.md |
 | Data Table Filter | A composable filter bar for data tables with text, number, date, option, and multi-option column types. | `pnpm dlx shadcn@latest add @docyrus/ui-data-table-filter` | docs/components/data-table-filter.md |
 | Date Time Picker | Date Time Picker component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-date-time-picker` | docs/components/date-time-picker.md |
 | Day Picker | Day Picker component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-day-picker` | docs/components/day-picker.md |
 | Delete Confirm Dialog | Delete Confirm Dialog component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-delete-confirm-dialog` | docs/components/delete-confirm-dialog.md |
 | Docyrus Icon | Docyrus Icon component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-docyrus-icon` | docs/components/docyrus-icon.md |
 | Duration Select | Duration Select component with multiple variants and sizes. | `pnpm dlx shadcn@latest add @docyrus/ui-duration-select` | docs/components/duration-select.md |
-| File Attachment Panel | File Attachment Panel component. | `pnpm dlx shadcn@latest add @docyrus/ui-file-attachment-panel` | docs/components/file-attachment-panel.md |
+| Editable Record Detail | Complete inline record editor with field-level change tracking, floating ActionBar showing pending changes, save/cancel with diff preview, and TanStack Form compatible API. Use for detail views where users edit individual fields without opening a full form. | `pnpm dlx shadcn@latest add @docyrus/ui-editable-record-detail` | docs/components/editable-record-detail.md |
+| Editable Value | Single-field inline editor that renders DynamicValue in display mode and switches to DynamicFormField on click. Supports inline, popover, and instant-save field types with automatic save/cancel behavior. | `pnpm dlx shadcn@latest add @docyrus/ui-editable-value` | docs/components/editable-value.md |
+| File Attachment Panel | File management panel with upload zone, file list/grid views, and empty state handling. | `pnpm dlx shadcn@latest add @docyrus/ui-file-attachment-panel` | docs/components/file-attachment-panel.md |
 | Form Fields | Dynamic form field system powered by TanStack Form. 47 field types with automatic dispatch via DynamicFormField. | `pnpm dlx shadcn@latest add @docyrus/ui-form-fields` | docs/components/form-fields.md |
-| Query Builder | Query Builder component. | `pnpm dlx shadcn@latest add @docyrus/ui-query-builder` | docs/components/query-builder.md |
-| Record Activity Panel | Record Activity Panel component. | `pnpm dlx shadcn@latest add @docyrus/ui-record-activity-panel` | docs/components/record-activity-panel.md |
-| Record Delete Confirm Dialog | Record Delete Confirm Dialog component. | `pnpm dlx shadcn@latest add @docyrus/ui-record-delete-confirm-dialog` | docs/components/record-delete-confirm-dialog.md |
+| Gantt | Gantt chart visualization for project timelines, task dependencies, and scheduling. | `pnpm dlx shadcn@latest add @docyrus/ui-gantt` | docs/components/gantt.md |
+| Image Editor | Advanced image editor with cropping, adjustments, and transformation tools. | `pnpm dlx shadcn@latest add @docyrus/ui-image-editor` | docs/components/image-editor.md |
+| Map | Map visualization component built on Leaflet for displaying geographic data and locations. | `pnpm dlx shadcn@latest add @docyrus/ui-map` | docs/components/map.md |
+| Morph Popover | Morphing popover that smoothly transitions between trigger and content states. | `pnpm dlx shadcn@latest add @docyrus/ui-morph-popover` | docs/components/morph-popover.md |
+| Notification Stack | Stacked notification cards with animation for displaying multiple notifications. | `pnpm dlx shadcn@latest add @docyrus/ui-notification-stack` | docs/components/notification-stack.md |
+| Notifications Panel | Full notification panel for managing and displaying user notifications. | `pnpm dlx shadcn@latest add @docyrus/ui-notifications-panel` | docs/components/notifications-panel.md |
+| Place Autocomplete | Location autocomplete input with address search and selection. | `pnpm dlx shadcn@latest add @docyrus/ui-place-autocomplete` | docs/components/place-autocomplete.md |
+| Query Builder | Visual query builder for constructing filter conditions with drag-and-drop, rule numbers, and depth control. | `pnpm dlx shadcn@latest add @docyrus/ui-query-builder` | docs/components/query-builder.md |
+| Record Activity Panel | Activity log panel for displaying record history and audit trail. | `pnpm dlx shadcn@latest add @docyrus/ui-record-activity-panel` | docs/components/record-activity-panel.md |
+| Record Delete Confirm Dialog | Domain-specific delete confirmation with record context. | `pnpm dlx shadcn@latest add @docyrus/ui-record-delete-confirm-dialog` | docs/components/record-delete-confirm-dialog.md |
+| Search Input | Dedicated search input component with search icon and clear button. | `pnpm dlx shadcn@latest add @docyrus/ui-search-input` | docs/components/search-input.md |
+| Tree View | Tree/hierarchy visualization component for displaying nested data structures. | `pnpm dlx shadcn@latest add @docyrus/ui-tree-view` | docs/components/tree-view.md |
 | Value Renderers | Read-only value display system for table cells, detail views, and kanban cards. 44 renderer types with automatic dispatch via DynamicValue. | `pnpm dlx shadcn@latest add @docyrus/ui-value-renderers` | docs/components/value-renderers.md |
 
 ---
@@ -189,7 +202,7 @@ Utility components for specialized file and sorting operations.
 - **shadcn**: 43 components
 - **diceui**: 42 components
 - **animate-ui**: 21 components
-- **docyrus**: 19 components
+- **docyrus**: 32 components
 - **reui**: 2 components
 
-**Total**: 127 components
+**Total**: 140 components

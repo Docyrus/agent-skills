@@ -4,11 +4,194 @@ Decision trees and best practices for choosing the right component for each use 
 
 ## Table of Contents
 
-1. [Selection Process](#selection-process)
-2. [Common Use Case Decision Trees](#common-use-case-decision-trees)
-3. [Library-Specific Strengths](#library-specific-strengths)
-4. [Default Choices](#default-choices)
-5. [When to Use Each Library](#when-to-use-each-library)
+1. [UX Design Patterns](#ux-design-patterns)
+2. [Selection Process](#selection-process)
+3. [Common Use Case Decision Trees](#common-use-case-decision-trees)
+4. [Library-Specific Strengths](#library-specific-strengths)
+5. [Default Choices](#default-choices)
+6. [When to Use Each Library](#when-to-use-each-library)
+
+---
+
+## UX Design Patterns
+
+These patterns are **mandatory** and must be followed in all Docyrus applications.
+
+### Pattern 1: Item Create Forms → AwesomeDialog
+
+All item creation and editing forms use the **AwesomeDialog** system. Choose the container type based on form complexity:
+
+```
+Form complexity → Container choice:
+
+Small/simple form (3-6 fields)     → container="sheet" side="right"
+Long/complex form (7+ fields)      → container="modal" size="lg"
+Mobile-first form                  → container="drawer" side="bottom"
+```
+
+**AwesomeDialog** props reference:
+- `container`: `'modal'` | `'sheet'` | `'drawer'` — determines the dialog presentation
+- `side`: `'left'` | `'right'` | `'top'` | `'bottom'` — positioning for sheet/drawer
+- `size`: `'sm'` | `'default'` | `'lg'` | `'xl'` | `'full'` — size preset
+- `pattern`: boolean — show decorative pattern background (default: true)
+- `patternStyle`: `'stripes'` | `'dots'` | `'grid'` | `'crosshatch'` | `'zigzag'`
+- `fullscreenable`: boolean — allow fullscreen toggle
+- `minimizable`: boolean — allow minimize (requires GlobalDialogProvider)
+- `resizable`: boolean — allow resize handles
+- `dialogId`: string — unique ID for global dialog tracking
+
+**Sub-components**: `AwesomeDialogHeader`, `AwesomeDialogBody`, `AwesomeDialogFooter`, `AwesomeDialogToolbar`
+
+**Example — Small create form (task):**
+```tsx
+<AwesomeDialog open={open} onOpenChange={setOpen} container="sheet" side="right">
+  <AwesomeDialogHeader title="Create Task" icon="far-plus" />
+  <AwesomeDialogBody>{/* TanStack Form fields */}</AwesomeDialogBody>
+  <AwesomeDialogFooter>
+    <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+    <Button onClick={handleSubmit}>Create</Button>
+  </AwesomeDialogFooter>
+</AwesomeDialog>
+```
+
+**Example — Large create form (project):**
+```tsx
+<AwesomeDialog open={open} onOpenChange={setOpen} container="modal" size="lg" fullscreenable>
+  <AwesomeDialogHeader title="Create Project" icon="far-folder-plus" />
+  <AwesomeDialogBody>{/* Many form fields — body scrolls */}</AwesomeDialogBody>
+  <AwesomeDialogFooter>
+    <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+    <Button onClick={handleSubmit}>Create Project</Button>
+  </AwesomeDialogFooter>
+</AwesomeDialog>
+```
+
+### Pattern 2: Item Detail Pages → New Page vs AwesomeDialog
+
+Choose the right container based on item complexity:
+
+```
+Item complexity → Detail view choice:
+
+Large items (projects, workspaces, reports)  → Dedicated new page (full route)
+Small items (tasks, contacts, comments)      → AwesomeDialog with container="sheet" side="right"
+```
+
+**Decision tree:**
+```
+Does the item have:
+  - Multiple tabs/sections?
+  - Sub-items or child lists?
+  - Complex layout with sidebar?
+  → YES: Create a dedicated page route
+
+  - Simple field list?
+  - Quick view/edit pattern?
+  - Opened from a list or table?
+  → YES: Use AwesomeDialog right drawer
+```
+
+**Example — Task detail in AwesomeDialog:**
+```tsx
+<AwesomeDialog open={open} onOpenChange={setOpen} container="sheet" side="right" size="lg" fullscreenable>
+  <AwesomeDialogHeader
+    title={task.title}
+    description={`${task.status} · ${task.assignee}`}
+    headerButtons={
+      <Button variant="outline" size="sm" onClick={switchToFullForm}>Edit All</Button>
+    }
+  />
+  <AwesomeDialogBody>
+    <EditableRecordDetail fields={fields} record={record} onSave={handleSave}>
+      <EditableRecordDetailField slug="title" />
+      <EditableRecordDetailField slug="status" />
+      <EditableRecordDetailField slug="assignee" />
+      <EditableRecordDetailField slug="due_date" />
+    </EditableRecordDetail>
+  </AwesomeDialogBody>
+</AwesomeDialog>
+```
+
+### Pattern 3: Form System → TanStack Form + Docyrus Form Fields
+
+**All forms must use** TanStack Form with the Docyrus form field system. Never use plain HTML forms or React Hook Form directly.
+
+**Key components:**
+- `DynamicFormField` — Auto-dispatches to the correct field type based on `IField.type`
+- 47+ field types: text, number, email, url, phone, date, dateTime, time, select, multiSelect, status, relation, file, image, code, docEditor, and more
+- Each field type has a dedicated `*FormField` component (e.g., `TextFormField`, `SelectFormField`, `DateFormField`)
+
+**Form field pattern:**
+```tsx
+import { useForm } from '@tanstack/react-form'
+import { TextFormField, SelectFormField, DateFormField } from '@docyrus/ui/components/form-fields'
+
+const form = useForm({ defaultValues: { title: '', status: '', dueDate: '' } })
+
+<form.Field name="title">
+  {(field) => <TextFormField field={field} label="Title" />}
+</form.Field>
+<form.Field name="status">
+  {(field) => <SelectFormField field={field} label="Status" options={statusOptions} />}
+</form.Field>
+```
+
+### Pattern 4: Inline Editing → EditableRecordDetail
+
+Use `EditableRecordDetail` for detail views where users can edit individual fields inline without opening a full form page. Always include an **"Edit All"** button in the header to switch to a full form editing experience.
+
+**Key components:**
+- `EditableRecordDetail` — Provider/wrapper that manages field state, change tracking, and save/cancel
+- `EditableRecordDetailField` — Individual field that reads config from context, renders label + inline-editable value
+- `EditableValue` — Lower-level single-field inline editor (used internally by EditableRecordDetailField)
+- `useEditableRecordDetail()` — Hook to access form, values, changes, and save/cancel from within the provider
+
+**How it works:**
+1. Fields render as read-only `DynamicValue` display
+2. Click a field → switches to `DynamicFormField` editor inline
+3. Changed fields get highlighted with amber background
+4. Floating `ActionBar` appears showing "N fields changed" with Save/Cancel buttons
+5. Save commits only changed fields; Cancel reverts all changes
+
+**Field change tracking types:**
+```tsx
+interface RecordDetailField {
+  field: IField           // Field configuration (name, slug, type)
+  enumOptions?: EnumOption[] // Options for select-based fields
+  readOnly?: boolean      // Per-field read-only override
+  appSlug?: string        // For dynamic enum loading
+  dataSourceSlug?: string // For dynamic enum loading
+}
+
+interface FieldChange {
+  fieldSlug: string
+  fieldName: string
+  originalValue: unknown
+  newValue: unknown
+}
+```
+
+**Example — Detail view with inline editing and "Edit All" button:**
+```tsx
+<AwesomeDialogHeader
+  title="Task Detail"
+  headerButtons={<Button variant="outline" size="sm" onClick={switchToFullForm}>Edit All</Button>}
+/>
+<AwesomeDialogBody>
+  <EditableRecordDetail fields={fields} record={record} onSave={handleSave} onCancel={handleCancel}>
+    <div className="space-y-3">
+      <h4 className="border-b pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        General Info
+      </h4>
+      <EditableRecordDetailField slug="title" />
+      <EditableRecordDetailField slug="status" />
+      <EditableRecordDetailField slug="priority" />
+      <EditableRecordDetailField slug="assignee" />
+      <EditableRecordDetailField slug="due_date" />
+    </div>
+  </EditableRecordDetail>
+</AwesomeDialogBody>
+```
 
 ---
 
@@ -77,12 +260,16 @@ Follow this process when selecting a component:
 
 ### Forms & Inputs
 
+**Always use TanStack Form + Docyrus form fields.** The `DynamicFormField` component auto-dispatches to the correct field type.
+
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
-| Dynamic forms | Form Fields | docyrus | 47 field types with auto-dispatch |
-| Text input | Input | shadcn | Basic text input |
-| Text area | Textarea | shadcn | Multi-line text |
-| Select dropdown | Select | shadcn | Basic select |
+| Dynamic forms (default) | **Form Fields + TanStack Form** | docyrus | 47 field types with auto-dispatch — **always use this** |
+| Inline record editing | **EditableRecordDetail** | docyrus | Click-to-edit fields with change tracking + ActionBar |
+| Single field inline edit | EditableValue | docyrus | Lower-level click-to-edit for individual values |
+| Text input | Input | shadcn | Basic text input (use via TextFormField in forms) |
+| Text area | Textarea | shadcn | Multi-line text (use via TextareaFormField in forms) |
+| Select dropdown | Select | shadcn | Basic select (use via SelectFormField in forms) |
 | Combobox/autocomplete | Combobox | diceui | Search + select |
 | Date picker | Date Time Picker | docyrus | Date + time combined |
 | Date only | Calendar | shadcn | Date selection only |
@@ -102,10 +289,14 @@ Follow this process when selecting a component:
 
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
+| Item create form (small) | **AwesomeDialog** (sheet) | docyrus | Default — sheet right for quick forms |
+| Item create form (large) | **AwesomeDialog** (modal) | docyrus | Default — modal for complex forms |
+| Item detail (small item) | **AwesomeDialog** (sheet right) | docyrus | Default — right drawer for task/contact detail |
+| Minimizable/global dialogs | **AwesomeDialog** + GlobalDialogProvider | docyrus | Taskbar-style dialog management |
 | Responsive dialog | Responsive Dialog | diceui | Auto-switches to drawer on mobile |
-| Basic dialog | Dialog | animate-ui | Animated modal |
-| Alert dialog | Alert Dialog | animate-ui | Confirmation prompts |
-| Drawer | Drawer | shadcn | Side/bottom panel |
+| Alert/confirmation dialog | Alert Dialog | animate-ui | Confirmation prompts |
+| Basic dialog | Dialog | animate-ui | Animated modal (non-form use cases) |
+| Drawer | Drawer | shadcn | Simple side/bottom panel |
 | Sheet | Sheet | animate-ui | Complementary content |
 | Popover | Popover | animate-ui | Floating content |
 | Tooltip | Tooltip | animate-ui | Hover hints |
@@ -116,15 +307,24 @@ Follow this process when selecting a component:
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
 | Kanban board | Kanban | diceui | Drag-drop columns |
+| Gantt chart | **Gantt** | docyrus | Project timeline scheduling |
 | Timeline | Timeline | diceui | Event/step display |
 | Stepper | Stepper | diceui | Multi-step process |
 | Tour/onboarding | Tour | diceui | Interactive tutorials |
 | Query builder | Query Builder | docyrus | Docyrus query construction |
+| Notifications | **NotificationStack** | docyrus | Stacked notification cards |
+| Notification panel | **NotificationsPanel** | docyrus | Full notification management |
+| Search input | **SearchInput** | docyrus | Dedicated search with clear |
+| Location input | **PlaceAutocomplete** | docyrus | Address search + selection |
+| Map display | **Map** | docyrus | Geographic data (Leaflet) |
+| Tree hierarchy | **TreeView** | docyrus | Nested data display |
+| Image editing | **ImageEditor** | docyrus | Crop, adjust, transform |
 | Media player | Media Player | diceui | Video/audio playback |
 | QR code | QR Code | diceui | QR generation |
 | Cropper | Cropper | docyrus | Image cropping |
 | Mentions | Mention | diceui | @mention functionality |
 | Command palette | Command | shadcn | Keyboard shortcuts |
+| Confirmation action | **ConfirmationButton** | docyrus | Button with confirm dialog |
 
 ---
 
@@ -162,16 +362,19 @@ Follow this process when selecting a component:
 
 **Use when**: Animation/transitions are important to the UX
 
-### docyrus (19 components)
-**Best for**: Docyrus-specific data handling, forms, business logic
+### docyrus (32 components)
+**Best for**: Docyrus-specific data handling, forms, dialogs, inline editing, and business logic
 
 **Strengths**:
 - Deep Docyrus platform integration
-- 47 form field types
+- AwesomeDialog system for item creation and detail views
+- EditableRecordDetail for inline field editing with change tracking
+- 47 form field types with TanStack Form integration
 - 44 value renderer types
 - Data source query builders
+- Gantt charts, notifications, maps, and more
 
-**Use when**: Working with Docyrus data sources, forms, or queries
+**Use when**: Working with Docyrus data sources, building item create/detail flows, forms, or queries
 
 ### reui (2 components)
 **Best for**: Specific utility needs
@@ -190,13 +393,18 @@ These are the **recommended defaults** unless the user specifies otherwise:
 
 | Use Case | Default Component | Library |
 |----------|------------------|---------|
+| Item create form | **AwesomeDialog** (sheet/modal) | docyrus |
+| Item detail (small) | **AwesomeDialog** (sheet right) | docyrus |
+| Inline record editing | **EditableRecordDetail** | docyrus |
 | Dashboard card | AwesomeCard | docyrus |
 | App navigation | Sidebar | animate-ui |
 | Charts | Chart + Recharts | shadcn |
 | Data table | Data Table | diceui |
-| Forms | Form Fields | docyrus |
+| Forms | **Form Fields + TanStack Form** | docyrus |
 | File upload | File Upload | diceui |
-| Dialogs | Responsive Dialog | diceui |
+| Confirmation dialogs | Alert Dialog | animate-ui |
+| Gantt / scheduling | Gantt | docyrus |
+| Notifications | NotificationStack | docyrus |
 
 ---
 
@@ -221,10 +429,13 @@ These are the **recommended defaults** unless the user specifies otherwise:
 - Need animated feedback for user actions
 
 ### Use docyrus when:
+- Building item create forms (AwesomeDialog)
+- Building item detail views (AwesomeDialog + EditableRecordDetail)
 - Working directly with Docyrus data sources
-- Building forms that map to Docyrus fields
+- Building forms that map to Docyrus fields (TanStack Form + DynamicFormField)
 - Displaying Docyrus record data in tables/cards
-- Need Docyrus-specific components (query builder, activity panel)
+- Need inline editing with change tracking
+- Need Docyrus-specific components (query builder, activity panel, gantt, notifications)
 
 ### Use reui when:
 - The specific component (file upload or sortable) matches your exact need
@@ -270,14 +481,25 @@ import { LucideActivity } from 'lucide-react'
 
 ## Quick Reference: Component Categories
 
+### Dialogs & Item Flows
+- Item create forms: **docyrus AwesomeDialog** (sheet for small, modal for large)
+- Item detail (small): **docyrus AwesomeDialog** (sheet right)
+- Item detail (large): Dedicated page route
+- Inline editing: **docyrus EditableRecordDetail**
+- Confirmation: animate-ui Alert Dialog
+- Responsive: diceui Responsive Dialog
+
 ### Data & Display
 - Tables: docyrus Data Grid, diceui Data Table, shadcn Table
 - Cards: docyrus AwesomeCard, shadcn Card
 - Charts: shadcn Chart + Recharts
 - Stats: diceui Stat, diceui Gauge, shadcn Progress
+- Gantt: docyrus Gantt
+- Tree: docyrus TreeView
 
 ### Forms & Input
-- Dynamic: docyrus Form Fields
+- Dynamic forms: **docyrus Form Fields + TanStack Form** (always use)
+- Inline editing: docyrus EditableRecordDetail, EditableValue
 - Text: shadcn Input, Textarea
 - Selection: shadcn Select, diceui Combobox
 - Dates: docyrus Date Time Picker, shadcn Calendar
@@ -291,12 +513,16 @@ import { LucideActivity } from 'lucide-react'
 - Tabs: animate-ui Tabs
 
 ### Overlays
-- Dialogs: diceui Responsive Dialog, animate-ui Dialog
+- Item forms/details: **docyrus AwesomeDialog** (preferred)
 - Popovers: animate-ui Popover, Tooltip, Hover Card
 - Drawers: shadcn Drawer, animate-ui Sheet
 
 ### Specialized
 - Kanban: diceui Kanban
+- Gantt: docyrus Gantt
 - Timeline: diceui Timeline
 - Stepper: diceui Stepper
 - Query: docyrus Query Builder
+- Notifications: docyrus NotificationStack
+- Maps: docyrus Map
+- Search: docyrus SearchInput

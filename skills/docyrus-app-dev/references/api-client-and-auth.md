@@ -4,7 +4,7 @@
 
 1. [RestApiClient](#restapiclient)
 2. [Authentication with @docyrus/signin](#authentication-with-docyrussignin)
-3. [API Client Module Pattern](#api-client-module-pattern)
+3. [API Client Access Pattern](#api-client-access-pattern)
 4. [Interceptors](#interceptors)
 5. [Error Handling](#error-handling)
 6. [Advanced Features](#advanced-features)
@@ -141,46 +141,35 @@ VITE_OAUTH2_SCOPES=openid profile offline_access Users.Read DS.ReadWrite.All
 
 ---
 
-## API Client Module Pattern
+## API Client Access Pattern
 
-For non-React modules (collections, utilities), `src/lib/api.ts` exposes a setter/proxy pattern:
+Generated collections are React hooks that use `useDocyrusClient()` internally to get the authenticated `RestApiClient` from `DocyrusAuthProvider`. No manual client syncing is needed.
 
 ```typescript
-import type { RestApiClient } from '@docyrus/api-client'
-
-let apiClient: RestApiClient | null = null
-
-// Proxy prevents access before initialization
-const apiClientProxy = new Proxy({} as RestApiClient, {
-  get(_target, prop) {
-    if (!apiClient) throw new Error('API client not initialized.')
-    const value = apiClient[prop as keyof RestApiClient]
-    if (typeof value === 'function') return value.bind(apiClient)
-    return value
-  },
-})
-
-export function setApiClient(client: RestApiClient) {
-  apiClient = client
-  // Add interceptors here
+// Collections get the client automatically via useDocyrusClient()
+function useBaseProjectCollection() {
+  const client = useDocyrusClient()
+  return {
+    list: (params?) => client!.get('/v1/apps/base/data-sources/project/items', params),
+    // ... other CRUD methods
+  }
 }
 
-export function getApiClient(): RestApiClient {
-  if (!apiClient) throw new Error('API client not initialized.')
-  return apiClient
+// In your component — just call the collection hook
+function ProjectList() {
+  const { list } = useBaseProjectCollection()
+  const { data } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => list({ columns: ['name', 'status'] }),
+  })
 }
-
-export { apiClientProxy as apiClient }
 ```
 
-**App.tsx syncs the client after auth:**
+For direct API access outside collections, use the `useDocyrusClient()` hook:
 
 ```typescript
 const client = useDocyrusClient()
-
-useEffect(() => {
-  if (client) setApiClient(client)
-}, [client])
+const data = await client!.get<MyType>('/v1/custom-endpoint')
 ```
 
 ---

@@ -214,7 +214,7 @@ docyrus ds list <appSlug> <dataSourceSlug> [options]
 
 ### docyrus ds create
 
-Create a data source item.
+Create data source item(s). If payload is an array, CLI sends a bulk request to `POST /:appSlug/data-sources/:dataSourceSlug/items/bulk`.
 
 ```
 docyrus ds create <appSlug> <dataSourceSlug> [options]
@@ -223,18 +223,30 @@ docyrus ds create <appSlug> <dataSourceSlug> [options]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--data` | string | JSON payload for record fields |
+| `--from-file` | string | Path to `.json` or `.csv` payload file |
+
+Batch rules:
+- Array payload triggers bulk create endpoint
+- Maximum 50 items per batch
 
 ### docyrus ds update
 
-Update a data source item.
+Update data source item(s). If payload is an array, CLI sends a bulk request to `PATCH /:appSlug/data-sources/:dataSourceSlug/items/bulk`.
 
 ```
-docyrus ds update <appSlug> <dataSourceSlug> <recordId> [options]
+docyrus ds update <appSlug> <dataSourceSlug> [recordId] [options]
 ```
 
 | Flag | Type | Description |
 |------|------|-------------|
 | `--data` | string | JSON payload for record fields |
+| `--from-file` | string | Path to `.json` or `.csv` payload file |
+
+Update rules:
+- Object payload uses single update endpoint and requires `recordId`
+- Array payload uses bulk update endpoint and requires `id` in each item
+- Do not provide positional `recordId` for batch update
+- Maximum 50 items per batch
 
 ### docyrus ds delete
 
@@ -243,6 +255,239 @@ Delete a data source item.
 ```
 docyrus ds delete <appSlug> <dataSourceSlug> <recordId>
 ```
+
+---
+
+## docyrus studio
+
+Dev app data source schema CRUD commands under `/v1/dev/apps/:app_id/data-sources`.
+
+Selector rules:
+- App selector: exactly one of `--appId` or `--appSlug`
+- Data source selector: exactly one of `--dataSourceId` or `--dataSourceSlug` (when required)
+- Field selector: exactly one of `--fieldId` or `--fieldSlug` (when required)
+
+Write payload rules:
+- Use `--data '<json>'` or `--from-file ./payload.json` (JSON only), not both
+- Flags override conflicting keys from JSON payload
+- Batch commands accept either root array or root object containing expected DTO key
+
+### Data source commands
+
+#### docyrus studio list-data-sources
+
+`GET /dev/apps/:app_id/data-sources`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--expand` | string | Optional comma-separated expansions (e.g. `fields`) |
+
+#### docyrus studio get-data-source
+
+`GET /dev/apps/:app_id/data-sources/:id`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+
+#### docyrus studio create-data-source
+
+`POST /dev/apps/:app_id/data-sources`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--title` | string | Data source title |
+| `--name` | string | Data source name |
+| `--slug` | string | Data source slug |
+| `--type` | string | Data source type |
+| `--icon` | string | Icon |
+| `--dataSharing` | string | Data sharing value |
+| `--meta` | string | JSON meta payload |
+
+#### docyrus studio update-data-source
+
+`PATCH /dev/apps/:app_id/data-sources/:id`
+
+Same flags as `create-data-source`, plus selector flags:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+
+#### docyrus studio delete-data-source
+
+`DELETE /dev/apps/:app_id/data-sources/:id`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+
+#### docyrus studio bulk-create-data-sources
+
+`POST /dev/apps/:app_id/data-sources/bulk`
+
+Expected DTO key: `dataSources`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+
+### Field commands
+
+#### docyrus studio list-fields
+
+`GET /dev/apps/:app_id/data-sources/:data_source_id/fields`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+
+#### docyrus studio get-field
+
+`GET /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--fieldId` | string | Field ID |
+| `--fieldSlug` | string | Field slug |
+
+#### docyrus studio create-field
+
+`POST /dev/apps/:app_id/data-sources/:data_source_id/fields`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--name` | string | Field name |
+| `--slug` | string | Field slug |
+| `--type` | string | Field type |
+| `--readOnly` | boolean | Field read only |
+| `--status` | number | Field status |
+| `--defaultValue` | string | Default value |
+| `--relationDataSourceId` | string | Relation data source ID |
+| `--sortOrder` | number | Sort order |
+| `--tenantEnumSetId` | string | Tenant enum set ID |
+| `--options` | string | JSON options |
+| `--validations` | string | JSON validations |
+
+#### docyrus studio update-field
+
+`PATCH /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id`
+
+Same flags as `create-field`, plus field selector flags:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--fieldId` | string | Field ID |
+| `--fieldSlug` | string | Field slug |
+
+#### docyrus studio delete-field
+
+`DELETE /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--fieldId` | string | Field ID |
+| `--fieldSlug` | string | Field slug |
+
+#### docyrus studio create-fields-batch
+
+`POST /dev/apps/:app_id/data-sources/:data_source_id/fields/batch`
+
+Expected DTO key: `fields`
+
+#### docyrus studio update-fields-batch
+
+`PATCH /dev/apps/:app_id/data-sources/:data_source_id/fields/batch`
+
+Expected DTO key: `fields`
+
+#### docyrus studio delete-fields-batch
+
+`DELETE /dev/apps/:app_id/data-sources/:data_source_id/fields/batch`
+
+Expected DTO key: `fieldIds`
+
+For all 3 field batch commands:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+
+### Enum commands
+
+#### docyrus studio list-enums
+
+`GET /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
+
+#### docyrus studio create-enums
+
+`POST /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
+
+Expected DTO key: `enums` (optional `enumSetId`)
+
+#### docyrus studio update-enums
+
+`PATCH /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
+
+Expected DTO key: `enums`
+
+#### docyrus studio delete-enums
+
+`DELETE /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
+
+Expected DTO key: `enumIds`
+
+For enum commands:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--fieldId` | string | Field ID |
+| `--fieldSlug` | string | Field slug |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--enumSetId` | string | Enum set ID (create only) |
 
 ---
 

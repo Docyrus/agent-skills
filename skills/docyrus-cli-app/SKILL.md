@@ -1,6 +1,6 @@
 ---
 name: docyrus-cli-app
-description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query or manage data source records (CRUD), send API requests, switch environments/tenants, or discover OpenAPI specs via the `docyrus` command-line tool. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus curl`, `docyrus auth`, or any shell-based Docyrus workflows.
+description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query/manage data records (`ds`), manage dev app data source schema objects (`studio`), send API requests, switch environments/tenants/accounts, or discover OpenAPI specs via the `docyrus` command-line tool. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus studio`, `docyrus discover`, `docyrus auth`, `docyrus env`, or shell-based Docyrus workflows.
 ---
 
 # Docyrus CLI
@@ -22,6 +22,7 @@ Guide for using the `docyrus` CLI to interact with the Docyrus platform from the
 | `docyrus ds create` | Create a record |
 | `docyrus ds update` | Update a record |
 | `docyrus ds delete` | Delete a record |
+| `docyrus studio ...` | CRUD for dev app data sources, fields, and enums |
 | `docyrus curl` | Send arbitrary API requests |
 | `docyrus discover api` | Download tenant OpenAPI spec |
 | `docyrus discover namespaces` | List API namespaces from OpenAPI spec |
@@ -122,6 +123,63 @@ Delete:
 docyrus ds delete crm contacts <recordId>
 ```
 
+### Studio Schema CRUD (`studio`)
+
+Use `studio` for developer-facing data source schema operations under `/v1/dev/apps/:app_id/data-sources` (data sources, fields, enums).
+
+Examples:
+
+```bash
+# Data sources
+docyrus studio list-data-sources --appSlug crm --expand fields --json
+docyrus studio get-data-source --appSlug crm --dataSourceSlug contacts --json
+docyrus studio create-data-source --appSlug crm --title "Contacts" --name "contacts" --slug "contacts" --json
+docyrus studio update-data-source --appId <appId> --dataSourceId <dataSourceId> --data '{"title":"Contacts v2"}' --json
+docyrus studio delete-data-source --appId <appId> --dataSourceSlug contacts --json
+docyrus studio bulk-create-data-sources --appId <appId> --from-file ./data-sources.json --json
+
+# Fields
+docyrus studio list-fields --appSlug crm --dataSourceSlug contacts --json
+docyrus studio get-field --appSlug crm --dataSourceSlug contacts --fieldSlug email --json
+docyrus studio create-field --appId <appId> --dataSourceId <dataSourceId> --name "Email" --slug "email" --type "text" --json
+docyrus studio update-field --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --data '{"name":"Primary Email"}' --json
+docyrus studio delete-field --appId <appId> --dataSourceId <dataSourceId> --fieldSlug email --json
+docyrus studio create-fields-batch --appId <appId> --dataSourceId <dataSourceId> --data '[{"name":"Status","slug":"status","type":"text"}]' --json
+docyrus studio update-fields-batch --appId <appId> --dataSourceId <dataSourceId> --from-file ./fields-update.json --json
+docyrus studio delete-fields-batch --appId <appId> --dataSourceId <dataSourceId> --data '["field-1","field-2"]' --json
+
+# Enums
+docyrus studio list-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --json
+docyrus studio create-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --data '[{"name":"Open","sortOrder":1}]' --json
+docyrus studio update-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --from-file ./enums-update.json --json
+docyrus studio delete-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --data '["enum-1","enum-2"]' --json
+```
+
+### Batch & File Input (`ds create` / `ds update`)
+
+Both commands support `--from-file` with `.json` or `.csv` files.
+
+- Object payload -> single item endpoints (`/items` or `/items/:recordId`)
+- Array payload -> bulk endpoints (`/items/bulk`)
+- Batch size limit: 50 items
+- Batch update requires `id` in every item and must not include positional `recordId`
+
+Examples:
+
+```bash
+# Bulk create from inline JSON array
+docyrus ds create crm contacts --data '[{"name":"A"},{"name":"B"}]' --json
+
+# Bulk update from inline JSON array (id required in each item)
+docyrus ds update crm contacts --data '[{"id":"1","phone":"+111"},{"id":"2","phone":"+222"}]' --json
+
+# Bulk create from CSV file
+docyrus ds create crm contacts --from-file ./contacts-create.csv --json
+
+# Single update from JSON file
+docyrus ds update crm contacts <recordId> --from-file ./contact-update.json --json
+```
+
 ### Arbitrary API Calls
 
 ```bash
@@ -133,12 +191,18 @@ docyrus curl /v1/some/endpoint -X POST -d '{"key":"value"}'
 ## Key Rules
 
 - Arguments use `appSlug` and `dataSourceSlug` (not IDs) — run `docyrus apps list` and `docyrus ds get` to discover slugs
+- `ds create` / `ds update` accept `--data` (JSON) or `--from-file` (`.json`/`.csv`), but not both at once
+- If payload is an array, CLI uses bulk endpoints with max 50 items
+- For bulk update, each item must include `id` and no positional `<recordId>` should be provided
 - `--filters` accepts a JSON string following the filter group structure: `{"combinator":"and","rules":[...]}`
 - Filter operators include: `=`, `!=`, `>`, `>=`, `<`, `<=`, `like`, `not like`, `in`, `not in`, `empty`, `not empty`, `between`, `today`, `this_month`, `this_quarter`, `last_30_days`, `active_user`
 - Filter on related fields using `rel_<relation_slug>/<field_slug>` syntax
 - `--columns` uses comma-separated field slugs with support for relation expansion `()`, spread `...`, aliasing `:`, and functions `@`
 - `--format` controls output: `toon` (default table), `json`, `yaml`, `md`, `jsonl`
 - `--verbose` wraps response in full envelope with metadata
+- Studio selectors are exclusive pairs: provide exactly one of `--appId|--appSlug`, `--dataSourceId|--dataSourceSlug`, and `--fieldId|--fieldSlug` (as required by command)
+- Studio write commands accept `--data` (JSON string) or `--from-file` (JSON only), and merge with flags where flags override overlapping keys
+- Studio batch commands auto-wrap root arrays to required DTO keys: `dataSources`, `fields`, `fieldIds`, `enums`, `enumIds`
 
 ## References
 

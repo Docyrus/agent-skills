@@ -252,6 +252,7 @@ Follow this process when selecting a component:
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
 | Editable grid | Data Grid | docyrus | Virtualized, keyboard nav, cell editing |
+| Grid saved views | **Data Grid View Select** | docyrus | Saved view management with sort/filter/columns |
 | Read-only table | Table | shadcn | Simple, responsive tables |
 | Advanced data table | Data Table | diceui | Filtering, sorting, pagination built-in |
 | Table filters | Data Table Filter | docyrus | Multi-column filter bar |
@@ -280,7 +281,8 @@ Follow this process when selecting a component:
 | Tags input | Tags Input | diceui | Multiple tag entry |
 | Rating | Rating | diceui | Star/heart rating |
 | Checkbox group | Checkbox Group | diceui | Multiple selections |
-| Radio group | Radio Group | animate-ui | Single selection with animation |
+| Radio group (animated) | Radio Group | animate-ui | Single selection with animation |
+| Radio group (card/grid) | **Radio Group** | docyrus | Card variant with icons, descriptions, grid columns |
 | Switch | Switch | animate-ui | Toggle with animation |
 | Slider | Slider | shadcn | Range selection |
 | OTP input | Input OTP | shadcn | One-time password codes |
@@ -306,8 +308,10 @@ Follow this process when selecting a component:
 
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
-| Kanban board | Kanban | diceui | Drag-drop columns |
+| Kanban board | **Kanban** | docyrus | Drag-drop columns with dnd-kit, keyboard nav |
 | Gantt chart | **Gantt** | docyrus | Project timeline scheduling |
+| Resource scheduling | **Resource Scheduler Panel** | docyrus | Horizontal timeline with drag-drop events |
+| Appointment booking | **Time Slot Scheduler** | docyrus | Columns/month views, capacity, timezone |
 | Timeline | Timeline | diceui | Event/step display |
 | Stepper | Stepper | diceui | Multi-step process |
 | Tour/onboarding | Tour | diceui | Interactive tutorials |
@@ -325,6 +329,15 @@ Follow this process when selecting a component:
 | Mentions | Mention | diceui | @mention functionality |
 | Command palette | Command | shadcn | Keyboard shortcuts |
 | Confirmation action | **ConfirmationButton** | docyrus | Button with confirm dialog |
+| Rich item selector | **Mega Select** | docyrus | Grid picker with categories, search, detail panel |
+| Quick record create | **Create Record Dialog** | docyrus | Popover dialog with subject, mentions, selectors |
+| Email composing | **Email Composer** | docyrus | To/Cc/Bcc, formatting toolbar, attachments |
+| Markdown editing | **Simple Markdown Editor** | docyrus | Lightweight MD editor with toolbar/stats |
+| Team chat | **Team Chat Channel** | docyrus | Posts, threads, reactions, mentions, attachments |
+| Contact activities | **Contact Activity Panel** | docyrus | Activity timeline with calls, emails, tasks, chat |
+| AI agent chat | **Docyrus Agent** | docyrus | Chat/action-panel/trigger modes for AI agents |
+| Pricing/quoting | **Pricing Engine Panel** | docyrus | Line items, VAT, discounts, currency, totals |
+| Record sharing | **Record Sharing** | docyrus | Permission-based sharing with users/teams/roles |
 
 ---
 
@@ -362,8 +375,8 @@ Follow this process when selecting a component:
 
 **Use when**: Animation/transitions are important to the UX
 
-### docyrus (32 components)
-**Best for**: Docyrus-specific data handling, forms, dialogs, inline editing, and business logic
+### docyrus (46 components)
+**Best for**: Docyrus-specific data handling, forms, dialogs, inline editing, scheduling, chat, AI agents, and business logic
 
 **Strengths**:
 - Deep Docyrus platform integration
@@ -372,9 +385,14 @@ Follow this process when selecting a component:
 - 47 form field types with TanStack Form integration
 - 44 value renderer types
 - Data source query builders
-- Gantt charts, notifications, maps, and more
+- Scheduling: Gantt, Resource Scheduler, Time Slot Scheduler, Calendar
+- Communication: Team Chat Channel, Email Composer, Comments Panel
+- AI integration: Docyrus Agent (chat, action panel, trigger modes)
+- Business: Pricing Engine, Record Sharing, Contact Activity
+- Selection: Mega Select, Create Record Dialog
+- Kanban board, notifications, maps, markdown editor, and more
 
-**Use when**: Working with Docyrus data sources, building item create/detail flows, forms, or queries
+**Use when**: Working with Docyrus data sources, building item create/detail flows, forms, scheduling, chat, AI features, or queries
 
 ### reui (2 components)
 **Best for**: Specific utility needs
@@ -394,17 +412,27 @@ These are the **recommended defaults** unless the user specifies otherwise:
 | Use Case | Default Component | Library |
 |----------|------------------|---------|
 | Item create form | **AwesomeDialog** (sheet/modal) | docyrus |
+| Quick record create | **Create Record Dialog** | docyrus |
 | Item detail (small) | **AwesomeDialog** (sheet right) | docyrus |
 | Inline record editing | **EditableRecordDetail** | docyrus |
 | Dashboard card | AwesomeCard | docyrus |
 | App navigation | Sidebar | animate-ui |
 | Charts | Chart + Recharts | shadcn |
 | Data table | Data Table | diceui |
+| Data grid saved views | **Data Grid View Select** | docyrus |
 | Forms | **Form Fields + TanStack Form** | docyrus |
 | File upload | File Upload | diceui |
 | Confirmation dialogs | Alert Dialog | animate-ui |
-| Gantt / scheduling | Gantt | docyrus |
+| Gantt / project scheduling | Gantt | docyrus |
+| Resource scheduling | **Resource Scheduler Panel** | docyrus |
+| Appointment booking | **Time Slot Scheduler** | docyrus |
+| Team chat | **Team Chat Channel** | docyrus |
+| Email composing | **Email Composer** | docyrus |
+| AI agent interface | **Docyrus Agent** | docyrus |
+| Kanban board | **Kanban** | docyrus |
 | Notifications | NotificationStack | docyrus |
+| Pricing / quoting | **Pricing Engine Panel** | docyrus |
+| Record sharing | **Record Sharing** | docyrus |
 
 ---
 
@@ -429,13 +457,19 @@ These are the **recommended defaults** unless the user specifies otherwise:
 - Need animated feedback for user actions
 
 ### Use docyrus when:
-- Building item create forms (AwesomeDialog)
+- Building item create forms (AwesomeDialog, Create Record Dialog)
 - Building item detail views (AwesomeDialog + EditableRecordDetail)
 - Working directly with Docyrus data sources
 - Building forms that map to Docyrus fields (TanStack Form + DynamicFormField)
 - Displaying Docyrus record data in tables/cards
 - Need inline editing with change tracking
-- Need Docyrus-specific components (query builder, activity panel, gantt, notifications)
+- Building scheduling UIs (Resource Scheduler, Time Slot Scheduler, Gantt, Calendar)
+- Building communication features (Team Chat, Email Composer, Comments Panel)
+- Integrating AI agents (Docyrus Agent with chat/action modes)
+- Need pricing/quoting (Pricing Engine Panel)
+- Need record sharing with permissions (Record Sharing)
+- Need rich item selectors (Mega Select, Kanban)
+- Need Docyrus-specific components (query builder, activity panel, notifications)
 
 ### Use reui when:
 - The specific component (file upload or sortable) matches your exact need
@@ -483,6 +517,7 @@ import { LucideActivity } from 'lucide-react'
 
 ### Dialogs & Item Flows
 - Item create forms: **docyrus AwesomeDialog** (sheet for small, modal for large)
+- Quick record create: **docyrus Create Record Dialog** (popover with subject/mentions)
 - Item detail (small): **docyrus AwesomeDialog** (sheet right)
 - Item detail (large): Dedicated page route
 - Inline editing: **docyrus EditableRecordDetail**
@@ -491,6 +526,7 @@ import { LucideActivity } from 'lucide-react'
 
 ### Data & Display
 - Tables: docyrus Data Grid, diceui Data Table, shadcn Table
+- Grid saved views: docyrus Data Grid View Select
 - Cards: docyrus AwesomeCard, shadcn Card
 - Charts: shadcn Chart + Recharts
 - Stats: diceui Stat, diceui Gauge, shadcn Progress
@@ -501,7 +537,10 @@ import { LucideActivity } from 'lucide-react'
 - Dynamic forms: **docyrus Form Fields + TanStack Form** (always use)
 - Inline editing: docyrus EditableRecordDetail, EditableValue
 - Text: shadcn Input, Textarea
+- Markdown: docyrus Simple Markdown Editor
 - Selection: shadcn Select, diceui Combobox
+- Rich selection: docyrus Mega Select (grid picker with categories)
+- Radio cards: docyrus Radio Group (card variant with icons/descriptions)
 - Dates: docyrus Date Time Picker, shadcn Calendar
 - Files: diceui File Upload
 - Special: diceui Phone Input, Color Picker, Tags Input
@@ -517,9 +556,29 @@ import { LucideActivity } from 'lucide-react'
 - Popovers: animate-ui Popover, Tooltip, Hover Card
 - Drawers: shadcn Drawer, animate-ui Sheet
 
+### Communication
+- Team chat: docyrus Team Chat Channel (threads, reactions, mentions)
+- Email composing: docyrus Email Composer (To/Cc/Bcc, toolbar, attachments)
+- Comments: docyrus Comments Panel (threaded conversations)
+- Contact activities: docyrus Contact Activity Panel (calls, meetings, emails)
+
+### Scheduling
+- Project timelines: docyrus Gantt
+- Resource scheduling: docyrus Resource Scheduler Panel (horizontal timeline)
+- Appointment booking: docyrus Time Slot Scheduler (columns/month views)
+- Calendar events: docyrus Calendar (month/week/day views)
+
+### AI & Agents
+- AI chat: docyrus Docyrus Agent (chat mode)
+- AI actions: docyrus Docyrus Agent (action-panel mode)
+- AI trigger: docyrus Docyrus Agent (floating trigger button)
+
+### Business Logic
+- Pricing/quoting: docyrus Pricing Engine Panel (line items, VAT, discounts)
+- Record sharing: docyrus Record Sharing (permissions, users/teams/roles)
+
 ### Specialized
-- Kanban: diceui Kanban
-- Gantt: docyrus Gantt
+- Kanban: docyrus Kanban (drag-drop columns)
 - Timeline: diceui Timeline
 - Stepper: diceui Stepper
 - Query: docyrus Query Builder

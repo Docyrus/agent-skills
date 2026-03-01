@@ -5,7 +5,7 @@ description: Design and build production-grade UI components for Docyrus React a
 
 # Docyrus App UI Design
 
-Build polished, accessible UI components for Docyrus React applications using a curated set of 140+ pre-built components from shadcn, diceui, animate-ui, docyrus-ui, and reui libraries.
+Build polished, accessible UI components for Docyrus React applications using a curated set of 154+ pre-built components from shadcn, diceui, animate-ui, docyrus-ui, and reui libraries.
 
 ## Component Library Preferences
 
@@ -14,10 +14,10 @@ Build polished, accessible UI components for Docyrus React applications using a 
 1. **shadcn** — 43 core components (buttons, forms, dialogs, tables, charts)
 2. **diceui** — 42 advanced components (data grids, kanban, file upload, color picker)
 3. **animate-ui** — 21 animated components (sidebar, dialogs, cards, menus)
-4. **docyrus** — 32 Docyrus-specific components (awesome dialog, data grid, form fields, value renderers, editable record detail, gantt, notifications)
+4. **docyrus** — 46 Docyrus-specific components (awesome dialog, data grid, form fields, value renderers, editable record detail, gantt, scheduling, chat, AI agents, pricing, sharing, email composer)
 5. **reui** — 2 utility components (file upload, sortable)
 
-**Total available**: 140 components
+**Total available**: 154 components
 
 ## Critical Design Rules
 
@@ -172,6 +172,116 @@ import { LineChart, Line, XAxis, YAxis } from 'recharts'
 </ChartContainer>
 ```
 
+### Quick Record Create with CreateRecordDialog
+
+```tsx
+import { CreateRecordDialog } from '@docyrus/ui/components/create-record-dialog'
+
+<CreateRecordDialog
+  headerIcon={<PlusIcon />}
+  headerLabel="New Task"
+  headerFields={[
+    { key: 'project', label: 'Project', options: projectOptions }
+  ]}
+  subjectPlaceholder="Task name..."
+  descriptionPlaceholder="Add description..."
+  footerFields={[
+    { key: 'assignee', label: 'Assignee', options: userOptions },
+    { key: 'priority', label: 'Priority', options: priorityOptions }
+  ]}
+  enableCreateMore
+  onSubmit={handleSubmit}
+  isPending={isPending}
+>
+  <Button variant="outline" size="sm"><PlusIcon /> New Task</Button>
+</CreateRecordDialog>
+```
+
+### Team Chat with TeamChatChannel
+
+```tsx
+import { TeamChatChannel } from '@docyrus/ui/components/team-chat-channel'
+
+<TeamChatChannel
+  posts={posts}
+  currentUser={currentUser}
+  users={users}
+  channelName="General"
+  onCreatePost={handleCreatePost}
+  onDeletePost={handleDeletePost}
+  onToggleReaction={handleToggleReaction}
+  onUploadFile={handleUploadFile}
+  onLoadReplies={handleLoadReplies}
+  maxHeight={600}
+/>
+```
+
+### Resource Scheduler
+
+```tsx
+import { ResourceSchedulerPanel } from '@docyrus/ui/components/resource-scheduler-panel'
+
+<ResourceSchedulerPanel
+  resources={resources}
+  events={events}
+  onEventClick={handleEventClick}
+  onEventMove={handleEventMove}
+  onSlotClick={handleSlotClick}
+  showTodayIndicator
+  height={500}
+/>
+```
+
+### AI Agent with DocyrusAgent
+
+```tsx
+import { DocyrusAgent } from '@docyrus/ui/components/docyrus-agent'
+
+<DocyrusAgent
+  mode="chat"
+  agent={{ name: 'Assistant', description: 'AI helper' }}
+  messages={messages}
+  chatStatus={status}
+  onSendMessage={handleSendMessage}
+  onStopGeneration={handleStop}
+  allowAttachments
+  suggestions={['Summarize this', 'Create a report']}
+/>
+```
+
+### Pricing Engine
+
+```tsx
+import { PricingEnginePanel } from '@docyrus/ui/components/pricing-engine-panel'
+
+<PricingEnginePanel
+  title="Quote #1234"
+  enableVat
+  enableLineDiscount
+  enableGlobalDiscount
+  defaultVatRate={20}
+  vatRates={[0, 10, 20]}
+  productCatalog={products}
+  onSave={handleSave}
+  onTotalsChange={handleTotalsChange}
+/>
+```
+
+### Mega Select for Rich Picking
+
+```tsx
+import { MegaSelect } from '@docyrus/ui/components/mega-select'
+
+<MegaSelect
+  items={templateItems}
+  categories={categories}
+  columns={3}
+  size="large"
+  searchable
+  onChoose={(id, item) => handleChoose(item)}
+/>
+```
+
 ## Component Selection Strategy
 
 When the user requests a UI component:
@@ -211,6 +321,7 @@ pnpm dlx shadcn@latest add @reui/file-upload-default
 | Use Case | Preferred Component | Library |
 |----------|-------------------|---------|
 | Item create forms | AwesomeDialog (sheet/modal/drawer) | docyrus |
+| Quick record create | CreateRecordDialog | docyrus |
 | Item detail (small) | AwesomeDialog (sheet right) | docyrus |
 | Item detail (large) | Dedicated page | — |
 | Inline record editing | EditableRecordDetail | docyrus |
@@ -218,15 +329,27 @@ pnpm dlx shadcn@latest add @reui/file-upload-default
 | App navigation | Sidebar | animate-ui |
 | Data tables | DataTable | diceui |
 | Editable grids | Data Grid | docyrus |
+| Grid saved views | DataGridViewSelect | docyrus |
 | Forms | Form Fields + TanStack Form | docyrus |
+| Rich item selector | MegaSelect | docyrus |
+| Radio card selection | RadioGroup (card variant) | docyrus |
 | File upload | File Upload | diceui |
 | Charts | Chart + Recharts | shadcn |
 | Confirmation dialogs | Alert Dialog | animate-ui |
 | Date picker | Date Time Picker | docyrus |
 | Color picker | Color Picker | diceui |
-| Kanban board | Kanban | diceui |
+| Kanban board | Kanban | docyrus |
 | Gantt chart | Gantt | docyrus |
+| Resource scheduling | ResourceSchedulerPanel | docyrus |
+| Appointment booking | TimeSlotScheduler | docyrus |
 | Timeline | Timeline | diceui |
+| Team chat | TeamChatChannel | docyrus |
+| Email composing | EmailComposer | docyrus |
+| Markdown editing | SimpleMarkdownEditor | docyrus |
+| Contact activities | ContactActivityPanel | docyrus |
+| AI agent interface | DocyrusAgent | docyrus |
+| Pricing / quoting | PricingEnginePanel | docyrus |
+| Record sharing | RecordSharing | docyrus |
 | Notifications | NotificationStack | docyrus |
 | Search | SearchInput | docyrus |
 | Location input | PlaceAutocomplete | docyrus |

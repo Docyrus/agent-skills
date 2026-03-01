@@ -24,6 +24,11 @@ Guide for using the `docyrus` CLI to interact with the Docyrus platform from the
 | `docyrus ds delete` | Delete a record |
 | `docyrus curl` | Send arbitrary API requests |
 | `docyrus discover api` | Download tenant OpenAPI spec |
+| `docyrus discover namespaces` | List API namespaces from OpenAPI spec |
+| `docyrus discover path` | List endpoints matching a path prefix |
+| `docyrus discover endpoint` | Return full endpoint object by path/method |
+| `docyrus discover entity` | Return full entity schema by name |
+| `docyrus discover search` | Search endpoint paths and entity names |
 
 **See [references/cli-manifest.md](references/cli-manifest.md) for complete command reference with all flags and arguments.**
 
@@ -34,6 +39,32 @@ Guide for using the `docyrus` CLI to interact with the Docyrus platform from the
 1. Authenticate: `docyrus auth login`
 2. Select tenant: `docyrus auth tenants use --tenantId <id>`
 3. Verify: `docyrus auth who`
+
+### Discover API & Entities
+
+Download the tenant OpenAPI spec and explore available endpoints and entities:
+
+```bash
+# Download/refresh tenant OpenAPI spec
+docyrus discover api --json
+
+# List all API namespaces (e.g. /v1/users, /v1/teams)
+docyrus discover namespaces --json
+
+# List endpoints under a path prefix (with or without /v1)
+docyrus discover path /v1/users --json
+docyrus discover path /teams --json
+
+# Get full endpoint details (defaults to GET; use [METHOD] prefix for others)
+docyrus discover endpoint /v1/users/me --json
+docyrus discover endpoint [PUT]/v1/users/me/photo --json
+
+# Get full entity/schema definition
+docyrus discover entity UserEntity --json
+
+# Search endpoints and entities by comma-separated terms
+docyrus discover search users,UserEntity --json
+```
 
 ### Discover Data Sources
 

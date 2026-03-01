@@ -119,11 +119,67 @@ docyrus curl <path> [options]
 
 ## docyrus discover
 
-Discovery commands.
+Discovery commands for exploring the tenant OpenAPI spec. All discover commands require an active login session. Commands other than `discover api` auto-download the spec if it doesn't exist locally.
+
+Local spec file path: `~/docyrus/tenans/<tenantId>/openapi.json`
 
 ### docyrus discover api
 
 Download tenant OpenAPI spec for the active tenant.
+
+### docyrus discover namespaces
+
+List API namespaces from the active tenant OpenAPI spec. Extracts deduplicated namespace prefixes (e.g. `/v1/users`, `/v1/teams`) from all paths.
+
+### docyrus discover path
+
+List endpoints with method and description for a matching path prefix.
+
+```
+docyrus discover path <prefix>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `prefix` | string | yes | Path prefix, e.g. `/v1/users` (the `/v1` prefix is optional) |
+
+### docyrus discover endpoint
+
+Return the full OpenAPI endpoint object for a path and HTTP method.
+
+```
+docyrus discover endpoint <selector>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `selector` | string | yes | Endpoint selector, e.g. `/v1/users/me` or `[PUT]/v1/users/me/photo` |
+
+Selector format: `/path` defaults to GET; `[METHOD]/path` specifies an explicit HTTP method. The `/v1` prefix is optional.
+
+### docyrus discover entity
+
+Return the full schema/definition object for an entity by name.
+
+```
+docyrus discover entity <name>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | yes | Entity name (case-sensitive), e.g. `UserEntity` |
+
+### docyrus discover search
+
+Search endpoint paths and entity names by comma-separated terms (case-insensitive substring match).
+
+```
+docyrus discover search <query>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `query` | string | yes | One or more comma-separated search strings, e.g. `users,UserEntity` |
 
 ---
 

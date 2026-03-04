@@ -22,6 +22,8 @@ npx skills add docyrus/agent-skills
 | **Docyrus API Dev**       | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./skills/docyrus-api-dev/SKILL.md)       |
 | **Docyrus App Dev**       | Build React TypeScript web applications following Docyrus-specific development patterns.          | [SKILL.md](./skills/docyrus-app-dev/SKILL.md)       |
 | **Docyrus App UI Design** | Design and build production-grade UI components using 127 preferred components from shadcn, diceui, animate-ui, docyrus-ui, and reui. | [SKILL.md](./skills/docyrus-app-ui-design/SKILL.md) |
+| **Docyrus API Doctor**    | Post-implementation checklist to catch bugs, performance issues, and code quality problems in Docyrus API code. | [SKILL.md](./skills/docyrus-api-doctor/SKILL.md)    |
+| **Docyrus CLI App**       | Interact with the Docyrus platform from the terminal using the `docyrus` CLI for auth, data records, schema management, and API requests. | [SKILL.md](./skills/docyrus-cli-app/SKILL.md)       |
 
 ## Repository Structure
 

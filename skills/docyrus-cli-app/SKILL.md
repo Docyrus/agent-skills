@@ -1,6 +1,6 @@
 ---
 name: docyrus-cli-app
-description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query/manage data records (`ds`), manage dev app data source schema objects (`studio`), send API requests, switch environments/tenants/accounts, or discover OpenAPI specs via the `docyrus` command-line tool. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus studio`, `docyrus discover`, `docyrus auth`, `docyrus env`, or shell-based Docyrus workflows.
+description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query or manage data records (`ds`), manage dev app data source schema objects (`studio`), send API requests, switch environments, tenants, or accounts, discover tenant OpenAPI specs, or use the Bun-powered terminal UI via `docyrus tui`. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus studio`, `docyrus discover`, `docyrus auth`, `docyrus env`, `docyrus tui`, or shell-based Docyrus workflows.
 ---
 
 # Docyrus CLI
@@ -11,66 +11,140 @@ Guide for using the `docyrus` CLI to interact with the Docyrus platform from the
 
 | Command | Description |
 |---------|-------------|
-| `docyrus auth login` | Authenticate via OAuth2 device flow |
-| `docyrus auth who` | Show current user |
-| `docyrus auth tenants list` | List available tenants |
-| `docyrus auth tenants use` | Switch active tenant |
-| `docyrus env list` / `env use` | Manage environments |
-| `docyrus apps list` | List tenant apps |
+| `docyrus` | Show active environment, current auth context, and help summary |
+| `docyrus env list` / `env use` | Manage named environments |
+| `docyrus auth login` | Authenticate via OAuth2 device flow or manual tokens |
+| `docyrus auth logout` | Logout the active account for the current environment |
+| `docyrus auth who` | Show the active user and tenant |
+| `docyrus auth accounts list` / `use` | Manage saved user accounts |
+| `docyrus auth tenants list` / `use` | Manage saved tenants for a user |
+| `docyrus apps list` | List apps from `/v1/apps` |
 | `docyrus ds get` | Get data source metadata |
 | `docyrus ds list` | Query records with filters, sorting, pagination |
-| `docyrus ds create` | Create a record |
-| `docyrus ds update` | Update a record |
-| `docyrus ds delete` | Delete a record |
+| `docyrus ds create` / `update` / `delete` | Mutate records, including bulk create/update |
 | `docyrus studio ...` | CRUD for dev app data sources, fields, and enums |
-| `docyrus curl` | Send arbitrary API requests |
 | `docyrus discover api` | Download tenant OpenAPI spec |
-| `docyrus discover namespaces` | List API namespaces from OpenAPI spec |
-| `docyrus discover path` | List endpoints matching a path prefix |
-| `docyrus discover endpoint` | Return full endpoint object by path/method |
-| `docyrus discover entity` | Return full entity schema by name |
-| `docyrus discover search` | Search endpoint paths and entity names |
+| `docyrus discover namespaces` / `path` / `endpoint` / `entity` / `search` | Explore the downloaded tenant OpenAPI spec |
+| `docyrus curl` | Send arbitrary API requests |
+| `docyrus tui` | Launch the OpenTUI terminal UI (requires Bun) |
 
-**See [references/cli-manifest.md](references/cli-manifest.md) for complete command reference with all flags and arguments.**
+**See [references/cli-manifest.md](references/cli-manifest.md) for complete command reference with flags and arguments.**
 
 ## Common Workflows
 
-### First-Time Setup
+### Settings Scope
 
-1. Authenticate: `docyrus auth login`
-2. Select tenant: `docyrus auth tenants use --tenantId <id>`
-3. Verify: `docyrus auth who`
+By default, `docyrus` stores settings in a project-local `.docyrus/` folder in the current working directory.
 
-### Discover API & Entities
+- Local default: `./.docyrus/`
+- Global override: `~/.docyrus/` via `-g` or `--global`
+- Tenant OpenAPI cache: `<settings-root>/tenans/<tenantId>/openapi.json`
 
-Download the tenant OpenAPI spec and explore available endpoints and entities:
+Examples:
 
 ```bash
-# Download/refresh tenant OpenAPI spec
+# Local project settings (default)
+docyrus auth login --clientId "83a8df32-3738-4b5a-a0c7-87976adb1631"
+
+# Force global settings for this run
+docyrus -g auth login --clientId "83a8df32-3738-4b5a-a0c7-87976adb1631"
+```
+
+### Environments
+
+The CLI does not use `API_BASE_URL`. It uses saved named environments:
+
+- `live` (`prod` alias) -> `https://api.docyrus.com`
+- `beta` -> `https://beta-api.docyrus.com`
+- `alpha` -> `https://alpha-api.docyrus.com`
+- `dev` -> `https://localhost:3366`
+
+Examples:
+
+```bash
+docyrus
+docyrus env list --json
+docyrus env use beta --json
+```
+
+Running `docyrus` without a subcommand returns the active environment, help summary, and current auth `context`.
+
+### Authentication
+
+Device flow login:
+
+```bash
+docyrus auth login --clientId "83a8df32-3738-4b5a-a0c7-87976adb1631" --json
+```
+
+Manual token login:
+
+```bash
+docyrus auth login \
+  --accessToken "<access-token>" \
+  --refreshToken "<optional-refresh-token>" \
+  --clientId "<optional-client-id>" \
+  --json
+```
+
+Rules:
+
+- `--refreshToken` requires `--accessToken`
+- if local login omits `--clientId`, the CLI falls back to the saved global client ID when available
+- explicit or previously resolved client IDs are saved to config for reuse
+- default scopes are hardcoded in the CLI and include `openid`, `email`, `profile`, `offline_access`, `ReadWrite.All`, `User.ReadWrite`, `Users.Read.All`, `Tenant.Read`, `Teams.Read.All`, `DS.ReadWrite.All`, `Docs.ReadWrite.All`, and `Architect.ReadWrite.All`
+
+Multi-account and multi-tenant workflows:
+
+```bash
+docyrus auth accounts list --json
+docyrus auth accounts use --userId "<user-id>" --json
+docyrus auth tenants list --userId "<user-id>" --json
+docyrus auth tenants use 1002 --json
+docyrus auth tenants use "8d130f7a-4bc4-4be6-a05b-0f8f1b2d93e9" --userId "<user-id>" --json
+docyrus auth who --json
+```
+
+`auth tenants use` takes a positional tenant selector. If it is numeric, the CLI treats it as `tenantNo`; otherwise it must be a UUID tenant ID.
+
+### Successful Result Shape
+
+Every successful command injects a top-level `context` field:
+
+```json
+{
+  "data": {},
+  "context": {
+    "email": "user@example.com",
+    "tenantName": "Acme",
+    "tenantNo": 1002,
+    "tenantDisplay": "Acme (1002)"
+  }
+}
+```
+
+If there is no active session, `context` is `null`.
+
+### Discover API and Entities
+
+Discover commands require an active session. Commands other than `discover api` auto-download the OpenAPI spec if it is missing locally.
+
+```bash
 docyrus discover api --json
-
-# List all API namespaces (e.g. /v1/users, /v1/teams)
 docyrus discover namespaces --json
-
-# List endpoints under a path prefix (with or without /v1)
 docyrus discover path /v1/users --json
-docyrus discover path /teams --json
-
-# Get full endpoint details (defaults to GET; use [METHOD] prefix for others)
 docyrus discover endpoint /v1/users/me --json
 docyrus discover endpoint [PUT]/v1/users/me/photo --json
-
-# Get full entity/schema definition
 docyrus discover entity UserEntity --json
-
-# Search endpoints and entities by comma-separated terms
 docyrus discover search users,UserEntity --json
 ```
 
 ### Discover Data Sources
 
-1. List apps: `docyrus apps list`
-2. Get metadata: `docyrus ds get <appSlug> <dataSourceSlug>`
+```bash
+docyrus apps list --json
+docyrus ds get crm contacts --json
+```
 
 ### Query Records (`ds list`)
 
@@ -80,7 +154,7 @@ Basic listing:
 docyrus ds list crm contacts --columns "name, email, phone" --limit 20
 ```
 
-With filters (JSON object):
+With filters:
 
 ```bash
 docyrus ds list crm contacts \
@@ -101,9 +175,9 @@ Date shortcut filter:
 docyrus ds list crm tasks --filters '{"rules":[{"field":"created_on","operator":"this_month"}]}'
 ```
 
-**See [references/list-query-examples.md](references/list-query-examples.md) for comprehensive filter, sort, pagination, and combined query examples.**
+**See [references/list-query-examples.md](references/list-query-examples.md) for more filter, sort, pagination, and combined query examples.**
 
-### CRUD Operations
+### Record Mutations
 
 Create:
 
@@ -123,11 +197,20 @@ Delete:
 docyrus ds delete crm contacts <recordId>
 ```
 
+Batch and file input:
+
+```bash
+docyrus ds create crm contacts --data '[{"name":"A"},{"name":"B"}]' --json
+docyrus ds update crm contacts --data '[{"id":"1","phone":"+111"},{"id":"2","phone":"+222"}]' --json
+docyrus ds create crm contacts --from-file ./contacts-create.csv --json
+docyrus ds update crm contacts <recordId> --from-file ./contact-update.json --json
+```
+
+Array payloads route to bulk endpoints and are limited to 50 items per request.
+
 ### Studio Schema CRUD (`studio`)
 
-Use `studio` for developer-facing data source schema operations under `/v1/dev/apps/:app_id/data-sources` (data sources, fields, enums).
-
-Examples:
+Use `studio` for developer-facing schema operations under `/v1/dev/apps/:app_id/data-sources`.
 
 ```bash
 # Data sources
@@ -155,56 +238,42 @@ docyrus studio update-enums --appId <appId> --dataSourceId <dataSourceId> --fiel
 docyrus studio delete-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --data '["enum-1","enum-2"]' --json
 ```
 
-### Batch & File Input (`ds create` / `ds update`)
-
-Both commands support `--from-file` with `.json` or `.csv` files.
-
-- Object payload -> single item endpoints (`/items` or `/items/:recordId`)
-- Array payload -> bulk endpoints (`/items/bulk`)
-- Batch size limit: 50 items
-- Batch update requires `id` in every item and must not include positional `recordId`
-
-Examples:
-
-```bash
-# Bulk create from inline JSON array
-docyrus ds create crm contacts --data '[{"name":"A"},{"name":"B"}]' --json
-
-# Bulk update from inline JSON array (id required in each item)
-docyrus ds update crm contacts --data '[{"id":"1","phone":"+111"},{"id":"2","phone":"+222"}]' --json
-
-# Bulk create from CSV file
-docyrus ds create crm contacts --from-file ./contacts-create.csv --json
-
-# Single update from JSON file
-docyrus ds update crm contacts <recordId> --from-file ./contact-update.json --json
-```
-
 ### Arbitrary API Calls
 
 ```bash
 docyrus curl /v1/users/me
-docyrus curl /v1/dev/apps -X GET --format json
+docyrus curl /v1/apps -X GET --format json
 docyrus curl /v1/some/endpoint -X POST -d '{"key":"value"}'
 ```
 
+### Terminal UI
+
+Launch the OpenTUI interface:
+
+```bash
+docyrus tui
+```
+
+It requires Bun installed locally. The TUI reuses the existing CLI command graph.
+
 ## Key Rules
 
-- Arguments use `appSlug` and `dataSourceSlug` (not IDs) — run `docyrus apps list` and `docyrus ds get` to discover slugs
-- `ds create` / `ds update` accept `--data` (JSON) or `--from-file` (`.json`/`.csv`), but not both at once
-- If payload is an array, CLI uses bulk endpoints with max 50 items
-- For bulk update, each item must include `id` and no positional `<recordId>` should be provided
-- `--filters` accepts a JSON string following the filter group structure: `{"combinator":"and","rules":[...]}`
-- Filter operators include: `=`, `!=`, `>`, `>=`, `<`, `<=`, `like`, `not like`, `in`, `not in`, `empty`, `not empty`, `between`, `today`, `this_month`, `this_quarter`, `last_30_days`, `active_user`
-- Filter on related fields using `rel_<relation_slug>/<field_slug>` syntax
-- `--columns` uses comma-separated field slugs with support for relation expansion `()`, spread `...`, aliasing `:`, and functions `@`
-- `--format` controls output: `toon` (default table), `json`, `yaml`, `md`, `jsonl`
-- `--verbose` wraps response in full envelope with metadata
-- Studio selectors are exclusive pairs: provide exactly one of `--appId|--appSlug`, `--dataSourceId|--dataSourceSlug`, and `--fieldId|--fieldSlug` (as required by command)
-- Studio write commands accept `--data` (JSON string) or `--from-file` (JSON only), and merge with flags where flags override overlapping keys
-- Studio batch commands auto-wrap root arrays to required DTO keys: `dataSources`, `fields`, `fieldIds`, `enums`, `enumIds`
+- Settings are project-local by default in `./.docyrus/`; use `-g` or `--global` for `~/.docyrus/`
+- The CLI uses named environments, not `API_BASE_URL`
+- `apps list` uses `/v1/apps`
+- `ds` commands use `appSlug` and `dataSourceSlug`
+- `ds create` and `ds update` accept `--data` JSON or `--from-file` (`.json` or `.csv`), but not both
+- Array payloads use bulk endpoints with a maximum of 50 items
+- Bulk update requires `id` in every item and must not include positional `<recordId>`
+- `--filters` accepts a JSON filter group such as `{"combinator":"and","rules":[...]}`
+- Related-field filters use `rel_<relation_slug>/<field_slug>`
+- `--columns` supports relation expansion `()`, spread `...`, aliasing `:`, and functions `@`
+- `--format` supports `toon`, `json`, `yaml`, `md`, and `jsonl`
+- Successful responses inject `context` with `email`, `tenantName`, `tenantNo`, and `tenantDisplay`
+- Studio selectors are exclusive pairs: exactly one of `--appId|--appSlug`, `--dataSourceId|--dataSourceSlug`, and `--fieldId|--fieldSlug` as required
+- Studio write commands accept `--data` or `--from-file` (JSON only), and explicit flags override overlapping JSON keys
 
 ## References
 
-- **[CLI Manifest](references/cli-manifest.md)** — Complete command reference with all flags, arguments, and options.
+- **[CLI Manifest](references/cli-manifest.md)** — Complete command reference with flags, arguments, and command notes.
 - **[List Query Examples](references/list-query-examples.md)** — Practical `ds list` examples covering columns, filters, sorting, pagination, and combined queries.

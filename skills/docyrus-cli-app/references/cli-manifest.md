@@ -8,6 +8,7 @@ LLM-ready reference for the `docyrus` CLI tool.
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `-g`, `--global` | boolean | Force global `~/.docyrus/` settings instead of local `./.docyrus/` |
 | `--format <toon\|json\|yaml\|md\|jsonl>` | string | Output format |
 | `--help` | boolean | Show help |
 | `--llms` | boolean | Print LLM-readable manifest |
@@ -21,6 +22,41 @@ LLM-ready reference for the `docyrus` CLI tool.
 |------|-------------|
 | `DOCYRUS_API_CLIENT_ID` | Default Docyrus OAuth2 client id |
 
+## Settings Scope
+
+- Default scope is local: `./.docyrus/`
+- Use `-g` or `--global` to force global scope: `~/.docyrus/`
+- OpenAPI cache path is `<settings-root>/tenans/<tenantId>/openapi.json`
+- `docyrus` without a subcommand returns active environment, help commands, and auth `context`
+
+---
+
+## docyrus env
+
+Environment commands.
+
+### docyrus env list
+
+List available environments.
+
+### docyrus env use
+
+Switch active environment by id or name.
+
+```
+docyrus env use <selector>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `selector` | string | yes | Environment id or name (`live`, `prod`, `beta`, `alpha`, `dev`) |
+
+Built-in environments:
+- `live` -> `https://api.docyrus.com`
+- `beta` -> `https://beta-api.docyrus.com`
+- `alpha` -> `https://alpha-api.docyrus.com`
+- `dev` -> `https://localhost:3366`
+
 ---
 
 ## docyrus apps
@@ -29,7 +65,7 @@ App commands.
 
 ### docyrus apps list
 
-List apps (`/v1/dev/apps`).
+List apps (`/v1/apps`).
 
 | Flag | Type | Description |
 |------|------|-------------|
@@ -43,28 +79,31 @@ Authentication commands.
 
 ### docyrus auth login
 
-Authorize CLI using OAuth2 device flow.
+Authorize CLI using OAuth2 device flow, or provide tokens manually.
 
 | Flag | Type | Description |
 |------|------|-------------|
 | `--clientId` | string | OAuth2 client id |
 | `--scope` | string | OAuth2 scopes (default: `openid email profile offline_access ReadWrite.All User.ReadWrite Users.Read.All Tenant.Read Teams.Read.All DS.ReadWrite.All Docs.ReadWrite.All Architect.ReadWrite.All`) |
+| `--accessToken` | string | Manual access token; skips device flow |
+| `--refreshToken` | string | Manual refresh token; requires `--accessToken` |
+
+Login notes:
+- Resolution order for client ID is `--clientId` -> `DOCYRUS_API_CLIENT_ID` -> saved local config -> saved global config
+- Manual token login falls back to `manual-token` only when no client ID can be resolved
+- Local login can reuse the globally saved client ID when local config does not have one
 
 ### docyrus auth logout
 
-Revoke and clear all tenant sessions for active account.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--clientId` | string | OAuth2 client id override |
+Revoke and clear all tenant sessions for the active account in the current environment.
 
 ### docyrus auth who
 
-Return current authenticated user (`/v1/users/me`).
+Return the current authenticated user (`/v1/users/me`).
 
 ### docyrus auth accounts list
 
-List saved user accounts for current API base URL.
+List saved user accounts for the current API base URL.
 
 ### docyrus auth accounts use
 
@@ -86,11 +125,22 @@ List available tenants for an account.
 
 Switch active tenant for an account.
 
+```
+docyrus auth tenants use <tenantSelector> [options]
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `tenantSelector` | string | yes | Numeric tenant no or UUID tenant id |
+
 | Flag | Type | Description |
 |------|------|-------------|
-| `--tenantId` | string | Tenant ID to activate |
 | `--userId` | string | User ID; defaults to active account |
 | `--scope` | string | Scope used only when tenant bootstrap login is required |
+
+Selector rules:
+- numeric selector -> match by `tenantNo`
+- non-numeric selector must be a UUID tenant id
 
 ---
 
@@ -119,9 +169,7 @@ docyrus curl <path> [options]
 
 ## docyrus discover
 
-Discovery commands for exploring the tenant OpenAPI spec. All discover commands require an active login session. Commands other than `discover api` auto-download the spec if it doesn't exist locally.
-
-Local spec file path: `~/docyrus/tenans/<tenantId>/openapi.json`
+Discovery commands for exploring the tenant OpenAPI spec. All discover commands require an active login session. Commands other than `discover api` auto-download the spec if it does not exist locally.
 
 ### docyrus discover api
 
@@ -129,7 +177,7 @@ Download tenant OpenAPI spec for the active tenant.
 
 ### docyrus discover namespaces
 
-List API namespaces from the active tenant OpenAPI spec. Extracts deduplicated namespace prefixes (e.g. `/v1/users`, `/v1/teams`) from all paths.
+List API namespaces from the active tenant OpenAPI spec. Returns deduplicated namespace prefixes such as `/v1/users` and `/v1/apps`.
 
 ### docyrus discover path
 
@@ -141,7 +189,7 @@ docyrus discover path <prefix>
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `prefix` | string | yes | Path prefix, e.g. `/v1/users` (the `/v1` prefix is optional) |
+| `prefix` | string | yes | Path prefix, for example `/v1/users` (the `/v1` prefix is optional) |
 
 ### docyrus discover endpoint
 
@@ -153,13 +201,13 @@ docyrus discover endpoint <selector>
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `selector` | string | yes | Endpoint selector, e.g. `/v1/users/me` or `[PUT]/v1/users/me/photo` |
+| `selector` | string | yes | Endpoint selector such as `/v1/users/me` or `[PUT]/v1/users/me/photo` |
 
 Selector format: `/path` defaults to GET; `[METHOD]/path` specifies an explicit HTTP method. The `/v1` prefix is optional.
 
 ### docyrus discover entity
 
-Return the full schema/definition object for an entity by name.
+Return the full schema definition object for an entity by name.
 
 ```
 docyrus discover entity <name>
@@ -167,11 +215,11 @@ docyrus discover entity <name>
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `name` | string | yes | Entity name (case-sensitive), e.g. `UserEntity` |
+| `name` | string | yes | Entity name (case-sensitive), for example `UserEntity` |
 
 ### docyrus discover search
 
-Search endpoint paths and entity names by comma-separated terms (case-insensitive substring match).
+Search endpoint paths and entity names by comma-separated terms.
 
 ```
 docyrus discover search <query>
@@ -179,7 +227,9 @@ docyrus discover search <query>
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `query` | string | yes | One or more comma-separated search strings, e.g. `users,UserEntity` |
+| `query` | string | yes | One or more comma-separated search strings, for example `users,UserEntity` |
+
+Endpoint results include method and description when available.
 
 ---
 
@@ -214,7 +264,7 @@ docyrus ds list <appSlug> <dataSourceSlug> [options]
 
 ### docyrus ds create
 
-Create data source item(s). If payload is an array, CLI sends a bulk request to `POST /:appSlug/data-sources/:dataSourceSlug/items/bulk`.
+Create data source item(s). If payload is an array, CLI sends a bulk request to `POST /apps/:appSlug/data-sources/:dataSourceSlug/items/bulk`.
 
 ```
 docyrus ds create <appSlug> <dataSourceSlug> [options]
@@ -226,12 +276,12 @@ docyrus ds create <appSlug> <dataSourceSlug> [options]
 | `--from-file` | string | Path to `.json` or `.csv` payload file |
 
 Batch rules:
-- Array payload triggers bulk create endpoint
-- Maximum 50 items per batch
+- array payload triggers bulk create endpoint
+- maximum 50 items per batch
 
 ### docyrus ds update
 
-Update data source item(s). If payload is an array, CLI sends a bulk request to `PATCH /:appSlug/data-sources/:dataSourceSlug/items/bulk`.
+Update data source item(s). If payload is an array, CLI sends a bulk request to `PATCH /apps/:appSlug/data-sources/:dataSourceSlug/items/bulk`.
 
 ```
 docyrus ds update <appSlug> <dataSourceSlug> [recordId] [options]
@@ -243,10 +293,10 @@ docyrus ds update <appSlug> <dataSourceSlug> [recordId] [options]
 | `--from-file` | string | Path to `.json` or `.csv` payload file |
 
 Update rules:
-- Object payload uses single update endpoint and requires `recordId`
-- Array payload uses bulk update endpoint and requires `id` in each item
-- Do not provide positional `recordId` for batch update
-- Maximum 50 items per batch
+- object payload uses the single-item endpoint and requires `recordId`
+- array payload uses the bulk update endpoint and requires `id` in each item
+- do not provide positional `recordId` for batch update
+- maximum 50 items per batch
 
 ### docyrus ds delete
 
@@ -256,6 +306,12 @@ Delete a data source item.
 docyrus ds delete <appSlug> <dataSourceSlug> <recordId>
 ```
 
+Successful command responses include a top-level `context` object with:
+- `email`
+- `tenantName`
+- `tenantNo`
+- `tenantDisplay`
+
 ---
 
 ## docyrus studio
@@ -263,14 +319,14 @@ docyrus ds delete <appSlug> <dataSourceSlug> <recordId>
 Dev app data source schema CRUD commands under `/v1/dev/apps/:app_id/data-sources`.
 
 Selector rules:
-- App selector: exactly one of `--appId` or `--appSlug`
-- Data source selector: exactly one of `--dataSourceId` or `--dataSourceSlug` (when required)
-- Field selector: exactly one of `--fieldId` or `--fieldSlug` (when required)
+- app selector: exactly one of `--appId` or `--appSlug`
+- data source selector: exactly one of `--dataSourceId` or `--dataSourceSlug` when required
+- field selector: exactly one of `--fieldId` or `--fieldSlug` when required
 
 Write payload rules:
-- Use `--data '<json>'` or `--from-file ./payload.json` (JSON only), not both
-- Flags override conflicting keys from JSON payload
-- Batch commands accept either root array or root object containing expected DTO key
+- use `--data '<json>'` or `--from-file ./payload.json` (JSON only), not both
+- flags override conflicting keys from JSON payload
+- batch commands accept either a root array or a root object containing the expected DTO key
 
 ### Data source commands
 
@@ -282,7 +338,7 @@ Write payload rules:
 |------|------|-------------|
 | `--appId` | string | App ID |
 | `--appSlug` | string | App slug |
-| `--expand` | string | Optional comma-separated expansions (e.g. `fields`) |
+| `--expand` | string | Optional comma-separated expansions such as `fields` |
 
 #### docyrus studio get-data-source
 
@@ -389,20 +445,20 @@ Expected DTO key: `dataSources`
 | `--name` | string | Field name |
 | `--slug` | string | Field slug |
 | `--type` | string | Field type |
-| `--readOnly` | boolean | Field read only |
-| `--status` | number | Field status |
+| `--readOnly` | boolean | Read-only flag |
+| `--status` | string | Field status |
 | `--defaultValue` | string | Default value |
-| `--relationDataSourceId` | string | Relation data source ID |
+| `--relationDataSourceId` | string | Related data source ID |
 | `--sortOrder` | number | Sort order |
 | `--tenantEnumSetId` | string | Tenant enum set ID |
-| `--options` | string | JSON options |
-| `--validations` | string | JSON validations |
+| `--options` | string | JSON options payload |
+| `--validations` | string | JSON validations payload |
 
 #### docyrus studio update-field
 
 `PATCH /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id`
 
-Same flags as `create-field`, plus field selector flags:
+Same flags as `create-field`, plus selector flags:
 
 | Flag | Type | Description |
 |------|------|-------------|
@@ -440,17 +496,6 @@ Expected DTO key: `fields`
 
 Expected DTO key: `fieldIds`
 
-For all 3 field batch commands:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-
 ### Enum commands
 
 #### docyrus studio list-enums
@@ -461,7 +506,7 @@ For all 3 field batch commands:
 
 `POST /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
 
-Expected DTO key: `enums` (optional `enumSetId`)
+Expected DTO key: `enums`
 
 #### docyrus studio update-enums
 
@@ -475,38 +520,13 @@ Expected DTO key: `enums`
 
 Expected DTO key: `enumIds`
 
-For enum commands:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--fieldId` | string | Field ID |
-| `--fieldSlug` | string | Field slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--enumSetId` | string | Enum set ID (create only) |
-
 ---
 
-## docyrus env
+## docyrus tui
 
-Environment commands.
+Launch the OpenTUI terminal UI.
 
-### docyrus env list
-
-List available environments.
-
-### docyrus env use
-
-Switch active environment by id or name.
-
-```
-docyrus env use <selector>
-```
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `selector` | string | yes | Environment id or name |
+Notes:
+- requires Bun installed locally
+- reuses the existing CLI command graph
+- intended for interactive terminal usage rather than browser embedding

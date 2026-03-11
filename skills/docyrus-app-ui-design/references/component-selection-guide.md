@@ -138,7 +138,7 @@ const form = useForm({ defaultValues: { title: '', status: '', dueDate: '' } })
 
 ### Pattern 4: Inline Editing → EditableRecordDetail
 
-Use `EditableRecordDetail` for detail views where users can edit individual fields inline without opening a full form page. Always include an **"Edit All"** button in the header to switch to a full form editing experience.
+Use `EditableRecordDetail` for detail views where users can edit individual fields inline without opening a full form page. **Always enable `trackChanges`** to highlight changed fields and show a floating ActionBar. Always include an **"Edit All"** button in the header to switch to a full form editing experience.
 
 **Key components:**
 - `EditableRecordDetail` — Provider/wrapper that manages field state, change tracking, and save/cancel
@@ -146,12 +146,14 @@ Use `EditableRecordDetail` for detail views where users can edit individual fiel
 - `EditableValue` — Lower-level single-field inline editor (used internally by EditableRecordDetailField)
 - `useEditableRecordDetail()` — Hook to access form, values, changes, and save/cancel from within the provider
 
-**How it works:**
+**How it works (with `trackChanges` enabled):**
 1. Fields render as read-only `DynamicValue` display
 2. Click a field → switches to `DynamicFormField` editor inline
 3. Changed fields get highlighted with amber background
 4. Floating `ActionBar` appears showing "N fields changed" with Save/Cancel buttons
 5. Save commits only changed fields; Cancel reverts all changes
+
+**Important:** Always pass `trackChanges` prop when using `EditableRecordDetail` or `DataGrid` with cell editing. Without it, users have no visual feedback about which fields they've modified and no centralized Save/Cancel flow.
 
 **Field change tracking types:**
 ```tsx
@@ -178,7 +180,7 @@ interface FieldChange {
   headerButtons={<Button variant="outline" size="sm" onClick={switchToFullForm}>Edit All</Button>}
 />
 <AwesomeDialogBody>
-  <EditableRecordDetail fields={fields} record={record} onSave={handleSave} onCancel={handleCancel}>
+  <EditableRecordDetail fields={fields} record={record} onSave={handleSave} onCancel={handleCancel} trackChanges>
     <div className="space-y-3">
       <h4 className="border-b pb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         General Info
@@ -228,8 +230,10 @@ Follow this process when selecting a component:
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
 | Stat/metric card | **AwesomeCard** | docyrus | Default choice - hatched header design, perfect for metrics |
+| Stat dashboard (multi-card) | **AwesomeStats** | docyrus | Grid/flex/tabs layouts, mini-charts, comparisons, drag-reorder |
 | Alternative card | Card | shadcn | Basic card for custom designs |
 | Stat display | Stat | diceui | Dedicated stat display with formatting |
+| Pivot table / analytics | **PivotGrid** | docyrus | 3-level hierarchies, subtotals, drilldown, export (CSV/Excel/PDF) |
 | Chart/graph | Chart + Recharts | shadcn | Built-in Recharts integration |
 | Gauge/dial | Gauge | diceui | Circular progress indicator |
 | Progress bar | Progress | shadcn | Linear progress indicator |
@@ -251,7 +255,7 @@ Follow this process when selecting a component:
 
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
-| Editable grid | Data Grid | docyrus | Virtualized, keyboard nav, cell editing |
+| Editable grid | Data Grid | docyrus | Virtualized, keyboard nav, cell editing — enable `trackChanges` for edit tracking |
 | Grid saved views | **Data Grid View Select** | docyrus | Saved view management with sort/filter/columns |
 | Read-only table | Table | shadcn | Simple, responsive tables |
 | Advanced data table | Data Table | diceui | Filtering, sorting, pagination built-in |
@@ -273,6 +277,7 @@ Follow this process when selecting a component:
 | Select dropdown | Select | shadcn | Basic select (use via SelectFormField in forms) |
 | Combobox/autocomplete | Combobox | diceui | Search + select |
 | Date picker | Date Time Picker | docyrus | Date + time combined |
+| Date range picker | **Date Time Range Picker** | docyrus | Start/end date+time pair with size variants |
 | Date only | Calendar | shadcn | Date selection only |
 | Time only | Time Picker | diceui | Time selection only |
 | Phone number | Phone Input | diceui | International formatting |
@@ -313,7 +318,7 @@ Follow this process when selecting a component:
 | Resource scheduling | **Resource Scheduler Panel** | docyrus | Horizontal timeline with drag-drop events |
 | Appointment booking | **Time Slot Scheduler** | docyrus | Columns/month views, capacity, timezone |
 | Timeline | Timeline | diceui | Event/step display |
-| Stepper | Stepper | diceui | Multi-step process |
+| Stepper / wizard | **Stepper** | docyrus | 6 variants, horizontal/vertical, animated connectors |
 | Tour/onboarding | Tour | diceui | Interactive tutorials |
 | Query builder | Query Builder | docyrus | Docyrus query construction |
 | Notifications | **NotificationStack** | docyrus | Stacked notification cards |
@@ -329,6 +334,8 @@ Follow this process when selecting a component:
 | Mentions | Mention | diceui | @mention functionality |
 | Command palette | Command | shadcn | Keyboard shortcuts |
 | Confirmation action | **ConfirmationButton** | docyrus | Button with confirm dialog |
+| Activity logging (CRM) | **Log Activity Form** | docyrus | Calls, emails, meetings, tasks, status updates with Plate editor |
+| Dynamic repeating rows | **Schema Repeater** | docyrus | Structured data list with customizable input types per column |
 | Rich item selector | **Mega Select** | docyrus | Grid picker with categories, search, detail panel |
 | Quick record create | **Create Record Dialog** | docyrus | Popover dialog with subject, mentions, selectors |
 | Email composing | **Email Composer** | docyrus | To/Cc/Bcc, formatting toolbar, attachments |
@@ -375,7 +382,7 @@ Follow this process when selecting a component:
 
 **Use when**: Animation/transitions are important to the UX
 
-### docyrus (46 components)
+### docyrus (52 components)
 **Best for**: Docyrus-specific data handling, forms, dialogs, inline editing, scheduling, chat, AI agents, and business logic
 
 **Strengths**:
@@ -433,6 +440,10 @@ These are the **recommended defaults** unless the user specifies otherwise:
 | Notifications | NotificationStack | docyrus |
 | Pricing / quoting | **Pricing Engine Panel** | docyrus |
 | Record sharing | **Record Sharing** | docyrus |
+| Stat dashboards | **AwesomeStats** | docyrus |
+| Pivot table / analytics | **PivotGrid** | docyrus |
+| Activity logging (CRM) | **Log Activity Form** | docyrus |
+| Multi-step wizard | **Stepper** | docyrus |
 
 ---
 
@@ -526,8 +537,10 @@ import { LucideActivity } from 'lucide-react'
 
 ### Data & Display
 - Tables: docyrus Data Grid, diceui Data Table, shadcn Table
+- Pivot table: docyrus PivotGrid (hierarchies, subtotals, drilldown, export)
 - Grid saved views: docyrus Data Grid View Select
 - Cards: docyrus AwesomeCard, shadcn Card
+- Stat dashboards: docyrus AwesomeStats (grid/flex/tabs, mini-charts, comparisons)
 - Charts: shadcn Chart + Recharts
 - Stats: diceui Stat, diceui Gauge, shadcn Progress
 - Gantt: docyrus Gantt
@@ -541,7 +554,7 @@ import { LucideActivity } from 'lucide-react'
 - Selection: shadcn Select, diceui Combobox
 - Rich selection: docyrus Mega Select (grid picker with categories)
 - Radio cards: docyrus Radio Group (card variant with icons/descriptions)
-- Dates: docyrus Date Time Picker, shadcn Calendar
+- Dates: docyrus Date Time Picker, docyrus Date Time Range Picker, shadcn Calendar
 - Files: diceui File Upload
 - Special: diceui Phone Input, Color Picker, Tags Input
 
@@ -561,6 +574,7 @@ import { LucideActivity } from 'lucide-react'
 - Email composing: docyrus Email Composer (To/Cc/Bcc, toolbar, attachments)
 - Comments: docyrus Comments Panel (threaded conversations)
 - Contact activities: docyrus Contact Activity Panel (calls, meetings, emails)
+- Activity logging: docyrus Log Activity Form (calls, emails, meetings, tasks, statuses)
 
 ### Scheduling
 - Project timelines: docyrus Gantt
@@ -580,8 +594,9 @@ import { LucideActivity } from 'lucide-react'
 ### Specialized
 - Kanban: docyrus Kanban (drag-drop columns)
 - Timeline: diceui Timeline
-- Stepper: diceui Stepper
+- Stepper / wizard: docyrus Stepper (6 variants, horizontal/vertical, animated)
 - Query: docyrus Query Builder
 - Notifications: docyrus NotificationStack
 - Maps: docyrus Map
 - Search: docyrus SearchInput
+- Repeating rows: docyrus SchemaRepeater (dynamic structured data lists)

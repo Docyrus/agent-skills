@@ -5,7 +5,7 @@ description: Design and build production-grade UI components for Docyrus React a
 
 # Docyrus App UI Design
 
-Build polished, accessible UI components for Docyrus React applications using a curated set of 154+ pre-built components from shadcn, diceui, animate-ui, docyrus-ui, and reui libraries.
+Build polished, accessible UI components for Docyrus React applications using a curated set of 160+ pre-built components from shadcn, diceui, animate-ui, docyrus-ui, and reui libraries.
 
 ## Component Library Preferences
 
@@ -14,10 +14,10 @@ Build polished, accessible UI components for Docyrus React applications using a 
 1. **shadcn** — 43 core components (buttons, forms, dialogs, tables, charts)
 2. **diceui** — 42 advanced components (data grids, kanban, file upload, color picker)
 3. **animate-ui** — 21 animated components (sidebar, dialogs, cards, menus)
-4. **docyrus** — 46 Docyrus-specific components (awesome dialog, data grid, form fields, value renderers, editable record detail, gantt, scheduling, chat, AI agents, pricing, sharing, email composer)
+4. **docyrus** — 52 Docyrus-specific components (awesome dialog, awesome stats, data grid, pivot grid, form fields, value renderers, editable record detail, gantt, scheduling, chat, AI agents, pricing, sharing, email composer, log activity form, schema repeater, stepper)
 5. **reui** — 2 utility components (file upload, sortable)
 
-**Total available**: 154 components
+**Total available**: 160 components
 
 ## Critical Design Rules
 
@@ -36,7 +36,8 @@ Build polished, accessible UI components for Docyrus React applications using a 
    - **Large items** (e.g. projects, workspaces) → Create a dedicated **new page** with full layout
    - **Small items** (e.g. tasks, comments, contacts) → Use **AwesomeDialog** with `container="sheet"` and `side="right"` as a right drawer
 8. **Always use TanStack Form + Docyrus form system** — All forms must use TanStack Form with the Docyrus `DynamicFormField` system and `@docyrus/ui-form-fields`. Never use plain HTML forms or React Hook Form directly.
-9. **Use EditableRecordDetail for inline editing** — When showing item detail views, use `EditableRecordDetail` with `EditableRecordDetailField` to allow users to edit fields inline without opening a full form. Add an **"Edit All"** button in the detail page header to switch to a full form editing experience.
+9. **Use EditableRecordDetail for inline editing** — When showing item detail views, use `EditableRecordDetail` with `EditableRecordDetailField` to allow users to edit fields inline without opening a full form. **Always enable `trackChanges`** to highlight changed fields and show a floating ActionBar with Save/Cancel. Add an **"Edit All"** button in the detail page header to switch to a full form editing experience.
+10. **Always enable `trackChanges` for editable components** — When using `EditableRecordDetail` or `DataGrid` with cell editing, always pass `trackChanges` prop. This highlights modified cells/fields, shows pending change counts, and provides Save/Cancel actions via a floating ActionBar.
 
 ## Quick Start Patterns
 
@@ -85,7 +86,7 @@ import {
     headerButtons={<Button variant="outline" size="sm" onClick={switchToFullForm}>Edit All</Button>}
   />
   <AwesomeDialogBody>
-    <EditableRecordDetail fields={fields} record={record} onSave={handleSave}>
+    <EditableRecordDetail fields={fields} record={record} onSave={handleSave} trackChanges>
       <EditableRecordDetailField slug="title" />
       <EditableRecordDetailField slug="status" />
       <EditableRecordDetailField slug="assignee" />
@@ -102,7 +103,13 @@ import {
   EditableRecordDetail, EditableRecordDetailField
 } from '@docyrus/ui/components/editable-record-detail'
 
-<EditableRecordDetail fields={fields} record={record} onSave={handleSave} onCancel={handleCancel}>
+<EditableRecordDetail
+  fields={fields}
+  record={record}
+  onSave={handleSave}
+  onCancel={handleCancel}
+  trackChanges  // Always enable — highlights changed fields and shows floating ActionBar with Save/Cancel
+>
   <div className="space-y-3">
     <EditableRecordDetailField slug="company_name" />
     <EditableRecordDetailField slug="status" />
@@ -110,7 +117,7 @@ import {
     <EditableRecordDetailField slug="email" />
   </div>
 </EditableRecordDetail>
-{/* ActionBar appears automatically when fields are changed — shows "N fields changed" with Save/Cancel */}
+{/* With trackChanges: changed fields get amber highlight, ActionBar shows "N fields changed" with Save/Cancel */}
 ```
 
 ### Dashboard with AwesomeCard
@@ -232,6 +239,70 @@ import { ResourceSchedulerPanel } from '@docyrus/ui/components/resource-schedule
 />
 ```
 
+### Dashboard Stats with AwesomeStats
+
+```tsx
+import { AwesomeStats } from '@docyrus/ui/components/awesome-stats'
+
+const stats = [
+  {
+    id: 'revenue',
+    title: 'Total Revenue',
+    value: 124500,
+    format: { style: 'currency', currency: 'USD', notation: 'compact' },
+    icon: 'fal chart-line',
+    color: 'blue',
+    comparison: { previousValue: 110000 },
+    miniChart: { type: 'sparkline', data: [80, 95, 110, 105, 120, 125] }
+  },
+  // ... more stats
+]
+
+// Grid layout (dashboard)
+<AwesomeStats items={stats} layout="grid" columns={4} />
+
+// Tabs layout (single card with animated transitions)
+<AwesomeStats items={stats} layout="tabs" />
+
+// With AwesomeCard styling
+<AwesomeStats items={stats} layout="grid" cardVariant="awesome" />
+```
+
+### Pivot Grid for Analytics
+
+```tsx
+import { usePivotGrid, PivotGridView, PivotGridToolbar } from '@docyrus/ui/components/pivot-grid'
+
+const { pivotState, ...pivotProps } = usePivotGrid({
+  data: salesData,
+  dimensions: [
+    { id: 'region', label: 'Region', getValue: (row) => row.region },
+    { id: 'product', label: 'Product', getValue: (row) => row.product },
+  ],
+  measures: [
+    { id: 'revenue', label: 'Revenue', aggregate: 'sum', getValue: (row) => row.revenue, formatValue: (v) => `$${v.toLocaleString()}` },
+  ],
+})
+
+<PivotGridToolbar {...pivotProps} />
+<PivotGridView {...pivotProps} />
+```
+
+### Log Activity Form (CRM)
+
+```tsx
+import { LogActivityForm } from '@docyrus/ui/components/log-activity-form'
+
+<LogActivityForm
+  defaultActivityType="call"
+  mentionUsers={users}
+  events={calendarEvents}
+  statusOptions={statusOptions}
+  onSubmit={handleSubmit}
+  isSubmitting={isPending}
+/>
+```
+
 ### AI Agent with DocyrusAgent
 
 ```tsx
@@ -297,7 +368,7 @@ When the user requests a UI component:
 
 ## Installation Pattern
 
-All components follow the shadcn registry pattern:
+Components follow the shadcn registry pattern. Docyrus components use the `@docyrus/cli`:
 
 ```bash
 # shadcn components
@@ -309,8 +380,8 @@ pnpm dlx shadcn@latest add @diceui/data-table
 # animate-ui components
 pnpm dlx shadcn@latest add @animate-ui/sidebar
 
-# docyrus components
-pnpm dlx shadcn@latest add @docyrus/ui-awesome-card
+# docyrus components (use @docyrus/cli)
+pnpm dlx @docyrus/cli add @docyrus/ui-awesome-card
 
 # reui components
 pnpm dlx shadcn@latest add @reui/file-upload-default
@@ -355,12 +426,18 @@ pnpm dlx shadcn@latest add @reui/file-upload-default
 | Location input | PlaceAutocomplete | docyrus |
 | Map display | Map | docyrus |
 | Tree hierarchy | TreeView | docyrus |
+| Dashboard stats | AwesomeStats | docyrus |
+| Pivot table / analytics | PivotGrid | docyrus |
+| Date range selection | DateTimeRangePicker | docyrus |
+| Activity logging (CRM) | LogActivityForm | docyrus |
+| Dynamic repeating rows | SchemaRepeater | docyrus |
+| Multi-step wizard | Stepper | docyrus |
 
 ## References
 
 Read these files for detailed component information:
 
-- **`references/preferred-components-catalog.md`** — Complete catalog of all 140 components with descriptions, install commands, and doc paths
+- **`references/preferred-components-catalog.md`** — Complete catalog of all 160 components with descriptions, install commands, and doc paths (docyrus docs at `https://ui.docy.app/docs/web/components/<name>/llms.txt`)
 - **`references/component-selection-guide.md`** — Decision trees and guidelines for choosing the right component for each use case
 - **`references/icon-usage-guide.md`** — Icon library integration patterns and usage examples for hugeicons, fontawesome, and lucide
 

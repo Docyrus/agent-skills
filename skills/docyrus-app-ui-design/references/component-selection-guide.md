@@ -330,7 +330,7 @@ Follow this process when selecting a component:
 | Image editing | **ImageEditor** | docyrus | Crop, adjust, transform |
 | Media player | Media Player | diceui | Video/audio playback |
 | QR code | QR Code | diceui | QR generation |
-| Cropper | Cropper | docyrus | Image cropping |
+| Cropper / Image cropping | **ImageEditor** | docyrus | Crop, adjust, transform |
 | Mentions | Mention | diceui | @mention functionality |
 | Command palette | Command | shadcn | Keyboard shortcuts |
 | Confirmation action | **ConfirmationButton** | docyrus | Button with confirm dialog |
@@ -382,7 +382,7 @@ Follow this process when selecting a component:
 
 **Use when**: Animation/transitions are important to the UX
 
-### docyrus (52 components)
+### docyrus (51 components)
 **Best for**: Docyrus-specific data handling, forms, dialogs, inline editing, scheduling, chat, AI agents, and business logic
 
 **Strengths**:

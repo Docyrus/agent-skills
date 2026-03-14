@@ -5,19 +5,19 @@ description: Design and build production-grade UI components for Docyrus React a
 
 # Docyrus App UI Design
 
-Build polished, accessible UI components for Docyrus React applications using a curated set of 160+ pre-built components from shadcn, diceui, animate-ui, docyrus-ui, and reui libraries.
+Build polished, accessible UI components for Docyrus React applications using a curated set of 159 pre-built components from shadcn, diceui, animate-ui, docyrus-ui, and reui libraries.
 
 ## Component Library Preferences
 
 **Primary component libraries (in order of preference):**
 
 1. **shadcn** — 43 core components (buttons, forms, dialogs, tables, charts)
-2. **diceui** — 42 advanced components (data grids, kanban, file upload, color picker)
+2. **diceui** — 41 advanced components (data grids, kanban, file upload, color picker)
 3. **animate-ui** — 21 animated components (sidebar, dialogs, cards, menus)
-4. **docyrus** — 52 Docyrus-specific components (awesome dialog, awesome stats, data grid, pivot grid, form fields, value renderers, editable record detail, gantt, scheduling, chat, AI agents, pricing, sharing, email composer, log activity form, schema repeater, stepper)
+4. **docyrus** — 51 Docyrus-specific components (awesome dialog, awesome stats, data grid, pivot grid, form fields, value renderers, editable record detail, gantt, scheduling, chat, AI agents, pricing, sharing, email composer, log activity form, schema repeater, stepper)
 5. **reui** — 2 utility components (file upload, sortable)
 
-**Total available**: 160 components
+**Total available**: 158 components
 
 ## Critical Design Rules
 
@@ -437,9 +437,21 @@ pnpm dlx shadcn@latest add @reui/file-upload-default
 
 Read these files for detailed component information:
 
-- **`references/preferred-components-catalog.md`** — Complete catalog of all 160 components with descriptions, install commands, and doc paths (docyrus docs at `https://ui.docy.app/docs/web/components/<name>/llms.txt`)
+- **`references/preferred-components-catalog.md`** — Complete catalog of all 160 components with descriptions, install commands, and doc paths (docyrus docs at `https://alpha-ui.docy.app/docs/web/components/<name>/llms.txt`)
 - **`references/component-selection-guide.md`** — Decision trees and guidelines for choosing the right component for each use case
 - **`references/icon-usage-guide.md`** — Icon library integration patterns and usage examples for hugeicons, fontawesome, and lucide
+
+### Docyrus UI Guide Documentation
+
+Fetch these llms.txt endpoints for detailed guidance:
+
+- **[Components Overview](https://alpha-ui.docy.app/docs/web/components/llms.txt)** — Production-ready UI components built with React, TypeScript, Tailwind CSS v4, and CVA variants
+- **[Installation](https://alpha-ui.docy.app/docs/web/guide/installation/llms.txt)** — How to install and set up Docyrus UI components in your project
+- **[Theming](https://alpha-ui.docy.app/docs/web/guide/theming/llms.txt)** — Customize the look and feel with CSS variables and the theme generator
+- **[Distributions](https://alpha-ui.docy.app/docs/web/guide/distributions/llms.txt)** — Component distributions and core libraries that power Docyrus UI web components
+- **[Examples & Recipes](https://alpha-ui.docy.app/docs/web/guide/examples/llms.txt)** — Practical multi-component patterns and recipes for common UI scenarios
+- **[Troubleshooting](https://alpha-ui.docy.app/docs/web/guide/troubleshooting/llms.txt)** — Common issues and solutions when using Docyrus UI web components
+- **[Releases](https://alpha-ui.docy.app/docs/web/guide/releases/llms.txt)** — Latest releases and updates for Docyrus UI web components
 
 ## Integration with docyrus-app-dev
 

@@ -70,11 +70,11 @@ interface ISelectQueryParams {
   distinctColumns?: string[] | null;
 
   // --- Computed Columns ---
-  formulas?: Record<string, IQueryFormula> | null;
+  formulas?: Record<string, ISelectQueryFormula> | null;
 
   // --- Aggregation ---
   calculations?: ISelectQueryCalculationRule[] | null;
-  showGroupSummaries?: boolean;
+  groupSummaries?: boolean;
 
   // --- Sorting ---
   orderBy?: string | ISelectQueryOrderBy | ISelectQueryOrderBy[];
@@ -94,7 +94,7 @@ interface ISelectQueryParams {
   cursorDateEnd?: string | null;
 
   // --- Advanced ---
-  childQueries?: Record<string, IQueryChildQueryParams> | null;
+  childQueries?: ISelectQueryChildQueryParams[] | null;
   pivot?: {
     matrix: ISelectPivotMatrixQuery[];
     hideEmptyRows?: boolean;
@@ -700,7 +700,7 @@ Count unique emails:
 }
 ```
 
-### `showGroupSummaries`
+### `groupSummaries`
 
 **Type:** `boolean`
 **Default:** `false`
@@ -711,7 +711,7 @@ When `true` and aggregation is used, includes group summary rows in the output.
 
 ## Formulas
 
-**Parameter:** `formulas` — `Record<string, IQueryFormula> | null`
+**Parameter:** `formulas` — `Record<string, ISelectQueryFormula> | null`
 
 Formulas are virtual computed columns injected into `SELECT` queries at build time. Keys are the formula names (used as column aliases), values are formula definitions.
 
@@ -837,16 +837,14 @@ Block subquery formulas can also be wrapped under an `expression` key:
 {
   "formulas": {
     "children_count": {
-      "expression": {
-        "from": "app_child_table",
-        "with": "parent_field",
-        "inputs": [{
-          "kind": "aggregate",
-          "name": "count",
-          "distinct": true,
-          "inputs": [{ "kind": "column", "name": "id" }]
-        }]
-      }
+      "from": "app_child_table",
+      "with": "parent_field",
+      "inputs": [{
+        "kind": "aggregate",
+        "name": "count",
+        "distinct": true,
+        "inputs": [{ "kind": "column", "name": "id" }]
+      }]
     }
   }
 }
@@ -1294,14 +1292,15 @@ interface ISelectPivotMatrixQuery {
 
 ## Child Queries
 
-**Parameter:** `childQueries` — `Record<string, IQueryChildQueryParams> | null`
+**Parameter:** `childQueries` — `ISelectQueryChildQueryParams[] | null`
 
 Use `childQueries` to fetch related records from a child data source as a nested JSON array for each parent record. This is similar to a `LEFT JOIN` but returns results as an aggregated JSON array in a single column.
 
 ### Child Query Structure
 
 ```typescript
-interface IQueryChildQueryParams {
+interface ISelectQueryChildQueryParams {
+  alias: string;                    // alias for the child query
   from: string;                    // child data source slug in "appSlug_slug" format
   using: string;                   // field in the child DS that references the parent record
   columns?: string | null;         // comma-separated columns to select from child
@@ -1317,8 +1316,9 @@ interface IQueryChildQueryParams {
 ```json
 {
   "columns": "id, name, matters",
-  "childQueries": {
-    "matters": {
+  "childQueries": [
+    {
+      "alias": "matters",
       "from": "attornaid_matter",
       "using": "client",
       "columns": "name",
@@ -1328,7 +1328,7 @@ interface IQueryChildQueryParams {
         ]
       }
     }
-  }
+  ]
 }
 ```
 
@@ -1359,8 +1359,9 @@ interface IQueryChildQueryParams {
 ```json
 {
   "columns": "id, product_name, recent_orders",
-  "childQueries": {
-    "recent_orders": {
+  "childQueries": [
+    {
+      "alias": "recent_orders",
       "from": "shop_order_item",
       "using": "product",
       "columns": "order_date, quantity, total_price",
@@ -1372,7 +1373,7 @@ interface IQueryChildQueryParams {
         ]
       }
     }
-  }
+  ]
 }
 ```
 
@@ -1381,8 +1382,9 @@ interface IQueryChildQueryParams {
 ```json
 {
   "columns": "id, name, order_stats",
-  "childQueries": {
-    "order_stats": {
+  "childQueries": [
+    {
+      "alias": "order_stats",
       "from": "shop_order",
       "using": "customer",
       "calculations": [
@@ -1390,7 +1392,7 @@ interface IQueryChildQueryParams {
         { "field": "amount", "func": "sum", "name": "total_spent" }
       ]
     }
-  }
+  ]
 }
 ```
 
@@ -1769,8 +1771,9 @@ Monthly sales report grouped by category:
 {
   "dataSourceFullSlug": "crm_customer",
   "columns": "id, name, email, recent_orders, open_tickets",
-  "childQueries": {
-    "recent_orders": {
+  "childQueries": [
+    {
+      "alias": "recent_orders",
       "from": "shop_order",
       "using": "customer",
       "columns": "id, order_date, total_amount, ...status(status_label:name)",
@@ -1782,7 +1785,8 @@ Monthly sales report grouped by category:
         ]
       }
     },
-    "open_tickets": {
+    {
+      "alias": "open_tickets",
       "from": "support_ticket",
       "using": "customer",
       "columns": "id, subject, priority, created_on",
@@ -1794,7 +1798,7 @@ Monthly sales report grouped by category:
         ]
       }
     }
-  },
+  ],
   "filters": {
     "rules": [
       { "field": "status", "operator": "=", "value": "active" }

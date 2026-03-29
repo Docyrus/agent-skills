@@ -8,8 +8,6 @@ Two block formula formats:
 
 **Block Subquery** — correlated subquery on child table: `{ alias?, inputs, from: string, with: string | Record<string,string>, filters?: IQueryFilterGroup }`. Detected by `from`+`with`.
 
-Compat wrapper: `{ expression: { from, with, inputs } }` is also accepted.
-
 ## Block Schema
 
 Top-level requires exactly 1 element in `inputs[]`. Optional `alias` becomes SQL alias.
@@ -135,7 +133,7 @@ Allowed: int, int2, int4, int8, bigint, real, float, float4, float8, numeric, do
 
 ## SelectQueryBuilder Integration
 
-1. Formulas in `ISelectQueryParams.formulas` as `Record<string, IQueryFormula>`.
+1. Formulas in `ISelectQueryParams.formulas` as `Record<string, ISelectQueryFormula>`.
 2. Column alias matching formula key → formula replaces column ref in SELECT.
 3. Dispatch: `from`/`expression` → `buildBlockFormula()` (subquery), `inputs` only → `buildBlockFormula()` (inline).
 4. Calculations with `func:"formula"` also route through `buildFormula()`.
@@ -273,20 +271,16 @@ Allowed: int, int2, int4, int8, bigint, real, float, float4, float8, numeric, do
     {
       "key": "total_tasks",
       "expression": {
-        "expression": {
-          "from": "base_task", "with": "project",
-          "inputs": [{ "kind": "aggregate", "name": "count", "inputs": [{ "kind": "column", "name": "id" }] }]
-        }
+        "from": "base_task", "with": "project",
+        "inputs": [{ "kind": "aggregate", "name": "count", "inputs": [{ "kind": "column", "name": "id" }] }]
       }
     },
     {
       "key": "open_tasks",
       "expression": {
-        "expression": {
-          "from": "base_task", "with": "project",
-          "inputs": [{ "kind": "aggregate", "name": "count", "inputs": [{ "kind": "column", "name": "id" }] }],
-          "filters": { "rules": [{ "field": "status", "operator": "not_in", "value": ["<completed_uuid>", "<cancelled_uuid>"] }], "combinator": "and" }
-        }
+        "from": "base_task", "with": "project",
+        "inputs": [{ "kind": "aggregate", "name": "count", "inputs": [{ "kind": "column", "name": "id" }] }],
+        "filters": { "rules": [{ "field": "status", "operator": "not_in", "value": ["<completed_uuid>", "<cancelled_uuid>"] }], "combinator": "and" }
       }
     }
   ]
@@ -301,18 +295,16 @@ Allowed: int, int2, int4, int8, bigint, real, float, float4, float8, numeric, do
 {
   "key": "task_stats",
   "expression": {
-    "expression": {
-      "from": "base_task", "with": "project",
-      "inputs": [{
-        "kind": "function", "name": "jsonb_build_object",
-        "inputs": [
-          { "kind": "literal", "literal": "total", "cast": "text" },
-          { "kind": "aggregate", "name": "count", "inputs": [{ "kind": "column", "name": "id" }] },
-          { "kind": "literal", "literal": "open", "cast": "text" },
-          { "kind": "aggregate", "name": "count", "inputs": [{ "kind": "case", "cases": [{ "when": { "kind": "compare", "op": "not in", "left": { "kind": "column", "name": "status" }, "right": { "kind": "literal", "literal": ["<completed_uuid>", "<cancelled_uuid>"] } }, "then": { "kind": "column", "name": "id" } }] }] }
-        ]
-      }]
-    }
+    "from": "base_task", "with": "project",
+    "inputs": [{
+      "kind": "function", "name": "jsonb_build_object",
+      "inputs": [
+        { "kind": "literal", "literal": "total", "cast": "text" },
+        { "kind": "aggregate", "name": "count", "inputs": [{ "kind": "column", "name": "id" }] },
+        { "kind": "literal", "literal": "open", "cast": "text" },
+        { "kind": "aggregate", "name": "count", "inputs": [{ "kind": "case", "cases": [{ "when": { "kind": "compare", "op": "not in", "left": { "kind": "column", "name": "status" }, "right": { "kind": "literal", "literal": ["<completed_uuid>", "<cancelled_uuid>"] } }, "then": { "kind": "column", "name": "id" } }] }] }
+      ]
+    }]
   }
 }
 ```

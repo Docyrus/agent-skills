@@ -18,7 +18,6 @@ npx skills add docyrus/agent-skills
 
 | Skill                     | Description                                                                                       | Location                                            |
 | :------------------------ | :------------------------------------------------------------------------------------------------ | :-------------------------------------------------- |
-| **Docyrus Architect**     | Manage platform resources: data sources, fields, enums, apps, custom queries, and perform advanced data analysis. | [SKILL.md](./skills/docyrus-architect/SKILL.md)     |
 | **Docyrus API Dev**       | Integrate with Docyrus API using `@docyrus/api-client` and `@docyrus/signin`.                     | [SKILL.md](./skills/docyrus-api-dev/SKILL.md)       |
 | **Docyrus App Dev React** | Build Docyrus React TypeScript applications end-to-end, combining auth, collections, queries, TanStack patterns, and production-grade UI implementation. | [SKILL.md](./skills/docyrus-app-dev-react/SKILL.md) |
 | **Docyrus API Doctor**    | Post-implementation checklist to catch bugs, performance issues, and code quality problems in Docyrus API code. | [SKILL.md](./skills/docyrus-api-doctor/SKILL.md)    |

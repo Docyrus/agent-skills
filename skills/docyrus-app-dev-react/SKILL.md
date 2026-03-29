@@ -59,11 +59,14 @@ import { DocyrusAuthProvider } from '@docyrus/signin'
 ### Auth gate and current-user access
 
 ```tsx
-const { status } = useDocyrusAuth()
-const { getMyInfo } = useUsersCollection()
+const { status, user, hasRole, hasPermission } = useDocyrusAuth()
 
 if (status === 'loading') return <Spinner />
 if (status === 'unauthenticated') return <SignInButton />
+
+// user is auto-fetched from /v1/users/me after authentication
+// hasRole('super_admin') — check role by slug or uid
+// hasPermission('edit', dataSourceId) — check ACL permission on a data source
 ```
 
 ### Data fetching with generated collections

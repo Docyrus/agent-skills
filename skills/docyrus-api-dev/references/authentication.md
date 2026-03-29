@@ -6,11 +6,12 @@
 2. [Installation](#installation)
 3. [DocyrusAuthProvider](#docyrusauthprovider)
 4. [Auth Hooks](#auth-hooks)
-5. [SignInButton](#signinbutton)
-6. [Auth Modes](#auth-modes)
-7. [Environment Variables](#environment-variables)
-8. [App Integration Pattern](#app-integration-pattern)
-9. [Advanced Usage](#advanced-usage)
+5. [Authorization (Roles & Permissions)](#authorization-roles--permissions)
+6. [SignInButton](#signinbutton)
+7. [Auth Modes](#auth-modes)
+8. [Environment Variables](#environment-variables)
+9. [App Integration Pattern](#app-integration-pattern)
+10. [Advanced Usage](#advanced-usage)
 
 ---
 
@@ -75,13 +76,17 @@ Full authentication context:
 import { useDocyrusAuth } from '@docyrus/signin'
 
 const {
-  status,   // 'loading' | 'authenticated' | 'unauthenticated'
-  mode,     // 'standalone' | 'iframe'
-  client,   // RestApiClient | null — configured API client with tokens
-  tokens,   // { accessToken, refreshToken, ... } | null
-  signIn,   // () => void — redirects to Docyrus login page
-  signOut,  // () => void — logout and clear tokens
-  error,    // Error | null
+  status,        // 'loading' | 'authenticated' | 'unauthenticated'
+  mode,          // 'standalone' | 'iframe'
+  client,        // RestApiClient | null — configured API client with tokens
+  tokens,        // { accessToken, refreshToken, ... } | null
+  user,          // DocyrusUser | null — auto-fetched from /v1/users/me
+  signIn,        // () => void — redirects to Docyrus login page
+  signOut,       // () => void — logout and clear tokens
+  hasRole,       // (role: string | string[]) => boolean — check role by slug or uid
+  hasPermission, // (operation: string, dataSourceId?: string) => boolean — check ACL permission
+  refreshUser,   // () => Promise<void> — re-fetch user from API
+  error,         // Error | null
 } = useDocyrusAuth()
 ```
 
@@ -98,6 +103,59 @@ if (client) {
   const user = await client.get('/v1/users/me')
   const items = await client.get('/v1/apps/base/data-sources/project/items', queryPayload)
 }
+```
+
+---
+
+## Authorization (Roles & Permissions)
+
+The provider auto-fetches the current user from `/v1/users/me` after authentication and exposes `hasRole` and `hasPermission` helpers. The `user` object is `null` until the fetch completes (shortly after `status` becomes `'authenticated'`).
+
+### Role Checking
+
+```typescript
+const { hasRole } = useDocyrusAuth()
+
+hasRole(null)                      // true — no role requirement
+hasRole('super_admin')             // checks slug or uid match
+hasRole(['editor', 'reviewer'])    // true if user has any of these roles
+```
+
+Checks both `primaryRole` and all additional `roles` from the user object.
+
+### Permission Checking
+
+```typescript
+const { hasPermission } = useDocyrusAuth()
+
+hasPermission('view', dataSourceId)    // can view this data source?
+hasPermission('edit', dataSourceId)    // can edit?
+hasPermission('delete', dataSourceId)  // can delete?
+```
+
+**Permission resolution order:**
+1. `super_admin` role → always granted
+2. `global_editor` role → granted for: view, create, edit, delete, create_bulk, export, import, print
+3. `global_viewer` role → granted only for: view
+4. Always-permitted system data sources (reports, todos, notes, etc.)
+5. User's `aclRules` array (merged from all roles by the server)
+
+### Pure Functions (Framework-Agnostic)
+
+```typescript
+import { hasRole, hasPermission } from '@docyrus/signin/core'
+import type { DocyrusUser } from '@docyrus/signin/core'
+
+// Use with any user object (e.g., server-side, tests)
+hasRole(user, 'super_admin')
+hasPermission(user, 'edit', 'some-ds-id')
+```
+
+### Refreshing User Data
+
+```typescript
+const { refreshUser } = useDocyrusAuth()
+await refreshUser() // re-fetch after role/permission changes
 ```
 
 ---
@@ -231,8 +289,10 @@ const data = await client!.get('/v1/custom-endpoint')
 
 ## Advanced Usage
 
-Core classes exported for advanced scenarios:
+Core classes and permission functions exported for advanced scenarios:
 
 ```typescript
 import { AuthManager, StandaloneOAuth2Auth, IframeAuth, detectAuthMode } from '@docyrus/signin'
+import { hasRole, hasPermission, getAllRoles } from '@docyrus/signin/core'
+import type { DocyrusUser, DocyrusRole, DocyrusAclRule, AclOperation, PermissionConfig } from '@docyrus/signin/core'
 ```

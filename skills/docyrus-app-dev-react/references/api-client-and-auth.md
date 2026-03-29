@@ -4,10 +4,11 @@
 
 1. [RestApiClient](#restapiclient)
 2. [Authentication with @docyrus/signin](#authentication-with-docyrussignin)
-3. [API Client Access Pattern](#api-client-access-pattern)
-4. [Interceptors](#interceptors)
-5. [Error Handling](#error-handling)
-6. [Advanced Features](#advanced-features)
+3. [Authorization (Roles & Permissions)](#authorization-roles--permissions)
+4. [API Client Access Pattern](#api-client-access-pattern)
+5. [Interceptors](#interceptors)
+6. [Error Handling](#error-handling)
+7. [Advanced Features](#advanced-features)
 
 ---
 
@@ -95,13 +96,17 @@ import { DocyrusAuthProvider } from '@docyrus/signin'
 
 ```typescript
 const {
-  status,   // 'loading' | 'authenticated' | 'unauthenticated'
-  mode,     // 'standalone' | 'iframe'
-  client,   // RestApiClient | null
-  tokens,   // { accessToken, refreshToken, ... } | null
-  signIn,   // () => void — redirects to Docyrus login
-  signOut,  // () => void — logout and clear tokens
-  error,    // Error | null
+  status,        // 'loading' | 'authenticated' | 'unauthenticated'
+  mode,          // 'standalone' | 'iframe'
+  client,        // RestApiClient | null
+  tokens,        // { accessToken, refreshToken, ... } | null
+  user,          // DocyrusUser | null — auto-fetched from /v1/users/me
+  signIn,        // () => void — redirects to Docyrus login
+  signOut,       // () => void — logout and clear tokens
+  hasRole,       // (role: string | string[]) => boolean — check role by slug or uid
+  hasPermission, // (operation: string, dataSourceId?: string) => boolean — check ACL permission
+  refreshUser,   // () => Promise<void> — re-fetch user from API
+  error,         // Error | null
 } = useDocyrusAuth()
 ```
 
@@ -137,6 +142,52 @@ VITE_API_BASE_URL=https://localhost:3366
 VITE_OAUTH2_CLIENT_ID=your-client-id
 VITE_OAUTH2_REDIRECT_URI=http://localhost:3000/auth/callback
 VITE_OAUTH2_SCOPES=openid profile offline_access Users.Read DS.ReadWrite.All
+```
+
+---
+
+## Authorization (Roles & Permissions)
+
+The provider auto-fetches the current user from `/v1/users/me` after authentication. The `user`, `hasRole`, and `hasPermission` are available on the `useDocyrusAuth()` hook.
+
+### Role-Based UI Gating
+
+```tsx
+function Dashboard({ dataSourceId }: { dataSourceId: string }) {
+  const { user, hasRole, hasPermission } = useDocyrusAuth()
+
+  if (!user) return <Spinner />
+
+  const canEdit = hasPermission('edit', dataSourceId)
+  const canDelete = hasPermission('delete', dataSourceId)
+  const isAdmin = hasRole('super_admin')
+
+  return (
+    <div>
+      {canEdit && <Button>Edit</Button>}
+      {canDelete && <Button variant="destructive">Delete</Button>}
+      {isAdmin && <AdminPanel />}
+    </div>
+  )
+}
+```
+
+### Permission Resolution Order
+
+1. `super_admin` role → always granted
+2. `global_editor` role → granted for: view, create, edit, delete, create_bulk, export, import, print
+3. `global_viewer` role → granted only for: view
+4. Always-permitted system data sources (reports, todos, notes, etc.)
+5. User's `aclRules` array (merged from all roles by the server)
+
+### Pure Functions (No React)
+
+```typescript
+import { hasRole, hasPermission } from '@docyrus/signin/core'
+import type { DocyrusUser } from '@docyrus/signin/core'
+
+hasRole(user, 'super_admin')
+hasPermission(user, 'edit', 'some-ds-id')
 ```
 
 ---

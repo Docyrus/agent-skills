@@ -156,6 +156,6 @@ The GET items endpoint accepts a powerful query payload:
 Read these files when you need detailed information:
 
 - **`references/api-client.md`** — Full RestApiClient API, OAuth2Client (all flows: PKCE, client credentials, device code), token managers, interceptors, error classes, SSE/streaming, file upload/download, HTML to PDF, retry logic
-- **`references/authentication.md`** — @docyrus/signin React provider, useDocyrusAuth/useDocyrusClient hooks, SignInButton, standalone vs iframe auth modes, env vars, API client access pattern
+- **`references/authentication.md`** — @docyrus/signin React provider, useDocyrusAuth/useDocyrusClient hooks, hasRole/hasPermission authorization helpers, SignInButton, standalone vs iframe auth modes, env vars, API client access pattern
 - **`references/data-source-query-guide.md`** — Up-to-date query payload guide: columns, filters, orderBy, pagination, calculations, formulas, child queries, pivots, and operator reference
 - **`references/formula-design-guide-llm.md`** — Up-to-date formula design guide for building and validating `formulas` payloads

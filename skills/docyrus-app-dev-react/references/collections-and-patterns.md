@@ -246,19 +246,20 @@ export function useDeleteProject() {
 ## App Bootstrap Flow
 
 1. `main.tsx`: Mount `DocyrusAuthProvider` → `QueryClientProvider` → `RouterProvider`
-2. `App.tsx`: Check `useDocyrusAuth()` status
-3. Use collection hooks (e.g., `useUsersCollection()`) for data access — they get the authenticated client via `useDocyrusClient()` internally
-4. Fetch user profile via `useUsersCollection().getMyInfo()`
+2. `App.tsx`: Check `useDocyrusAuth()` status — `user` is auto-fetched from `/v1/users/me`
+3. Use `hasRole()` / `hasPermission()` from `useDocyrusAuth()` for authorization checks
+4. Use collection hooks (e.g., `useUsersCollection()`) for data access — they get the authenticated client via `useDocyrusClient()` internally
 5. Render protected routes
 
 ```typescript
 // App.tsx
 function App() {
-  const { status, signOut } = useDocyrusAuth()
-  const { getMyInfo } = useUsersCollection()
+  const { status, user, hasRole, hasPermission } = useDocyrusAuth()
 
   if (status === 'loading') return <LoadingSpinner />
   if (status === 'unauthenticated') return <LoginPage />
+
+  // user auto-fetched, hasRole/hasPermission ready
   return <AppLayout />
 }
 ```

@@ -23,6 +23,7 @@ Use this skill when you are:
 - Building or modifying a Docyrus-backed React app
 - Setting up authentication with `@docyrus/signin`
 - Fetching or mutating data with generated collections or `@docyrus/api-client`
+- Building record sharing, role management, or ACL-driven UI flows
 - Designing feature UIs such as dashboards, forms, tables, layouts, dialogs, analytics, or detail pages
 - Selecting between shadcn, diceui, animate-ui, docyrus-ui, and reui components
 - Implementing complete feature flows that combine data access and polished UI
@@ -86,6 +87,31 @@ const { data: projects } = useQuery({
 })
 ```
 
+### ACL, roles, and record sharing
+
+Use direct `useDocyrusClient()` calls for ACL features. These routes may be hidden from generated OpenAPI output, so they are typically not available through generated collection hooks.
+
+```tsx
+const client = useDocyrusClient()
+
+const { data: roles } = useQuery({
+  queryKey: ['acl', 'roles'],
+  queryFn: () => client!.get('/v1/users/acl/roles'),
+})
+
+const replaceUserRoles = useMutation({
+  mutationFn: ({ userId, roleIds }: { userId: string; roleIds: string[] }) =>
+    client!.put(`/v1/users/acl/users/${userId}/roles`, { roleIds }),
+})
+
+const createRoleQuery = useMutation({
+  mutationFn: (payload: Record<string, unknown>) =>
+    client!.post('/v1/users/acl/role-queries', payload),
+})
+```
+
+Prefer role `uid` values returned by the API when sending `roleIds` for user-role updates or role-query payloads.
+
 ## Critical App/Data Rules
 
 1. **Always send `columns`** in `.list()` and `.get()` calls. Without it, only `id` is returned.
@@ -96,6 +122,11 @@ const { data: projects } = useQuery({
 6. **Formula keys must appear in `columns`**.
 7. **Use `useUsersCollection().getMyInfo()`** for current user profile instead of making a direct profile call.
 8. **Regenerate collections after schema changes** by rebuilding the tenant OpenAPI spec, downloading the latest `openapi.json`, and re-running the collection generator.
+9. **ACL endpoints are usually raw-client integrations** — use `useDocyrusClient()` or `RestApiClient` for roles, user-role assignments, role queries, record sharing, and ownership transfer.
+10. **Prefer role `uid` values** for ACL role writes, user-role `roleIds`, and role-query `roleIds`.
+11. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
+12. **Send role-query `query` as raw JSON** and omit `tenantAppId` when `dataSourceId` is present; backend derives it.
+13. **After deleting a role, invalidate dependent app queries** for role lists, user-role lists, role-query lists, and any UI that renders primary-role labels.
 
 ## Critical UI/UX Rules
 
@@ -248,6 +279,7 @@ For deep dives, read:
 - `references/README.md` — merged reference map for app development and UI design
 - `references/api-client-and-auth.md`
 - `references/collections-and-patterns.md`
+- `../docyrus-api-dev/references/acl-endpoints-frontend.md`
 - `../docyrus-api-dev/references/data-source-query-guide.md`
 - `../docyrus-api-dev/references/formula-design-guide-llm.md`
 - `../docyrus-api-dev/references/query-guide.md`

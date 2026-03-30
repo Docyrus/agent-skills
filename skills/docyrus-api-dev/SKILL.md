@@ -89,6 +89,36 @@ GET    /v1/users/me       — Current user profile
 PATCH  /v1/users/me       — Update current user
 ```
 
+### ACL / Role Management Endpoints
+```
+GET    /v1/users/acl?dataSourceId={uuid}&recordId={uuid}   — Read record ACL rows
+POST   /v1/users/acl/share                                 — Upsert record shares
+DELETE /v1/users/acl/share                                 — Revoke record shares
+PUT    /v1/users/acl/owner                                 — Transfer record ownership
+
+GET    /v1/users/acl/roles                                 — List roles
+GET    /v1/users/acl/roles/{roleId}                        — Get one role
+POST   /v1/users/acl/roles                                 — Create role
+PATCH  /v1/users/acl/roles/{roleId}                        — Update role
+DELETE /v1/users/acl/roles/{roleId}                        — Delete role
+
+GET    /v1/users/acl/user-roles                            — List user-role assignments
+GET    /v1/users/acl/users/{userId}/roles                  — List one user's roles
+POST   /v1/users/acl/users/{userId}/roles                  — Add roles to a user
+PUT    /v1/users/acl/users/{userId}/roles                  — Replace a user's full role set
+DELETE /v1/users/acl/users/{userId}/roles/{roleId}         — Remove one role assignment
+
+GET    /v1/users/acl/role-queries                          — List role queries
+GET    /v1/users/acl/role-queries/{roleQueryId}            — Get one role query
+POST   /v1/users/acl/role-queries                          — Create role query
+PATCH  /v1/users/acl/role-queries/{roleQueryId}            — Update role query
+DELETE /v1/users/acl/role-queries/{roleQueryId}            — Delete role query
+```
+
+ACL routes require the normal authenticated API session, but they may not appear in generated Swagger/OpenAPI output because the backend currently excludes them from public docs. Integrate them with direct `RestApiClient` calls when you need record sharing, role CRUD, user-role assignment management, or role-query management.
+
+For all ACL role operations, prefer using role `uid` values returned by the API. Nested role objects expose both `id` and `uid`, and both map to the role UID value.
+
 ### Making API Calls
 
 ```typescript
@@ -150,6 +180,11 @@ The GET items endpoint accepts a powerful query payload:
 4. **Child query keys must appear in `columns`** — if childQuery key is `orders`, include `orders` in columns.
 5. **Formula keys must appear in `columns`** — if formula key is `total`, include `total` in columns.
 6. **Filter by related field** using `rel_{{relation_field}}/{{field}}` syntax.
+7. **ACL routes may be hidden from generated OpenAPI** — call them directly via `RestApiClient` instead of expecting generated collection support.
+8. **Prefer role `uid` values** for ACL role writes, user-role `roleIds`, and role-query `roleIds`.
+9. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
+10. **Send role-query `query` as raw JSON** and let backend derive `tenantAppId` from `dataSourceId` when applicable.
+11. **After deleting a role, refresh dependent ACL state** — role lists, user-role lists, role-query lists, and any UI showing primary-role labels.
 
 ## References
 
@@ -159,3 +194,4 @@ Read these files when you need detailed information:
 - **`references/authentication.md`** — @docyrus/signin React provider, useDocyrusAuth/useDocyrusClient hooks, hasRole/hasPermission authorization helpers, SignInButton, standalone vs iframe auth modes, env vars, API client access pattern
 - **`references/data-source-query-guide.md`** — Up-to-date query payload guide: columns, filters, orderBy, pagination, calculations, formulas, child queries, pivots, and operator reference
 - **`references/formula-design-guide-llm.md`** — Up-to-date formula design guide for building and validating `formulas` payloads
+- **`references/acl-endpoints-frontend.md`** — Hidden ACL endpoint reference covering record sharing, roles, user-role assignment flows, role queries, identifier rules, and expected frontend integration behavior

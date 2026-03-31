@@ -1,6 +1,6 @@
 ---
 name: docyrus-app-dev-react
-description: Build Docyrus React TypeScript web applications end-to-end, combining authentication, API access, generated collections, TanStack Query/Form patterns, and production-grade UI implementation with preferred component libraries. Use when creating or modifying Docyrus-backed apps that use @docyrus/api-client, @docyrus/signin, Docyrus collections, queries, dashboards, forms, tables, layouts, or Docyrus UI components.
+description: Build Docyrus React TypeScript web applications end-to-end, combining authentication, API access, @docyrus/app-utils runtime helpers, generated collections, TanStack Query/Form patterns, and production-grade UI implementation with preferred component libraries. Use when creating or modifying Docyrus-backed apps that use @docyrus/api-client, @docyrus/signin, @docyrus/app-utils, Docyrus collections, queries, dashboards, forms, tables, layouts, or Docyrus UI components.
 ---
 
 # Docyrus App Dev React
@@ -12,7 +12,7 @@ Build Docyrus React TypeScript applications end-to-end. This skill combines app 
 - React 19 + TypeScript + Vite
 - TanStack Router (code-based), TanStack Query (server state), TanStack Form
 - Tailwind CSS v4, shadcn/ui components
-- `@docyrus/api-client` + `@docyrus/signin`
+- `@docyrus/api-client` + `@docyrus/signin` + `@docyrus/app-utils`
 - Auto-generated collections from OpenAPI spec
 - Preferred UI libraries: shadcn, diceui, animate-ui, docyrus-ui, reui
 
@@ -22,7 +22,9 @@ Use this skill when you are:
 
 - Building or modifying a Docyrus-backed React app
 - Setting up authentication with `@docyrus/signin`
+- Bootstrapping tenant-aware runtime utilities with `@docyrus/app-utils`
 - Fetching or mutating data with generated collections or `@docyrus/api-client`
+- Persisting app-level config or saved grid views with `AppConfig` and `DataViews`
 - Building record sharing, role management, or ACL-driven UI flows
 - Designing feature UIs such as dashboards, forms, tables, layouts, dialogs, analytics, or detail pages
 - Selecting between shadcn, diceui, animate-ui, docyrus-ui, and reui components
@@ -31,11 +33,13 @@ Use this skill when you are:
 ## End-to-End Feature Workflow
 
 1. Set up app auth, routing, and query providers.
-2. Use generated Docyrus collection hooks or the REST client for data access.
-3. Define `columns`, filters, formulas, child queries, and mutations correctly.
-4. Check preferred UI components before building anything custom.
-5. Use Docyrus form and detail patterns for create, edit, and item detail flows.
-6. Connect UI actions to TanStack Query mutations and invalidate relevant queries.
+2. Bootstrap `TenantPreferences`, date/number utilities, and shared app runtime helpers from `@docyrus/app-utils`.
+3. Use generated Docyrus collection hooks or the REST client for data access.
+4. Define `columns`, filters, formulas, child queries, and mutations correctly.
+5. Use `AppConfig` for per-app persisted settings and `DataViews` for saved grid views.
+6. Check preferred UI components before building anything custom.
+7. Use Docyrus form and detail patterns for create, edit, item detail, and editable grid flows.
+8. Connect UI actions to TanStack Query mutations and invalidate relevant queries.
 
 ## Quick Start: App Bootstrap
 
@@ -69,6 +73,55 @@ if (status === 'unauthenticated') return <SignInButton />
 // hasRole('super_admin') — check role by slug or uid
 // hasPermission('edit', dataSourceId) — check ACL permission on a data source
 ```
+
+### Tenant-aware app utilities
+
+Use `@docyrus/app-utils` as the default runtime layer for tenant-level formatting and persisted app/grid preferences.
+
+```tsx
+import {
+  createAppConfigClient,
+  createDataViewClient,
+  createDateUtils,
+  createNumberUtils,
+  getTenantPreferences,
+} from '@docyrus/app-utils'
+
+function useAppRuntime(appId: string) {
+  const client = useDocyrusClient()
+  const { getMyInfo } = useUsersCollection()
+
+  return useQuery({
+    queryKey: ['app-runtime', appId],
+    enabled: !!client && !!appId,
+    queryFn: async () => {
+      const [preferences, me] = await Promise.all([
+        getTenantPreferences(client!),
+        getMyInfo(),
+      ])
+
+      return {
+        preferences,
+        me,
+        dateUtils: createDateUtils({
+          preferences,
+          userTimezone: me.timeZone?.id,
+        }),
+        numberUtils: createNumberUtils({ preferences }),
+        appConfig: createAppConfigClient(client!, appId),
+        dataViews: createDataViewClient(client!, appId),
+      }
+    },
+  })
+}
+```
+
+Use this runtime to:
+
+- Format dates and datetimes with tenant format strings and the user's timezone.
+- Format numbers, currency-like values, and decimals using tenant separators and precision.
+- Read and upsert the app's single persisted `AppConfig` document.
+- Read and persist saved grid views through `DataViews`.
 
 ### Data fetching with generated collections
 
@@ -112,6 +165,16 @@ const createRoleQuery = useMutation({
 
 Prefer role `uid` values returned by the API when sending `roleIds` for user-role updates or role-query payloads.
 
+### Saved data grid views
+
+Use `DataGridViewSelect` as the default saved-view UI for Docyrus grids, and persist those views with `createDataViewClient(client, appId)`.
+
+- `DataGridViewSelect` is the default component for showing and editing saved grid views.
+- Pass the TanStack table instance via `table` so the selector/editor can read column definitions.
+- Pass `fields` when you want the built-in filter builder enabled in the editor.
+- Back `views`, `onViewCreate`, `onViewSave`, `onViewDelete`, `onViewHide`, and `onViewUnhide` with `DataViews` CRUD.
+- Use `DataGridViewEditor` separately only when you need a standalone editor outside the selector.
+
 ## Critical App/Data Rules
 
 1. **Always send `columns`** in `.list()` and `.get()` calls. Without it, only `id` is returned.
@@ -121,12 +184,20 @@ Prefer role `uid` values returned by the API when sending `roleIds` for user-rol
 5. **Child query keys must appear in `columns`**.
 6. **Formula keys must appear in `columns`**.
 7. **Use `useUsersCollection().getMyInfo()`** for current user profile instead of making a direct profile call.
-8. **Regenerate collections after schema changes** by rebuilding the tenant OpenAPI spec, downloading the latest `openapi.json`, and re-running the collection generator.
-9. **ACL endpoints are usually raw-client integrations** — use `useDocyrusClient()` or `RestApiClient` for roles, user-role assignments, role queries, record sharing, and ownership transfer.
-10. **Prefer role `uid` values** for ACL role writes, user-role `roleIds`, and role-query `roleIds`.
-11. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
-12. **Send role-query `query` as raw JSON** and omit `tenantAppId` when `dataSourceId` is present; backend derives it.
-13. **After deleting a role, invalidate dependent app queries** for role lists, user-role lists, role-query lists, and any UI that renders primary-role labels.
+8. **Initialize `TenantPreferences` once per app runtime** and create shared `dateUtils` / `numberUtils` instances from `@docyrus/app-utils`.
+9. **Formatting functions from `@docyrus/app-utils` are regionalized** — do not hardcode locale, date format, decimal separator, thousand separator, or decimal precision when tenant preferences should drive them.
+10. **Use `createAppConfigClient(client, appId)`** for the app's single persisted config document; `upsert` is the default write path.
+11. **Use `createDataViewClient(client, appId)`** for saved grid-view CRUD.
+12. **Use `DataViews` with `DataGridViewSelect`** to show, create, edit, reorder, hide, unhide, soft-delete, and hard-delete saved data grid views.
+13. **`DataGridViewSelect` needs a TanStack table instance** and should receive `fields` when you want the built-in filter builder/editor experience.
+14. **Data view creation requires `name` and `tenant_data_source_id`**.
+15. **Use `dataViews.update(viewId, { archived: true })` for soft-delete** and `dataViews.remove(viewId)` only for irreversible hard-delete.
+16. **Regenerate collections after schema changes** by rebuilding the tenant OpenAPI spec, downloading the latest `openapi.json`, and re-running the collection generator.
+17. **ACL endpoints are usually raw-client integrations** — use `useDocyrusClient()` or `RestApiClient` for roles, user-role assignments, role queries, record sharing, and ownership transfer.
+18. **Prefer role `uid` values** for ACL role writes, user-role `roleIds`, and role-query `roleIds`.
+19. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
+20. **Send role-query `query` as raw JSON** and omit `tenantAppId` when `dataSourceId` is present; backend derives it.
+21. **After deleting a role, invalidate dependent app queries** for role lists, user-role lists, role-query lists, and any UI that renders primary-role labels.
 
 ## Critical UI/UX Rules
 
@@ -144,6 +215,8 @@ Prefer role `uid` values returned by the API when sending `roleIds` for user-rol
 8. **All forms must use TanStack Form + the Docyrus form system**. Do not build feature forms with plain HTML forms or React Hook Form directly.
 9. **Use `EditableRecordDetail` for inline editing** in item detail views.
 10. **Always enable `trackChanges`** for editable detail and grid experiences.
+11. **Use `DataGridViewSelect` for saved grid views** and back it with `DataViews` from `@docyrus/app-utils`.
+12. **Prefer `DataGridViewEditor` only when you need a standalone grid-view editor** outside the selector component.
 
 ## Default UI Choices
 
@@ -159,7 +232,7 @@ Prefer role `uid` values returned by the API when sending `roleIds` for user-rol
 | App navigation | `Sidebar` | animate-ui |
 | Data table | `DataTable` | diceui |
 | Editable grid | `Data Grid` | docyrus |
-| Grid saved views | `DataGridViewSelect` | docyrus |
+| Grid saved views | `DataGridViewSelect` + `DataViews` | docyrus + `@docyrus/app-utils` |
 | Forms | Docyrus form fields + TanStack Form | docyrus |
 | Charts | shadcn chart + Recharts | shadcn |
 | File upload | File Upload | diceui |

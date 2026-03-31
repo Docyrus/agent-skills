@@ -243,25 +243,42 @@ Follow this process when selecting a component:
 
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
-| App sidebar | **Sidebar** | animate-ui | Default choice - smooth animations, composable |
-| Alternative sidebar | Navigation Menu | shadcn | For mega menus and dropdowns |
-| Breadcrumbs | Breadcrumb | shadcn | Path navigation |
-| Menu bar | Menubar | shadcn | Desktop-style persistent menu |
-| Dropdown menu | Dropdown Menu | animate-ui | Animated transitions |
-| Context menu | Context Menu | shadcn | Right-click menus |
-| Tabs | Tabs | animate-ui | Animated tab transitions |
+| Dynamic forms (default) | **Form Fields + TanStack Form** | docyrus | 47 field types with auto-dispatch — **always use this** |
+| Inline record editing | **EditableRecordDetail** | docyrus | Click-to-edit fields with change tracking + ActionBar |
+| Single field inline edit | EditableValue | docyrus | Lower-level click-to-edit for individual values |
+| Text input | Input | shadcn | Basic text input (use via TextFormField in forms) |
+| Text area | Textarea | shadcn | Multi-line text (use via TextareaFormField in forms) |
+| Select dropdown | Select | shadcn | Basic select (use via SelectFormField in forms) |
+| Combobox/autocomplete | Combobox | diceui | Search + select |
+| Date picker | Date Time Picker | docyrus | Date + time combined |
+| Date range picker | **Date Time Range Picker** | docyrus | Start/end date+time pair with size variants |
+| Date only | Calendar | shadcn | Date selection only |
+| Time only | Time Picker | diceui | Time selection only |
+| Phone number | Phone Input | diceui | International formatting |
+| Color selection | Color Picker | diceui | Full spectrum + palette |
+| File upload | File Upload | diceui | Drag-drop, preview, progress |
+| Tags input | Tags Input | diceui | Multiple tag entry |
+| Rating | Rating | diceui | Star/heart rating |
+| Checkbox group | Checkbox Group | diceui | Multiple selections |
+| Radio group (animated) | Radio Group | animate-ui | Single selection with animation |
+| Radio group (card/grid) | **Radio Group** | docyrus | Card variant with icons, descriptions, grid columns |
+| Switch | Switch | animate-ui | Toggle with animation |
+| Slider | Slider | shadcn | Range selection |
+| OTP input | Input OTP | shadcn | One-time password codes |
 
 ### Data Display & Tables
 
 | Need | Component | Library | Rationale |
 |------|-----------|---------|-----------|
 | Editable grid | Data Grid | docyrus | Virtualized, keyboard nav, cell editing — enable `trackChanges` for edit tracking |
-| Grid saved views | **Data Grid View Select** | docyrus | Saved view management with sort/filter/columns |
+| Grid saved views | **Data Grid View Select** | docyrus | Saved view management with sort/filter/columns — persist with `DataViews` from `@docyrus/app-utils` |
 | Read-only table | Table | shadcn | Simple, responsive tables |
 | Advanced data table | Data Table | diceui | Filtering, sorting, pagination built-in |
 | Table filters | Data Table Filter | docyrus | Multi-column filter bar |
 | Value display | Value Renderers | docyrus | 44 renderer types for read-only display |
 | Empty state | Empty | shadcn | No data placeholder |
+
+When using **Data Grid View Select**, back its `views`, `onViewCreate`, `onViewSave`, `onViewDelete`, `onViewHide`, and `onViewUnhide` flows with `createDataViewClient(client, appId)` from `@docyrus/app-utils`. Always pass the TanStack `table` instance, and pass `fields` when you want the editor's built-in filter builder enabled.
 
 ### Forms & Inputs
 
@@ -426,7 +443,7 @@ These are the **recommended defaults** unless the user specifies otherwise:
 | App navigation | Sidebar | animate-ui |
 | Charts | Chart + Recharts | shadcn |
 | Data table | Data Table | diceui |
-| Data grid saved views | **Data Grid View Select** | docyrus |
+| Data grid saved views | **Data Grid View Select** + `DataViews` | docyrus + `@docyrus/app-utils` |
 | Forms | **Form Fields + TanStack Form** | docyrus |
 | File upload | File Upload | diceui |
 | Confirmation dialogs | Alert Dialog | animate-ui |
@@ -538,7 +555,7 @@ import { LucideActivity } from 'lucide-react'
 ### Data & Display
 - Tables: docyrus Data Grid, diceui Data Table, shadcn Table
 - Pivot table: docyrus PivotGrid (hierarchies, subtotals, drilldown, export)
-- Grid saved views: docyrus Data Grid View Select
+- Grid saved views: docyrus Data Grid View Select + `DataViews` from `@docyrus/app-utils`
 - Cards: docyrus AwesomeCard, shadcn Card
 - Stat dashboards: docyrus AwesomeStats (grid/flex/tabs, mini-charts, comparisons)
 - Charts: shadcn Chart + Recharts

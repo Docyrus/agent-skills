@@ -25,6 +25,12 @@ Guide for using the `docyrus` CLI to interact with the Docyrus platform from the
 | `docyrus studio ...` | CRUD for dev app data sources, fields, and enums |
 | `docyrus discover api` | Download tenant OpenAPI spec |
 | `docyrus discover namespaces` / `path` / `endpoint` / `entity` / `search` | Explore the downloaded tenant OpenAPI spec |
+| `docyrus discover connectors` | List integration connectors with optional keyword search |
+| `docyrus discover connector <slug>` | Get connector details including data sources and actions |
+| `docyrus discover connector-action <slug> <actionKey>` | Get action details with input/output JSON schemas |
+| `docyrus discover connector-connections <slug>` | Get tenant and user connections for a connector |
+| `docyrus discover connector-curl <slug> <endpoint>` | Send HTTP request through a connector's provider auth |
+| `docyrus action <appSlug> <actionKey>` | Run a connector or app action |
 | `docyrus curl` | Send arbitrary API requests |
 | `docyrus tui` | Launch the OpenTUI terminal UI (requires Bun) |
 
@@ -238,6 +244,77 @@ docyrus studio update-enums --appId <appId> --dataSourceId <dataSourceId> --fiel
 docyrus studio delete-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --data '["enum-1","enum-2"]' --json
 ```
 
+### Discover and Use Connectors
+
+Connectors are external integration providers (e.g. Meta WhatsApp, Microsoft Graph, Salesforce). Use the `discover` subcommands to find connectors, inspect their data sources and actions, check connection status, and send requests through their auth configuration.
+
+**Discovery workflow:**
+
+```bash
+# 1. Search for connectors by keyword
+docyrus discover connectors --q whatsapp --json
+
+# 2. Get connector details (data sources + actions)
+docyrus discover connector meta-whatsapp --json
+
+# 3. Get full action details with input/output schemas
+docyrus discover connector-action meta-whatsapp sendWhatsappMessage --json
+
+# 4. Check if tenant/user has active connections
+docyrus discover connector-connections meta-whatsapp --json
+```
+
+**Send requests through connector auth (`connector-curl`):**
+
+The `connector-curl` command sends HTTP requests to external providers using the connector's stored auth credentials (OAuth tokens, API keys, base URL).
+
+```bash
+# GET request with query params
+docyrus discover connector-curl meta-whatsapp \
+  "433457363182570/phone_numbers" \
+  -d '{"fields":"id,display_phone_number,verified_name"}' --json
+
+# POST request (send WhatsApp message)
+docyrus discover connector-curl meta-whatsapp \
+  "418088118057836/messages" \
+  -X POST \
+  -d '{"messaging_product":"whatsapp","to":"905551234567","type":"template","template":{"name":"sample_template","language":{"code":"en_US"}}}' \
+  --contentType "application/json" --json
+
+# With explicit auth header override
+docyrus discover connector-curl meta-whatsapp \
+  "me/businesses" \
+  --headers '{"Authorization":"Bearer <token>"}' \
+  -d '{"fields":"id,name"}' --json
+
+# With connection ID override
+docyrus discover connector-curl meta-whatsapp \
+  "some/endpoint" \
+  -c <connection-uuid> --json
+```
+
+Aliases: `-X` (method), `-d` (data), `-c` (connectionId).
+
+**Run actions:**
+
+The `action` command runs predefined connector or app actions via `POST /v1/apps/:appSlug/actions/:actionKey/run`.
+
+```bash
+# Run an action with parameters
+docyrus action base sendWhatsappMessage \
+  --params '{"to":"905551234567","templateName":"hello_world"}' --json
+
+# Dry run — preview request without executing
+docyrus action base sendWhatsappMessage \
+  --params '{"to":"905551234567"}' --dryRun --json
+
+# With connection override
+docyrus action base sendWhatsappMessage \
+  -p '{"to":"905551234567"}' -c <connection-uuid> --json
+```
+
+Aliases: `-p` (params), `-c` (connectionId), `-n` (dryRun).
+
 ### Arbitrary API Calls
 
 ```bash
@@ -272,6 +349,10 @@ It requires Bun installed locally. The TUI reuses the existing CLI command graph
 - Successful responses inject `context` with `email`, `tenantName`, `tenantNo`, and `tenantDisplay`
 - Studio selectors are exclusive pairs: exactly one of `--appId|--appSlug`, `--dataSourceId|--dataSourceSlug`, and `--fieldId|--fieldSlug` as required
 - Studio write commands accept `--data` or `--from-file` (JSON only), and explicit flags override overlapping JSON keys
+- Connector discovery uses the `/v1/connectors` API endpoints, not the OpenAPI spec
+- `connector-curl` sends requests through the connector's provider auth (OAuth tokens, base URL); the `--headers` option can override the Authorization header
+- `connector-curl` data is sent as body for POST/PUT/PATCH and as query params for GET
+- `action` command runs actions via `/v1/apps/:appSlug/actions/:actionKey/run` with `--params` as the JSON body
 
 ## References
 

@@ -1,6 +1,6 @@
 ---
 name: docyrus-api-dev
-description: Develop applications using the Docyrus API with @docyrus/api-client and @docyrus/signin libraries. Use when building apps that authenticate with Docyrus OAuth2 (PKCE, iframe, client credentials, device code), make REST API calls to Docyrus data source endpoints, or construct query payloads with filters, aggregations, formulas, pivots, and child queries. Triggers on tasks involving Docyrus API integration, @docyrus/api-client usage, @docyrus/signin authentication, data source query building, or Docyrus REST endpoint consumption.
+description: Develop applications using the Docyrus API with @docyrus/api-client and @docyrus/signin libraries. Use when building apps that authenticate with Docyrus OAuth2 (PKCE, iframe, client credentials, device code), make REST API calls to Docyrus data source endpoints, construct query payloads with filters, aggregations, formulas, pivots, and child queries, or integrate with external connectors (discover connectors, send requests through provider auth, run actions). Triggers on tasks involving Docyrus API integration, @docyrus/api-client usage, @docyrus/signin authentication, data source query building, Docyrus REST endpoint consumption, connector discovery, or external provider requests.
 ---
 
 # Docyrus API Developer
@@ -88,6 +88,41 @@ POST   /v1/users          — Create user
 GET    /v1/users/me       — Current user profile
 PATCH  /v1/users/me       — Update current user
 ```
+
+### Connector Discovery & External Request Endpoints
+```
+GET    /v1/connectors?q=&limit=&offset=                                    — List connectors with keyword search
+GET    /v1/connectors/{dataProviderSlug}                                    — Get connector detail (dataSources + actions)
+GET    /v1/connectors/{dataProviderSlug}/actions/{actionKey}                — Get action detail (input/output schemas, API endpoint)
+GET    /v1/connectors/{dataProviderSlug}/connections                        — Get tenant connections + user connection status
+PUT    /v1/connectors/{dataProviderSlug}                                    — Send HTTP request through connector provider auth
+```
+
+Scopes: `Read.All`, `ReadWrite.All`, or `Connectors.Read.All`. The `PUT` endpoint requires `ReadWrite.All`.
+
+**PUT request body** for sending requests through a connector:
+```json
+{
+  "endpoint": "relative/path/or/absolute-url",
+  "requestMethod": "GET",
+  "data": { "fields": "id,name", "limit": 20 },
+  "contentType": "application/json",
+  "headers": { "Authorization": "Bearer <override-token>" },
+  "connectionId": "optional-tenant-connection-uuid",
+  "connectionAccountId": "optional-connection-account-uuid"
+}
+```
+
+The connector resolves auth credentials (OAuth tokens, base URL) from the provider configuration and stored connections. Custom `headers.Authorization` overrides the stored token.
+
+### Action Run Endpoints
+```
+GET    /v1/apps/base/actions                                               — List base actions
+GET    /v1/apps/{appSlug}/actions/{actionSlug}                             — Get action metadata
+POST   /v1/apps/{appSlug}/actions/{actionSlug}/run                         — Run action directly
+```
+
+Action run accepts arbitrary JSON body as input. Optional headers: `x-connection-id`, `x-connection-account-id`.
 
 ### ACL / Role Management Endpoints
 ```

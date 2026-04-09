@@ -24,7 +24,7 @@ Use this skill when you are:
 - Setting up authentication with `@docyrus/signin`
 - Bootstrapping tenant-aware runtime utilities with `@docyrus/app-utils`
 - Fetching or mutating data with generated collections or `@docyrus/api-client`
-- Persisting app-level config or saved grid views with `AppConfig` and `DataViews`
+- Persisting app-level config or user-level config or saved grid views with `AppConfig`, `UserAppConfig`, and `DataViews`
 - Building record sharing, role management, or ACL-driven UI flows
 - Designing feature UIs such as dashboards, forms, tables, layouts, dialogs, analytics, or detail pages
 - Selecting between shadcn, diceui, animate-ui, docyrus-ui, and reui components
@@ -36,7 +36,7 @@ Use this skill when you are:
 2. Bootstrap `TenantPreferences`, date/number utilities, and shared app runtime helpers from `@docyrus/app-utils`.
 3. Use generated Docyrus collection hooks or the REST client for data access.
 4. Define `columns`, filters, formulas, child queries, and mutations correctly.
-5. Use `AppConfig` for per-app persisted settings and `DataViews` for saved grid views.
+5. Use `AppConfig` for per-app persisted settings, `UserAppConfig` for per-user per-app settings, and `DataViews` for saved grid views.
 6. Check preferred UI components before building anything custom.
 7. Use Docyrus form and detail patterns for create, edit, item detail, and editable grid flows.
 8. Connect UI actions to TanStack Query mutations and invalidate relevant queries.
@@ -81,6 +81,7 @@ Use `@docyrus/app-utils` as the default runtime layer for tenant-level formattin
 ```tsx
 import {
   createAppConfigClient,
+  createUserAppConfigClient,
   createDataViewClient,
   createDateUtils,
   createNumberUtils,
@@ -109,6 +110,7 @@ function useAppRuntime(appId: string) {
         }),
         numberUtils: createNumberUtils({ preferences }),
         appConfig: createAppConfigClient(client!, appId),
+        userConfig: createUserAppConfigClient(client!, appId),
         dataViews: createDataViewClient(client!, appId),
       }
     },
@@ -121,6 +123,7 @@ Use this runtime to:
 - Format dates and datetimes with tenant format strings and the user's timezone.
 - Format numbers, currency-like values, and decimals using tenant separators and precision.
 - Read and upsert the app's single persisted `AppConfig` document.
+- Read and upsert the current user's `UserAppConfig` document (per-user per-app settings).
 - Read and persist saved grid views through `DataViews`.
 
 ### Data fetching with generated collections
@@ -187,17 +190,18 @@ Use `DataGridViewSelect` as the default saved-view UI for Docyrus grids, and per
 8. **Initialize `TenantPreferences` once per app runtime** and create shared `dateUtils` / `numberUtils` instances from `@docyrus/app-utils`.
 9. **Formatting functions from `@docyrus/app-utils` are regionalized** — do not hardcode locale, date format, decimal separator, thousand separator, or decimal precision when tenant preferences should drive them.
 10. **Use `createAppConfigClient(client, appId)`** for the app's single persisted config document; `upsert` is the default write path.
-11. **Use `createDataViewClient(client, appId)`** for saved grid-view CRUD.
-12. **Use `DataViews` with `DataGridViewSelect`** to show, create, edit, reorder, hide, unhide, soft-delete, and hard-delete saved data grid views.
-13. **`DataGridViewSelect` needs a TanStack table instance** and should receive `fields` when you want the built-in filter builder/editor experience.
-14. **Data view creation requires `name` and `tenant_data_source_id`**.
-15. **Use `dataViews.update(viewId, { archived: true })` for soft-delete** and `dataViews.remove(viewId)` only for irreversible hard-delete.
-16. **Regenerate collections after schema changes** by rebuilding the tenant OpenAPI spec, downloading the latest `openapi.json`, and re-running the collection generator.
-17. **ACL endpoints are usually raw-client integrations** — use `useDocyrusClient()` or `RestApiClient` for roles, user-role assignments, role queries, record sharing, and ownership transfer.
-18. **Prefer role `uid` values** for ACL role writes, user-role `roleIds`, and role-query `roleIds`.
-19. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
-20. **Send role-query `query` as raw JSON** and omit `tenantAppId` when `dataSourceId` is present; backend derives it.
-21. **After deleting a role, invalidate dependent app queries** for role lists, user-role lists, role-query lists, and any UI that renders primary-role labels.
+11. **Use `createUserAppConfigClient(client, appId)`** for the current user's persisted config document scoped to an app (e.g. theme, layout preferences, sidebar state); `upsert` is the default write path.
+12. **Use `createDataViewClient(client, appId)`** for saved grid-view CRUD.
+13. **Use `DataViews` with `DataGridViewSelect`** to show, create, edit, reorder, hide, unhide, soft-delete, and hard-delete saved data grid views.
+14. **`DataGridViewSelect` needs a TanStack table instance** and should receive `fields` when you want the built-in filter builder/editor experience.
+15. **Data view creation requires `name` and `tenant_data_source_id`**.
+16. **Use `dataViews.update(viewId, { archived: true })` for soft-delete** and `dataViews.remove(viewId)` only for irreversible hard-delete.
+17. **Regenerate collections after schema changes** by rebuilding the tenant OpenAPI spec, downloading the latest `openapi.json`, and re-running the collection generator.
+18. **ACL endpoints are usually raw-client integrations** — use `useDocyrusClient()` or `RestApiClient` for roles, user-role assignments, role queries, record sharing, and ownership transfer.
+19. **Prefer role `uid` values** for ACL role writes, user-role `roleIds`, and role-query `roleIds`.
+20. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
+21. **Send role-query `query` as raw JSON** and omit `tenantAppId` when `dataSourceId` is present; backend derives it.
+22. **After deleting a role, invalidate dependent app queries** for role lists, user-role lists, role-query lists, and any UI that renders primary-role labels.
 
 ## Critical UI/UX Rules
 

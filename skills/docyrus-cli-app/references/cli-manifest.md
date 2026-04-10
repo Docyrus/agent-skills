@@ -233,6 +233,101 @@ Endpoint results include method and description when available.
 
 ---
 
+## docyrus connect
+
+Connector and action commands. Interact with external integration connectors and run actions.
+
+### docyrus connect list-connectors
+
+List available integration connectors.
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--q` | string | Keyword search on name, slug, or description |
+| `--limit` | number | Max results (default: 100) |
+| `--offset` | number | Result offset (default: 0) |
+
+### docyrus connect get-connector
+
+Get connector details with data sources and actions.
+
+```
+docyrus connect get-connector <slug>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `slug` | string | yes | Data provider slug (e.g. `msgraph`) |
+
+### docyrus connect get-action
+
+Get connector action details including input/output schemas.
+
+```
+docyrus connect get-action <slug> <actionKey>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `slug` | string | yes | Data provider slug (e.g. `msgraph`) |
+| `actionKey` | string | yes | Action key (e.g. `sendEmailWithOutlook`) |
+
+### docyrus connect list-connections
+
+Get tenant and user connections for a connector.
+
+```
+docyrus connect list-connections <slug>
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `slug` | string | yes | Data provider slug (e.g. `msgraph`) |
+
+### docyrus connect curl
+
+Send an HTTP request through a connector's provider auth.
+
+```
+docyrus connect curl <slug> <endpoint> [options]
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `slug` | string | yes | Data provider slug (e.g. `msgraph`, `meta`) |
+| `endpoint` | string | yes | Relative endpoint path or absolute URL |
+
+| Flag | Alias | Type | Description |
+|------|-------|------|-------------|
+| `--method` | `-X` | string | HTTP method (default: `GET`) |
+| `--data` | `-d` | string | JSON request payload |
+| `--contentType` | | string | Content-Type header (defaults to `application/json`) |
+| `--headers` | | string | JSON object of additional headers |
+| `--connectionId` | `-c` | string | Tenant connection ID override |
+| `--connectionAccountId` | | string | Connection account ID |
+
+### docyrus connect run-action
+
+Run a connector or app action.
+
+```
+docyrus connect run-action <appSlug> <actionKey> [options]
+```
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `appSlug` | string | yes | App slug (e.g. `base`, or a custom app slug) |
+| `actionKey` | string | yes | Action key (e.g. `sendEmailWithOutlook`) |
+
+| Flag | Alias | Type | Description |
+|------|-------|------|-------------|
+| `--params` | `-p` | string | JSON object with action input parameters |
+| `--connectionId` | `-c` | string | Tenant connection ID override |
+| `--connectionAccountId` | | string | Tenant connection account ID |
+| `--dryRun` | `-n` | boolean | Preview the request without executing |
+
+---
+
 ## docyrus ds
 
 Data source commands for CRUD operations on records.

@@ -1,9 +1,9 @@
 ---
-name: docyrus-data-grid-pages
+name: docyrus-data-grid-page-design
 description: Build Docyrus React data-grid and record-list pages with `DataGrid`, `DataGridViewSelect`, `useDataGrid`, `useDocyrusDataViewSelect`, and `useDocyrusDataGrid`. Use when asked to build or refactor a list page, records table, CRM or ERP grid, saved-view tabs, row actions, manual DataGrid toolbar composition, or Docyrus data-source grid queries with filtering, sorting, grouping, search, display modes, paging, and reload behavior.
 ---
 
-# Docyrus Data Grid Pages
+# Docyrus Data Grid Page Design
 
 Build full Docyrus list pages around the web `DataGrid` stack.
 

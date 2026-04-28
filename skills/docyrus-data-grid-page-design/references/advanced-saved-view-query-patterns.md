@@ -35,7 +35,7 @@
 
 ## Manual server-query translation from a saved view
 
-If you keep custom row fetching, derive request params from the active view yourself.
+If you keep custom row fetching, derive request params from the active view yourself. Don't forget the toolbar filter merge — `DataGridFilterMenu` writes to TanStack `columnFilters`, and a manual page must AND-merge those into the saved-view filter payload.
 
 ```ts
 const activeView = views.find(view => view.id === activeViewId);
@@ -45,13 +45,42 @@ const orderBy = (activeView?.sorting ?? []).map(sort => ({
   field: sort.id,
   direction: sort.desc ? 'desc' : 'asc'
 }));
-const filters = activeView?.filterQuery;
+
+// Auto-expand reference-type fields so the API returns `{ id, name, ... }` payloads.
+const EXPANDABLE_FIELD_TYPES = new Set([
+  'field-userSelect', 'field-userMultiSelect',
+  'field-relation', 'field-relatedField',
+  'field-select', 'field-radioGroup',
+  'field-enum', 'field-systemEnum',
+  'field-multiSelect', 'field-tagSelect',
+  'field-status', 'field-approvalStatus'
+]);
+const expand = fields
+  .filter(field => columns.includes(field.slug) && EXPANDABLE_FIELD_TYPES.has(field.type))
+  .map(field => field.slug);
+
+// Merge saved-view filters with toolbar filter state.
+const viewFilter = activeView?.filterQuery?.rules?.length ? activeView.filterQuery : undefined;
+const toolbarRules = (table.getState().columnFilters ?? [])
+  .map(filter => toServerRule(filter)) // import from @docyrus/ui/components/data-grid/lib/data-grid-server
+  .filter(Boolean);
+
+let filters;
+
+if (viewFilter && toolbarRules.length > 0) {
+  filters = { combinator: 'and', rules: [viewFilter, ...toolbarRules] };
+} else if (viewFilter) {
+  filters = viewFilter;
+} else if (toolbarRules.length > 0) {
+  filters = { combinator: 'and', rules: toolbarRules };
+}
 
 const params = {
   columns,
   orderBy: orderBy.length > 0 ? orderBy : undefined,
-  filters: filters?.rules?.length ? filters : undefined,
+  filters,
   filterKeyword: keyword || undefined,
+  expand: expand.length > 0 ? expand : undefined,
   limit: 50,
   offset: 0
 };
@@ -64,6 +93,8 @@ Rules to preserve from the built-in hook behavior:
 - Otherwise use `columnVisibility` entries with `true` values.
 - With no explicit saved-view visibility config, fetch all field slugs.
 - If the active view groups by a field, make sure that field stays in `columns` even if the saved view hides it.
+- Add reference-type field slugs to `expand` so user / relation / status / select / multi-select cells render with full data.
+- AND-merge `view.filterQuery` with the toolbar filter rules; reset `pageIndex` to 0 when the merged filter changes.
 - If you merge app-specific overrides, apply them last so they win.
 
 ## Reserved columns versus backend field slugs

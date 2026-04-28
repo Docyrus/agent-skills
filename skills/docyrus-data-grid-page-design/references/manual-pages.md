@@ -123,10 +123,23 @@ Use these when you do not want the prebuilt hook toolbar:
 
 For persistence, system views, paging ownership, or manual translation of the active view into Docyrus query params, also read `advanced-saved-view-query-patterns.md`.
 
+## What you lose by going manual
+
+`useDocyrusDataGrid` does several things automatically that manual mode does **not**:
+
+- **Auto-`expand`** for reference fields. In manual mode you must add reference field slugs to your request's `expand` array yourself, or rich cells (user / relation / select / status) will only see bare IDs.
+- **Reserved-column pinning.** `select` and `actions` are not auto-pinned to the left in manual mode — call `table.setColumnPinning({ left: ['select', 'actions'], right: [] })` after applying the active view.
+- **Filter menu refetch wiring.** `DataGridFilterMenu` writes through to `table.setColumnFilters`, but a manual page's row query doesn't watch that state. You need to read `table.getState().columnFilters` (or lift the state into the host) and translate the filter values into your request's `filters` payload. Reset `pageIndex` to 0 on changes.
+- **Async option search for relation/user filter columns.** The filter menu will show empty option lists unless you pass a `getAsyncOptions` resolver (signature: `(column) => AsyncOptionsConfig | undefined`) that calls `/v1/users` for user fields and `/v1/apps/{appSlug}/data-sources/{slug}/items` for relations.
+- **Tenant-aware formatters.** Pass `formatDate`, `formatDateTime`, `formatNumber` through `useDataGrid({ meta: { ... } })`. Cells read them from `tableMeta`.
+- **Shared users list.** Pass `users: ReadonlyArray<CellUserOption>` to `buildTanstackColumnDef({ users })` (or set the `cell.options` directly via `mapColumn`) so user cells get avatar + label from the global list.
+
+If any of these matter to the page, prefer `useDocyrusDataGrid` and use `mapColumn` / `extraColumns` / toolbar enable flags to customize.
+
 ## Gotchas
 
 - Local/manual `SavedDataGridView` objects can include reserved columns like `select` and `actions` in `columnOrder`.
 - Backend Docyrus-saved views store real field slugs only. If you want the standard reserved-column behavior, `useDocyrusDataGrid` is the safest path.
 - Pass `fields` into `DataGridViewSelect` when you want the filter builder inside the editor.
 - Pass `isSaving` and `isLoading` when the host owns async view CRUD.
-- For manual Docyrus item requests, always send `columns`.
+- For manual Docyrus item requests, always send `columns`. Add reference-type field slugs (`field-userSelect`, `field-userMultiSelect`, `field-relation`, `field-relatedField`, `field-select`, `field-radioGroup`, `field-enum`, `field-systemEnum`, `field-multiSelect`, `field-tagSelect`, `field-status`, `field-approvalStatus`) to `expand` so the API returns `{ id, name, ... }` payloads.

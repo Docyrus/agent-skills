@@ -45,11 +45,18 @@ function OrganizationsPageInner({ client }: { client: NonNullable<ReturnType<typ
     []
   );
 
+  const { users } = useUsers();
+  const { formatDate, formatDateTime, formatNumber } = useGridFormatters();
+
   const { table, gridProps, toolbar, resolvedListParams } = useDocyrusDataGrid<OrganizationRow>({
     client,
     appSlug: 'crm',
     dataSourceSlug: 'organization',
     actionsColumn,
+    users,
+    formatDate,
+    formatDateTime,
+    formatNumber,
     listParams: { limit: 50 },
     defaultRowGroupingColumn: 'status'
   });
@@ -77,14 +84,34 @@ Use `onReload` when you use `data` mode, because the hook cannot refetch rows on
 
 ## High-value options
 
+### Columns and toolbar
+
 - `actionsColumn`: add per-row actions right after the select column.
 - `extraColumns`: prepend custom columns before metadata-generated Docyrus fields.
 - `mapColumn`: override or skip generated field columns.
-- `listParams`: append query params like `limit`, `fullCount`, `expand`, or custom backend flags.
 - `defaultRowGroupingColumn`: seed a default grouping for views that do not define one.
 - `systemViews`: add static developer-defined views before saved backend views.
 - `enableViewSelect`, `enableSearchInput`, `enableFilterMenu`, `enableGroupMenu`, `enableSortMenu`, `enableRowHeightMenu`, `enableDisplayMenu`, `enableReloadButton`: trim the standard toolbar.
 - `showSelectColumn`, `enableRowMarkers`: control the left-most reserved column.
+
+### Query shape
+
+- `listParams`: append query params like `limit`, `fullCount`, `expand`, or custom backend flags. `listParams` overrides win against the hook's defaults, so use this to pin paging or add tenant-specific flags.
+
+### Tenant-aware formatters
+
+- `formatDate?: (value) => string` — wired into `DateCell` display.
+- `formatDateTime?: (value) => string` — wired into `DateTimeCell` display.
+- `formatNumber?: (value, opts?: { variant?: 'number' | 'currency' | 'percent'; currency?: string }) => string` — wired into `NumberCell` / `CurrencyCell` / `PercentCell` display.
+
+Build these from `@docyrus/app-utils` (`createDateUtils` + `createNumberUtils` over `getTenantPreferences`). See `tenant-and-users-providers.md` for the standard provider pattern.
+
+### Shared users list
+
+- `users?: ReadonlyArray<CellUserOption>` — seeds the static option list for `field-userSelect` and `field-userMultiSelect` cells.
+  - When supplied, those cells render avatars + labels from this list immediately.
+  - When not supplied, cells fall back to the row's expanded `{ id, name, photo }` payload (which is why the auto-expand for reference fields matters — see below).
+  - Type with `import { type CellUserOption } from '@docyrus/ui/components/data-grid'`.
 
 ## How backend query params are derived
 
@@ -92,19 +119,62 @@ The hook builds `resolvedListParams` from the active view and toolbar state:
 
 - `columns`: visible field slugs, with `id` always first.
 - `orderBy`: mapped from `view.sorting`.
-- `filters`: mapped from `view.filterQuery`.
+- `filters`: AND-merge of `view.filterQuery` (saved view) and the toolbar filter menu's transient state. Toolbar filter changes refetch the items query automatically (no extra wiring needed in standard mode).
 - `filterKeyword`: mapped from the debounced toolbar search input.
+- `expand`: every visible reference-type column slug is added automatically. Covered types: `field-userSelect`, `field-userMultiSelect`, `field-relation`, `field-relatedField`, `field-select`, `field-radioGroup`, `field-enum`, `field-systemEnum`, `field-multiSelect`, `field-tagSelect`, `field-status`, `field-approvalStatus`.
 - `limit` / `offset`: default to `100` / `0`, then `listParams` wins.
 - grouping column safety: the active grouping field is appended even if the saved view hides it.
 
-Inspect `resolvedListParams` when you need debugging, analytics, export, or a “copy query” action.
+Inspect `resolvedListParams` when you need debugging, analytics, export, or a "copy query" action.
+
+## Filter menu (`DataGridFilterMenu`) behavior
+
+The hook's toolbar wires the filter menu so it pulls live data from the backend instead of only filtering loaded rows.
+
+- Toolbar filter additions/changes trigger a refetch with the merged `filters` payload.
+- Filter changes reset `pageIndex` to 0 so a stale offset can't land out of bounds.
+- Toolbar filters are session-transient and clear when the active view changes.
+- Field type to filter type mappings:
+  - `field-userSelect`, `field-userMultiSelect`, `field-relation`, `field-relatedField`, `field-multiSelect`, `field-tagSelect` → `multiOption` (server `in` operator), with debounced async option search.
+  - `field-status`, `field-approvalStatus`, `field-enum`, `field-systemEnum`, `field-select`, `field-radioGroup` → `option` with the field's static enum options.
+  - `field-checkbox`, `field-switch` → `boolean` (true / false / empty).
+  - `field-date`, `field-dateTime`, `field-dateRange` → `date` with `is between` for ranges.
+  - `field-money`, `field-currency`, `field-percent`, `field-rating`, `field-duration`, `field-number`, `field-autonumber` → `number`.
+  - `field-file`, `field-image`, `field-chart`, etc. are excluded from the filter menu entirely.
+- Async option search calls `/v1/users` for user fields and `/v1/apps/{appSlug}/data-sources/{slug}/items` for relations. The hook caches the data-sources lookup needed to resolve `relationDataSourceId` (UUID) to the URL slugs, valid for 5 minutes.
+
+## Reserved columns
+
+`useDocyrusDataGrid` always:
+
+- Re-prepends `select` and `actions` to the column order after a saved view is applied (saved views only know real field slugs).
+- Pins both reserved columns to the left so they stay visible during horizontal scroll.
+
+You don't need to configure pinning yourself; the hook merges with whatever the saved view declares.
+
+## Cell variants for reference fields
+
+Out of the box (no `mapColumn` needed):
+
+- `field-userSelect` → `UserCell` with avatar + name. If a static `users` list is passed, options come from there; otherwise the cell reads the row's expanded `{ id, name, photo }` payload directly.
+- `field-userMultiSelect` → `UserMultiSelectCell` (avatar stack). Same options/expanded-payload fallback.
+- `field-relation`, `field-relatedField` → `RelationCell` showing the related record's name (from `expand`).
+- `field-status`, `field-approvalStatus` → `StatusCell` with color + icon from the field's enums.
+- `field-select`, `field-radioGroup` → `SelectCell` with color/icon support.
+- `field-multiSelect`, `field-tagSelect` → multi-select cells with chips.
+- `field-identity` → `UuidCell`. Defaults to `showCopyButton: true` (60px fixed-width icon-only column). Override `mapColumn` to set `showCopyButton: false` for a 300px full-text column.
+- `field-url` → `UrlCell` rendering as a link with `target="_blank"`.
+- `field-money`, `field-currency`, `field-percent`, `field-number` → `NumberCell` family. Honor the `formatNumber` option for tenant-aware locale formatting.
+- `field-date`, `field-dateTime` → `DateCell` / `DateTimeCell`. Honor `formatDate` / `formatDateTime`.
+
+Use `mapColumn` only when you need to override these defaults.
 
 ## Important behavior
 
 - `gridProps` already carries the active view's paging settings. Usually you should just spread it into `<DataGrid>`.
-- Backend-saved views store field slugs, not reserved columns like `select` or `actions`. The hook re-prepends those reserved columns for you.
+- Backend-saved views store field slugs, not reserved columns like `select` or `actions`. The hook re-prepends and re-pins those reserved columns for you.
 - In `data` mode the search box becomes client-side global filtering. In backend modes it becomes `filterKeyword`.
-- Relation and user-ish field types need extra metadata; use `mapColumn` when you want richer rendering than the fallback short-text cell.
+- The hook controls TanStack `columnFilters` state. If you build a manual page, replicate this so toolbar filter changes can drive your row query.
 
 ## Default recommendation
 

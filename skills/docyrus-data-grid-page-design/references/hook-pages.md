@@ -88,15 +88,45 @@ Use `onReload` when you use `data` mode, because the hook cannot refetch rows on
 
 - `actionsColumn`: add per-row actions right after the select column.
 - `extraColumns`: prepend custom columns before metadata-generated Docyrus fields.
-- `mapColumn`: override or skip generated field columns.
+- `mapColumn`: override or skip generated field columns (`(field, defaultColumn) => ColumnDef | null`).
 - `defaultRowGroupingColumn`: seed a default grouping for views that do not define one.
 - `systemViews`: add static developer-defined views before saved backend views.
-- `enableViewSelect`, `enableSearchInput`, `enableFilterMenu`, `enableGroupMenu`, `enableSortMenu`, `enableRowHeightMenu`, `enableDisplayMenu`, `enableReloadButton`: trim the standard toolbar.
-- `showSelectColumn`, `enableRowMarkers`: control the left-most reserved column.
+- `enableViewSelect`, `enableSearchInput`, `enableFilterMenu`, `enableGroupMenu`, `enableSortMenu`, `enableRowHeightMenu`, `enableDisplayMenu`, `enableReloadButton`, `enableServerExportMenu`: trim the standard toolbar (all default `true`).
+- `showSelectColumn` (default `true`), `enableRowMarkers` (default `true`): control the left-most reserved column.
+- `selectColumn`: override `getDataGridSelectColumn` entirely.
+- `searchPlaceholder` (default `"Search…"`), `searchDebounceMs` (default `300`), `toolbarClassName`.
+- `enableSearch` (default `false`), `enableGrouping` (default `true`), `readOnly` (default `true`) — forwarded to `useDataGrid`.
 
 ### Query shape
 
 - `listParams`: append query params like `limit`, `fullCount`, `expand`, or custom backend flags. `listParams` overrides win against the hook's defaults, so use this to pin paging or add tenant-specific flags.
+- `defaultLimit` (default `100`): page size used when no `limit` is supplied via `listParams`.
+- `enableItemsQuery` (default `true` when no `data` prop is given): set `false` to wire the toolbar without fetching rows.
+
+### Inline change tracking
+
+- `trackChanges` (default `true`): enables the save/discard banner above the grid for inline cell edits.
+- `onSaveChanges?: (changes: Array<RowChange>, data: Array<TData>) => void | Promise<void>`: custom save handler. By default the hook batches changes into a single `PATCH /items/bulk` call (with `enableAutomation: false`, `enableChangeLogging: false`) using `collection.updateMany` when supplied, otherwise the direct items endpoint.
+
+### Bulk actions (selection bar)
+
+- `bulkActions` (default `['update', 'delete', 'export']`): array of built-in bulk actions to surface when rows are selected. Pass `false` or `[]` to hide the selection bar entirely.
+  - `update` → opens the `BulkUpdateDialog`. Calls `collection.updateMany` when present, otherwise the direct items endpoint.
+  - `delete` → opens `RecordDeleteConfirmDialog`. Calls `collection.deleteMany` when present, otherwise the direct items endpoint.
+  - `export` → opens the export menu for the selection (subset of the toolbar export).
+
+### Server export
+
+- `enableServerExportMenu` (default `true`): toolbar export dropdown that pulls all rows matching the active view's filters/keyword from `POST /v1/edge/run/query-export`.
+- `serverExportLimit` (default `10000`): row cap forwarded to the server export endpoint.
+- `serverExportExcludedFieldTypes`: field types to skip when picking export columns. Defaults to virtual / non-stored types like `field-action`.
+- `serverExportExcludedSlugs`: field slugs to skip when picking export columns. Defaults to internal metadata columns mirroring the legacy Vue exporter (`data`, `document`, `parent_data_source_id`, `parent_record_id`, `icon`, `color`, `mentions`, `followers`, `type`, `tenant_view_id`, `tenant_data_source_id`, `sort_order`, `editor_view_id`).
+- `exportColumns` (default `'visible'`): `'visible'` uses the table's currently-visible columns; `'all'` includes every data-source field; an explicit `Array<string>` of slugs picks specific fields in order.
+- `exportFileName`: file name (without extension) for exports. Defaults to `dataSourceSlug`.
+
+### Lifecycle hooks
+
+- `onReload?: () => void`: called after the reload button's internal `refetch` (data source + views + items) runs.
 
 ### Tenant-aware formatters
 
@@ -169,12 +199,26 @@ Out of the box (no `mapColumn` needed):
 
 Use `mapColumn` only when you need to override these defaults.
 
+## Hook result
+
+`useDocyrusDataGrid<TData>` returns:
+
+- `table` — TanStack Table instance. Pass to `<DataGrid>` and any toolbar building blocks.
+- `gridProps` — spread onto `<DataGrid table={table} {...gridProps} />`. Includes `actions: Array<DataGridAction<TData>>` so the floating selection bar lights up automatically when `bulkActions` are enabled.
+- `toolbar` — pre-wired toolbar `ReactNode` ready to render above the grid.
+- `items: Array<TData>` — resolved rows from `data`, `collection.list()`, or the direct items fetch.
+- `resolvedListParams: DocyrusDataGridListParams` — final params sent to the backend (after merging view state, search, and `listParams`). Use for export/analytics/copy-query.
+- `pagingMode: 'standard' | 'virtual-scroll' | undefined` — resolved paging mode for the active view. Pass to `<DataGrid pagingMode>` so the standard footer renders only when the view enables it.
+- `reload: () => void` — triggers `refetch()` (data source + views + items) and the optional `onReload` callback.
+- Plus everything from `useDocyrusDataViewSelect` except `gridViewSelectProps`: `views`, `fields`, `dataSource`, `activeViewId`, `setActiveViewId`, `isLoading`, `error`, `refetch`.
+
 ## Important behavior
 
 - `gridProps` already carries the active view's paging settings. Usually you should just spread it into `<DataGrid>`.
 - Backend-saved views store field slugs, not reserved columns like `select` or `actions`. The hook re-prepends and re-pins those reserved columns for you.
 - In `data` mode the search box becomes client-side global filtering. In backend modes it becomes `filterKeyword`.
 - The hook controls TanStack `columnFilters` state. If you build a manual page, replicate this so toolbar filter changes can drive your row query.
+- `collection.updateMany` / `collection.deleteMany` are required for bulk update/delete to use the collection layer; otherwise the hook falls back to the direct items endpoints.
 
 ## Default recommendation
 

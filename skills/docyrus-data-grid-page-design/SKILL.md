@@ -13,6 +13,9 @@ Build full Docyrus list pages around the web `DataGrid` stack.
    - Best when rows come from a Docyrus data source or generated collection.
    - Gives you metadata-driven columns, saved views, toolbar wiring, search, filters (with async option search for relation/user fields), grouping, sorting, row-height, display mode, paging, and reload.
    - Auto-wires reference field expansion, tenant-aware formatters, and a shared users list when supplied.
+   - Built-in inline change tracking + save banner (`trackChanges`, `onSaveChanges`).
+   - Built-in selection-bar bulk actions (`bulkActions`: `update`, `delete`, `export`) with `BulkUpdateDialog` + `RecordDeleteConfirmDialog`.
+   - Built-in server-side export menu (`enableServerExportMenu`, `exportColumns`, `exportFileName`, `serverExportLimit`).
    - Read `references/hook-pages.md`.
 
 2. **Custom layout or custom row-query lifecycle** → use `useDocyrusDataViewSelect` + `useDataGrid`.

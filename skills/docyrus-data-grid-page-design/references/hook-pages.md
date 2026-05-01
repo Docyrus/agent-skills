@@ -74,6 +74,31 @@ function OrganizationsPageInner({ client }: { client: NonNullable<ReturnType<typ
 
 If a generated collection already exists, pass `collection` to `useDocyrusDataGrid` and let the hook call `collection.list(resolvedListParams)` instead of the direct items endpoint.
 
+### Page shell with `vertical-tabs` view picker
+
+When `viewSelectVariant === 'vertical-tabs'`, render `sidePanel` to the left of the grid:
+
+```tsx
+const { table, gridProps, toolbar, sidePanel } = useDocyrusDataGrid<Row>({
+  client, appSlug, dataSourceSlug,
+  viewSelectVariant: 'vertical-tabs'
+});
+
+return (
+  <div className="flex h-full flex-col overflow-hidden">
+    <div className="shrink-0">{toolbar}</div>
+    <div className="flex min-h-0 flex-1">
+      {sidePanel}
+      <div className="min-h-0 flex-1">
+        <DataGrid table={table} {...gridProps} height="auto" />
+      </div>
+    </div>
+  </div>
+);
+```
+
+`sidePanel` is `null` for `'horizontal-tabs'` and `'dropdown'` — rendering it conditionally is safe.
+
 ## Data modes
 
 1. `data`: pass pre-resolved rows when another part of the page owns fetching.
@@ -91,7 +116,7 @@ Use `onReload` when you use `data` mode, because the hook cannot refetch rows on
 - `mapColumn`: override or skip generated field columns (`(field, defaultColumn) => ColumnDef | null`).
 - `defaultRowGroupingColumn`: seed a default grouping for views that do not define one.
 - `systemViews`: add static developer-defined views before saved backend views.
-- `viewSelectVariant` (default `'horizontal-tabs'`): view picker layout. `'dropdown'` → compact `<Select>`-style trigger for tight toolbars. `'vertical-tabs'` → sidebar-friendly stacked list.
+- `viewSelectVariant` (default `'horizontal-tabs'`): view picker layout. `'dropdown'` → compact `<Select>`-style trigger for tight toolbars. `'vertical-tabs'` → moves the picker out of the toolbar into a side panel (see "Side panel" in **Hook result** below); the consumer renders `sidePanel` to the left of the grid.
 - `viewSelectMaxVisible?: number`: caps inline tabs in the `'horizontal-tabs'` variant; overflow collapses into the active view's overflow menu. Ignored for `'dropdown'` / `'vertical-tabs'`.
 - `enableViewSelect`, `enableSearchInput`, `enableFilterMenu`, `enableGroupMenu`, `enableSortMenu`, `enableRowHeightMenu`, `enableDisplayMenu`, `enableReloadButton`, `enableServerExportMenu`: trim the standard toolbar (all default `true`).
 - `showSelectColumn` (default `true`), `enableRowMarkers` (default `true`): control the left-most reserved column.
@@ -214,6 +239,7 @@ Use `mapColumn` only when you need to override these defaults.
 - `table` — TanStack Table instance. Pass to `<DataGrid>` and any toolbar building blocks.
 - `gridProps` — spread onto `<DataGrid table={table} {...gridProps} />`. Includes `actions: Array<DataGridAction<TData>>` so the floating selection bar lights up automatically when `bulkActions` are enabled.
 - `toolbar` — pre-wired toolbar `ReactNode` ready to render above the grid.
+- `sidePanel` — pre-wired side panel `ReactNode`. `null` for `'horizontal-tabs'` and `'dropdown'` view variants. When `viewSelectVariant === 'vertical-tabs'`, it returns a `<DataGridSidePanel>` containing the vertical view picker — render it to the left of `<DataGrid>` (e.g. inside a flex row).
 - `items: Array<TData>` — resolved rows from `data`, `collection.list()`, or the direct items fetch.
 - `resolvedListParams: DocyrusDataGridListParams` — final params sent to the backend (after merging view state, search, and `listParams`). Use for export/analytics/copy-query.
 - `pagingMode: 'standard' | 'virtual-scroll' | undefined` — resolved paging mode for the active view. Pass to `<DataGrid pagingMode>` so the standard footer renders only when the view enables it.

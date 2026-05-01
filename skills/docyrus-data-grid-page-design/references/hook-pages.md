@@ -91,6 +91,8 @@ Use `onReload` when you use `data` mode, because the hook cannot refetch rows on
 - `mapColumn`: override or skip generated field columns (`(field, defaultColumn) => ColumnDef | null`).
 - `defaultRowGroupingColumn`: seed a default grouping for views that do not define one.
 - `systemViews`: add static developer-defined views before saved backend views.
+- `viewSelectVariant` (default `'horizontal-tabs'`): view picker layout. `'dropdown'` → compact `<Select>`-style trigger for tight toolbars. `'vertical-tabs'` → sidebar-friendly stacked list.
+- `viewSelectMaxVisible?: number`: caps inline tabs in the `'horizontal-tabs'` variant; overflow collapses into the active view's overflow menu. Ignored for `'dropdown'` / `'vertical-tabs'`.
 - `enableViewSelect`, `enableSearchInput`, `enableFilterMenu`, `enableGroupMenu`, `enableSortMenu`, `enableRowHeightMenu`, `enableDisplayMenu`, `enableReloadButton`, `enableServerExportMenu`: trim the standard toolbar (all default `true`).
 - `showSelectColumn` (default `true`), `enableRowMarkers` (default `true`): control the left-most reserved column.
 - `selectColumn`: override `getDataGridSelectColumn` entirely.

@@ -110,10 +110,16 @@ Use `onReload` when you use `data` mode, because the hook cannot refetch rows on
 
 ### Bulk actions (selection bar)
 
-- `bulkActions` (default `['update', 'delete', 'export']`): array of built-in bulk actions to surface when rows are selected. Pass `false` or `[]` to hide the selection bar entirely.
+- `bulkActions` (default `['update', 'delete', 'export']`): array of built-in bulk actions to surface when rows are selected. Pass `false` or `[]` to hide the built-ins (custom `extraBulkActions` still render if provided).
   - `update` → opens the `BulkUpdateDialog`. Calls `collection.updateMany` when present, otherwise the direct items endpoint.
   - `delete` → opens `RecordDeleteConfirmDialog`. Calls `collection.deleteMany` when present, otherwise the direct items endpoint.
   - `export` → opens the export menu for the selection (subset of the toolbar export).
+- `extraBulkActions?: Array<DataGridAction<TData>>`: extra row-selection actions appended after the built-ins. Each entry's `onAction(selectedRows)` (or `render(selectedRows)`) receives the currently selected rows so handlers can drive their own logic. Use for app-specific operations like "Send email", "Assign owner", etc.
+
+### Toolbar slots
+
+- `toolbarStartContent?: ReactNode`: prepended to the left side of the built-in toolbar (next to view tabs and search). Use for app-specific filters or buttons that should sit alongside standard controls.
+- `toolbarEndContent?: ReactNode`: appended to the right side of the built-in toolbar (after the reload button). Use for app-specific actions like "Add record", "Refresh metrics", etc.
 
 ### Server export
 

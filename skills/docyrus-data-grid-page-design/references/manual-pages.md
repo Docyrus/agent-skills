@@ -121,6 +121,11 @@ Use these when you do not want the prebuilt hook toolbar:
 - `DataGridViewMenu`
 - your own search input wired to `table.setGlobalFilter(...)` or to backend query state
 
+### Extra toolbar buttons + selection actions
+
+- `<DataGridToolbar startContent={...} endContent={...}>` accepts arbitrary nodes prepended/appended to the standard menus. Use this when composing the toolbar yourself.
+- `<DataGrid actions={[{ label, icon, onAction(selectedRows) }, ...]}>` renders custom buttons in the floating action bar when rows are selected. Each entry can supply either `onAction(selectedRows)` (simple `<Button>`) or `render(selectedRows)` (full custom node, e.g. a dropdown). `DataGridAction<TData>` is exported from `@docyrus/ui/components/data-grid`.
+
 For persistence, system views, paging ownership, or manual translation of the active view into Docyrus query params, also read `advanced-saved-view-query-patterns.md`.
 
 ## What you lose by going manual

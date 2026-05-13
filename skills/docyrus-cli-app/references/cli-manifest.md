@@ -615,6 +615,351 @@ Expected DTO key: `enums`
 
 Expected DTO key: `enumIds`
 
+### Data view commands
+
+Saved view definitions for a data source. These commands route through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/views` (app + data source identified by slug). Pass either `--appId` or `--appSlug` and either `--dataSourceId` or `--dataSourceSlug`; the CLI resolves whichever side you didn't provide.
+
+#### docyrus studio list-data-views
+
+`GET /apps/:appSlug/data-sources/:dataSourceSlug/views`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--tenantAppId` | string | Optional tenant app ID to scope the view list |
+
+#### docyrus studio get-data-view
+
+`GET /apps/:appSlug/data-sources/:dataSourceSlug/views/:viewId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--viewId` | string | Data source view ID (required) |
+
+#### docyrus studio create-data-view
+
+`POST /apps/:appSlug/data-sources/:dataSourceSlug/views`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--name` | string | View name |
+| `--description` | string | View description |
+| `--tenantAppId` | string | Optional tenant app ID |
+| `--columns` | string | JSON columns payload |
+| `--filters` | string | JSON filters payload |
+| `--sort` | string | JSON sort payload |
+| `--color` | string | Color |
+| `--icon` | string | Icon |
+| `--colorRules` | string | JSON color rules payload |
+| `--quickFilterFields` | string | JSON array of quick filter field slugs |
+| `--isDefault` | boolean | Mark as default view |
+| `--sortOrder` | number | Sort order |
+
+#### docyrus studio update-data-view
+
+`PUT /apps/:appSlug/data-sources/:dataSourceSlug/views/:viewId`
+
+Same flags as `create-data-view`, plus:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--viewId` | string | Data source view ID (required) |
+| `--archived` | boolean | Archive flag |
+
+#### docyrus studio delete-data-view
+
+`DELETE /apps/:appSlug/data-sources/:dataSourceSlug/views/:viewId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--viewId` | string | Data source view ID (required) |
+
+### Form commands
+
+Data source form definitions used by record-entry UIs. Routes through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/forms`.
+
+#### docyrus studio list-forms
+
+`GET /apps/:appSlug/data-sources/:dataSourceSlug/forms`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+
+#### docyrus studio get-form
+
+`GET /apps/:appSlug/data-sources/:dataSourceSlug/forms/:formId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--formId` | string | Form ID (required) |
+
+#### docyrus studio create-form
+
+`POST /apps/:appSlug/data-sources/:dataSourceSlug/forms`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--name` | string | Form name |
+| `--description` | string | Description |
+| `--title` | string | Title |
+| `--subtopic` | string | Subtopic |
+| `--color` | string | Color |
+| `--icon` | string | Icon |
+| `--layout` | string | JSON layout payload |
+| `--isDefault` | boolean | Mark as default form |
+| `--status` | number | Form status |
+
+#### docyrus studio update-form
+
+`PUT /apps/:appSlug/data-sources/:dataSourceSlug/forms/:formId`
+
+Same flags as `create-form`, plus:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--formId` | string | Form ID (required) |
+| `--archived` | boolean | Archive flag |
+
+#### docyrus studio delete-form
+
+`DELETE /apps/:appSlug/data-sources/:dataSourceSlug/forms/:formId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | App ID |
+| `--appSlug` | string | App slug |
+| `--dataSourceId` | string | Data source ID |
+| `--dataSourceSlug` | string | Data source slug |
+| `--formId` | string | Form ID (required) |
+
+### Webform commands
+
+Public-facing webforms that submit into either a tenant data source or, when unbound, a tenant-schema `webform_record` table. Routes through `/v1/dev/webforms`. Pass `--dataSourceId` directly, or `--dataSourceSlug` together with `--appId`/`--appSlug` to resolve the ID.
+
+#### docyrus studio list-webforms
+
+`GET /dev/webforms`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
+| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
+| `--dataSourceId` | string | Filter by data source ID |
+| `--dataSourceSlug` | string | Filter by data source slug (requires `--appId` or `--appSlug`) |
+
+#### docyrus studio get-webform
+
+`GET /dev/webforms/:webformId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--webformId` | string | Webform ID (required) |
+
+#### docyrus studio create-webform
+
+`POST /dev/webforms`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
+| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
+| `--dataSourceId` | string | Data source ID to bind the webform to |
+| `--dataSourceSlug` | string | Data source slug (requires `--appId` or `--appSlug`) |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--name` | string | Webform name |
+| `--schema` | string | JSON schema payload |
+| `--status` | number | Status (1 active, 2 inactive) |
+| `--webformOptions` | string | JSON options payload |
+| `--sandbox` | boolean | Sandbox flag |
+| `--css` | string | Custom CSS |
+
+#### docyrus studio update-webform
+
+`PATCH /dev/webforms/:webformId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--webformId` | string | Webform ID (required) |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--name` | string | Webform name |
+| `--schema` | string | JSON schema payload |
+| `--status` | number | Status (1 active, 2 inactive) |
+| `--webformOptions` | string | JSON options payload |
+| `--sandbox` | boolean | Sandbox flag |
+| `--css` | string | Custom CSS |
+
+#### docyrus studio delete-webform
+
+`DELETE /dev/webforms/:webformId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--webformId` | string | Webform ID (required) |
+
+### HTML template commands
+
+HTML/PDF/DOCX export templates. Routes through `/v1/dev/html-templates`. Identify a data source either by ID or by slug (slug requires `--appId` or `--appSlug`).
+
+#### docyrus studio list-html-templates
+
+`GET /dev/html-templates`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
+| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
+| `--dataSourceId` | string | Filter by data source ID |
+| `--dataSourceSlug` | string | Filter by data source slug (requires `--appId` or `--appSlug`) |
+| `--isDefault` | boolean | Filter by default flag |
+| `--limit` | number | Page size (default 100) |
+| `--offset` | number | Page offset (default 0) |
+
+#### docyrus studio get-html-template
+
+`GET /dev/html-templates/:templateId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--templateId` | string | HTML template ID (required) |
+
+#### docyrus studio create-html-template
+
+`POST /dev/html-templates`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
+| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
+| `--dataSourceId` | string | Data source ID this template binds to |
+| `--dataSourceSlug` | string | Data source slug (requires `--appId` or `--appSlug`) |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--name` | string | Template name |
+| `--filenameTmpl` | string | Filename template |
+| `--pageOrientation` | string | Page orientation |
+| `--sourceType` | string | Source type (`html`, `pdf`, `docx`, ...) |
+| `--marginLeft` | number | Left margin |
+| `--marginRight` | number | Right margin |
+| `--marginTop` | number | Top margin |
+| `--marginBottom` | number | Bottom margin |
+| `--pageFormat` | string | Page format (`A4`, `Letter`, ...) |
+| `--body` | string | HTML body |
+| `--isDefault` | boolean | Mark as default template |
+| `--headerTmpl` | string | Header template |
+| `--footerTmpl` | string | Footer template |
+| `--styles` | string | Inline CSS styles |
+
+#### docyrus studio update-html-template
+
+`PUT /dev/html-templates/:templateId`
+
+Same flags as `create-html-template`, plus:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--templateId` | string | HTML template ID (required) |
+
+#### docyrus studio delete-html-template
+
+`DELETE /dev/html-templates/:templateId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--templateId` | string | HTML template ID (required) |
+
+### Email template commands
+
+Transactional email templates. Routes through `/v1/dev/email-templates`. The data source binding is optional on create/update.
+
+#### docyrus studio list-email-templates
+
+`GET /dev/email-templates`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
+| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
+| `--dataSourceId` | string | Filter by data source ID |
+| `--dataSourceSlug` | string | Filter by data source slug (requires `--appId` or `--appSlug`) |
+| `--limit` | number | Page size (default 100) |
+| `--offset` | number | Page offset (default 0) |
+
+#### docyrus studio get-email-template
+
+`GET /dev/email-templates/:templateId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--templateId` | string | Email template ID (required) |
+
+#### docyrus studio create-email-template
+
+`POST /dev/email-templates`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
+| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
+| `--dataSourceId` | string | Optional data source ID to bind the template to |
+| `--dataSourceSlug` | string | Data source slug (requires `--appId` or `--appSlug`) |
+| `--data` | string | JSON payload |
+| `--from-file` | string | Path to JSON payload file |
+| `--name` | string | Template name |
+| `--subject` | string | Email subject |
+| `--body` | string | Email body |
+| `--ownership` | string | Ownership (e.g. `system`, `user`) |
+
+#### docyrus studio update-email-template
+
+`PUT /dev/email-templates/:templateId`
+
+Same flags as `create-email-template`, plus:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--templateId` | string | Email template ID (required) |
+
+#### docyrus studio delete-email-template
+
+`DELETE /dev/email-templates/:templateId`
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--templateId` | string | Email template ID (required) |
+
 ---
 
 ## docyrus tui

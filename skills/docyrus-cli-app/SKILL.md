@@ -1,6 +1,6 @@
 ---
 name: docyrus-cli-app
-description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query or manage data records (`ds`), manage dev app data source schema objects (`studio`), send API requests, switch environments, tenants, or accounts, discover tenant OpenAPI specs, or use the Bun-powered terminal UI via `docyrus tui`. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus studio`, `docyrus discover`, `docyrus auth`, `docyrus env`, `docyrus tui`, or shell-based Docyrus workflows.
+description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query or manage data records (`ds`), manage dev app data source schema objects (`studio`) including data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX export templates, and email templates, send API requests, switch environments, tenants, or accounts, discover tenant OpenAPI specs, or use the Bun-powered terminal UI via `docyrus tui`. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus studio`, `docyrus studio data-view`, `docyrus studio form`, `docyrus studio webform`, `docyrus studio html-template`, `docyrus studio email-template`, `docyrus discover`, `docyrus auth`, `docyrus env`, `docyrus tui`, or shell-based Docyrus workflows.
 ---
 
 # Docyrus CLI
@@ -22,7 +22,7 @@ Guide for using the `docyrus` CLI to interact with the Docyrus platform from the
 | `docyrus ds get` | Get data source metadata |
 | `docyrus ds list` | Query records with filters, sorting, pagination |
 | `docyrus ds create` / `update` / `delete` | Mutate records, including bulk create/update |
-| `docyrus studio ...` | CRUD for dev app data sources, fields, and enums |
+| `docyrus studio ...` | CRUD for dev app data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX templates, and email templates |
 | `docyrus discover api` | Download tenant OpenAPI spec |
 | `docyrus discover namespaces` / `path` / `endpoint` / `entity` / `search` | Explore the downloaded tenant OpenAPI spec |
 | `docyrus connect list-connectors` | List integration connectors with optional keyword search |
@@ -216,7 +216,7 @@ Array payloads route to bulk endpoints and are limited to 50 items per request.
 
 ### Studio Schema CRUD (`studio`)
 
-Use `studio` for developer-facing schema operations under `/v1/dev/apps/:app_id/data-sources`.
+Use `studio` for developer-facing schema operations: data sources, fields, enums, saved views, forms, webforms, and export templates. Most data-source-scoped commands accept either `--appId`/`--appSlug` and either `--dataSourceId`/`--dataSourceSlug`, and the CLI resolves whichever side you did not pass.
 
 ```bash
 # Data sources
@@ -242,6 +242,46 @@ docyrus studio list-enums --appId <appId> --dataSourceId <dataSourceId> --fieldI
 docyrus studio create-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --data '[{"name":"Open","sortOrder":1}]' --json
 docyrus studio update-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --from-file ./enums-update.json --json
 docyrus studio delete-enums --appId <appId> --dataSourceId <dataSourceId> --fieldId <fieldId> --data '["enum-1","enum-2"]' --json
+
+# Data views (/v1/apps/:appSlug/data-sources/:dataSourceSlug/views)
+docyrus studio list-data-views --appSlug crm --dataSourceSlug contacts --json
+docyrus studio get-data-view --appSlug crm --dataSourceSlug contacts --viewId <viewId> --json
+docyrus studio create-data-view --appSlug crm --dataSourceSlug contacts --name "Active customers" \
+  --filters '{"rules":[{"field":"status","operator":"=","value":"active"}]}' --isDefault --json
+docyrus studio update-data-view --appSlug crm --dataSourceSlug contacts --viewId <viewId> --data '{"name":"Renamed view"}' --json
+docyrus studio delete-data-view --appSlug crm --dataSourceSlug contacts --viewId <viewId> --json
+
+# Forms (/v1/apps/:appSlug/data-sources/:dataSourceSlug/forms)
+docyrus studio list-forms --appSlug crm --dataSourceSlug contacts --json
+docyrus studio get-form --appSlug crm --dataSourceSlug contacts --formId <formId> --json
+docyrus studio create-form --appSlug crm --dataSourceSlug contacts --name "Lead intake" --title "New lead" --json
+docyrus studio update-form --appSlug crm --dataSourceSlug contacts --formId <formId> --data '{"title":"Renamed"}' --json
+docyrus studio delete-form --appSlug crm --dataSourceSlug contacts --formId <formId> --json
+
+# Webforms (/v1/dev/webforms)
+docyrus studio list-webforms --json
+docyrus studio list-webforms --appSlug crm --dataSourceSlug contacts --json
+docyrus studio get-webform --webformId <webformId> --json
+docyrus studio create-webform --name "Contact form" --schema '{"components":[]}' --status 1 --json
+docyrus studio create-webform --appSlug crm --dataSourceSlug contacts --from-file ./contact-webform.json --json
+docyrus studio update-webform --webformId <webformId> --data '{"name":"Renamed"}' --json
+docyrus studio delete-webform --webformId <webformId> --json
+
+# HTML / PDF / DOCX export templates (/v1/dev/html-templates)
+docyrus studio list-html-templates --appSlug crm --dataSourceSlug contacts --limit 10 --json
+docyrus studio get-html-template --templateId <templateId> --json
+docyrus studio create-html-template --appSlug crm --dataSourceSlug contacts \
+  --name "Invoice" --sourceType pdf --pageFormat A4 --pageOrientation portrait \
+  --body "<h1>{{ company.name }}</h1>" --isDefault --json
+docyrus studio update-html-template --templateId <templateId> --data '{"name":"Invoice v2"}' --json
+docyrus studio delete-html-template --templateId <templateId> --json
+
+# Email templates (/v1/dev/email-templates)
+docyrus studio list-email-templates --json
+docyrus studio get-email-template --templateId <templateId> --json
+docyrus studio create-email-template --name "Welcome" --subject "Hello {{ user.name }}" --body "<p>Hi</p>" --json
+docyrus studio update-email-template --templateId <templateId> --data '{"subject":"Hi {{ user.name }}"}' --json
+docyrus studio delete-email-template --templateId <templateId> --json
 ```
 
 ### Connectors and Actions (`connect`)
@@ -349,6 +389,9 @@ It requires Bun installed locally. The TUI reuses the existing CLI command graph
 - Successful responses inject `context` with `email`, `tenantName`, `tenantNo`, and `tenantDisplay`
 - Studio selectors are exclusive pairs: exactly one of `--appId|--appSlug`, `--dataSourceId|--dataSourceSlug`, and `--fieldId|--fieldSlug` as required
 - Studio write commands accept `--data` or `--from-file` (JSON only), and explicit flags override overlapping JSON keys
+- `studio` data-view and form commands route through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/...`; the CLI bidirectionally resolves between id and slug, so pass either side
+- `studio` webform commands route through `/v1/dev/webforms`; CRUD uses `--webformId`, and create/list accept either `--dataSourceId` or `--dataSourceSlug` (slug requires `--appId` or `--appSlug`)
+- `studio` html-template and email-template commands route through `/v1/dev/html-templates` and `/v1/dev/email-templates`; CRUD uses `--templateId`, and the optional data-source binding accepts either `--dataSourceId` or `--dataSourceSlug` (slug requires `--appId` or `--appSlug`)
 - `connect` subcommands use the `/v1/connectors` API endpoints, not the OpenAPI spec
 - `connect curl` sends requests through the connector's provider auth (OAuth tokens, base URL); the `--headers` option can override the Authorization header
 - `connect curl` data is sent as body for POST/PUT/PATCH and as query params for GET

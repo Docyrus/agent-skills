@@ -1,6 +1,6 @@
 ---
 name: docyrus-cli-app
-description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query or manage data records (`ds`), manage dev app data source schema objects (`studio`) including data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX export templates, and email templates, send API requests, switch environments, tenants, or accounts, discover tenant OpenAPI specs, or use the Bun-powered terminal UI via `docyrus tui`. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus studio`, `docyrus studio data-view`, `docyrus studio form`, `docyrus studio webform`, `docyrus studio html-template`, `docyrus studio email-template`, `docyrus discover`, `docyrus auth`, `docyrus env`, `docyrus tui`, or shell-based Docyrus workflows.
+description: Use the Docyrus CLI (`docyrus`) to interact with the Docyrus platform from the terminal. Use when the user asks to authenticate, list apps, query or manage data records (`ds`), manage dev app data source schema objects (`studio`) including data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX export templates, and email templates, manage automations and their triggers/action nodes (`automation`), list tenant email accounts and send emails (`messaging`), send API requests, switch environments, tenants, or accounts, discover tenant OpenAPI specs, or use the Bun-powered terminal UI via `docyrus tui`. Triggers on tasks involving docyrus CLI commands, terminal-based Docyrus operations, `docyrus ds list`, `docyrus studio`, `docyrus studio data-view`, `docyrus studio form`, `docyrus studio webform`, `docyrus studio html-template`, `docyrus studio email-template`, `docyrus automation`, `docyrus automation create-trigger`, `docyrus automation create-node`, `docyrus messaging accounts`, `docyrus messaging email send`, `docyrus discover`, `docyrus auth`, `docyrus env`, `docyrus tui`, or shell-based Docyrus workflows.
 ---
 
 # Docyrus CLI
@@ -19,10 +19,14 @@ Guide for using the `docyrus` CLI to interact with the Docyrus platform from the
 | `docyrus auth accounts list` / `use` | Manage saved user accounts |
 | `docyrus auth tenants list` / `use` | Manage saved tenants for a user |
 | `docyrus apps list` | List apps from `/v1/apps` |
+| `docyrus apps delete` / `restore` / `permanent-delete` | Archive, restore, or hard-delete apps via `/v1/dev/apps/:appId` |
 | `docyrus ds get` | Get data source metadata |
 | `docyrus ds list` | Query records with filters, sorting, pagination |
 | `docyrus ds create` / `update` / `delete` | Mutate records, including bulk create/update |
 | `docyrus studio ...` | CRUD for dev app data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX templates, and email templates |
+| `docyrus automation ...` | Manage automations, triggers, and action nodes for an app |
+| `docyrus messaging accounts` | List tenant email accounts (non-credential info) |
+| `docyrus messaging email send` | Send an email through a tenant email account |
 | `docyrus discover api` | Download tenant OpenAPI spec |
 | `docyrus discover namespaces` / `path` / `endpoint` / `entity` / `search` | Explore the downloaded tenant OpenAPI spec |
 | `docyrus connect list-connectors` | List integration connectors with optional keyword search |
@@ -225,6 +229,8 @@ docyrus studio get-data-source --appSlug crm --dataSourceSlug contacts --json
 docyrus studio create-data-source --appSlug crm --title "Contacts" --name "contacts" --slug "contacts" --json
 docyrus studio update-data-source --appId <appId> --dataSourceId <dataSourceId> --data '{"title":"Contacts v2"}' --json
 docyrus studio delete-data-source --appId <appId> --dataSourceSlug contacts --json
+docyrus studio restore-data-source --appId <appId> --dataSourceId <dataSourceId> --json
+docyrus studio permanent-delete-data-source --appId <appId> --dataSourceId <dataSourceId> --json
 docyrus studio bulk-create-data-sources --appId <appId> --from-file ./data-sources.json --json
 
 # Fields
@@ -283,6 +289,97 @@ docyrus studio create-email-template --name "Welcome" --subject "Hello {{ user.n
 docyrus studio update-email-template --templateId <templateId> --data '{"subject":"Hi {{ user.name }}"}' --json
 docyrus studio delete-email-template --templateId <templateId> --json
 ```
+
+### App Management (`apps`)
+
+`apps list` uses `/v1/apps`, but mutations route through `/v1/dev/apps/:appId`.
+
+```bash
+docyrus apps list --json
+docyrus apps delete --appId <appId> --json
+docyrus apps restore --appId <appId> --json
+docyrus apps permanent-delete --appId <appId> --json
+```
+
+### Automations (`automation`)
+
+Manage automations, their triggers, and action nodes for an app. All commands route through `/v1/dev/apps/:appId/automations`. App is resolved with `--appId` or `--appSlug`. Automations and nodes have IDs only (no slugs).
+
+```bash
+# Automation CRUD
+docyrus automation list --appSlug crm --json
+docyrus automation get --appSlug crm --automationId <automationId> --json
+docyrus automation create --appSlug crm \
+  --name "Notify on new deal" --triggerType recordCreated \
+  --sourceDataSourceId <dataSourceId> --status 1 --json
+docyrus automation update --appSlug crm --automationId <automationId> \
+  --data '{"name":"Renamed automation","status":1}' --json
+docyrus automation delete --appSlug crm --automationId <automationId> --json
+
+# Triggers (typed create/update, type-independent delete)
+docyrus automation list-triggers --appSlug crm --automationId <automationId> --json
+docyrus automation get-trigger --appSlug crm --automationId <automationId> --triggerId <triggerId> --json
+docyrus automation create-trigger --appSlug crm --automationId <automationId> \
+  --type record-modified --sourceDataSourceId <dataSourceId> \
+  --modifiedColumns "status,stage" --modifiedColumnsCondition any --json
+docyrus automation create-trigger --appSlug crm --automationId <automationId> \
+  --type recurrence --recurrenceFrequency day --recurrenceInterval 1 --recurrenceRunAt "09:00" --json
+docyrus automation update-trigger --appSlug crm --automationId <automationId> \
+  --type webhook --triggerId <triggerId> --data '{"webhook_name":"renamed"}' --json
+docyrus automation delete-trigger --appSlug crm --automationId <automationId> --triggerId <triggerId> --json
+
+# Action nodes (typed create/update, type-independent delete)
+docyrus automation list-nodes --appSlug crm --automationId <automationId> --json
+docyrus automation get-node --appSlug crm --automationId <automationId> --nodeId <nodeId> --json
+docyrus automation create-node --appSlug crm --automationId <automationId> \
+  --type http-request --requestMethod POST --customEndpoint "https://example.com/webhook" \
+  --contentType "application/json" --from-file ./http-node.json --json
+docyrus automation create-node --appSlug crm --automationId <automationId> \
+  --type external-action --actionTypeId <coreActionId> --from-file ./external-action.json --json
+docyrus automation update-node --appSlug crm --automationId <automationId> \
+  --type send-email --nodeId <nodeId> --data '{"data":{"to":"user@example.com","subject":"Hi"}}' --json
+docyrus automation delete-node --appSlug crm --automationId <automationId> --nodeId <nodeId> --json
+```
+
+Trigger `--type` values (kebab-case URL form): `record-created`, `record-modified`, `record-deleted`, `recurrence`, `app-event`, `webhook`, `emailhook`, `webform`, `button-activation`, `manual-activation`.
+
+Node `--type` values (kebab-case URL form): `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`.
+
+Note: `automation create --triggerType` uses the camelCase form (e.g. `recordCreated`, `recordModified`) to match `CreateAutomationDto.trigger_type`. Trigger CRUD commands use kebab-case for `--type`.
+
+Convenience flags are camelCase on the CLI but converted to `snake_case` in the request body. Complex nested objects (trigger `data`, node `data`, `field_mapping`, `dynamic_field_mapping`, `condition`, `input_template`, `input_transformer`, `custom_headers`, `pre_action_request`, `post_action_request`, `target_data_source_condition`, etc.) must be supplied via `--data` / `--from-file` — the CLI does not flatten them. `--recurrenceWeekDays` and `--modifiedColumns` accept comma-separated values and are sent as arrays.
+
+`create-node --type external-action` requires `--actionTypeId` and the backend validates the supplied `data` against the linked `core_action.input_json_schema`.
+
+### Messaging (`messaging`)
+
+List tenant email accounts and send transactional emails through them. Routes through `/v1/messaging/email/*`. Requires the `Messaging.Email.Send` OAuth2 scope.
+
+```bash
+# List active tenant email accounts (no credentials returned)
+docyrus messaging accounts --json
+
+# Send through an account using individual flags
+docyrus messaging email send \
+  --accountId <accountUuid> \
+  --to "ops@example.com,sales@example.com" \
+  --subject "Daily summary" \
+  --body "<p>Hello</p>" --json
+
+# Send with cc/bcc/replyTo and send-as-user
+docyrus messaging email send \
+  --accountId <accountUuid> \
+  --to "user@example.com" --cc "manager@example.com" --bcc "audit@example.com" \
+  --replyTo "support@example.com" --sendAsUser \
+  --subject "Update" --body "<p>...</p>" --json
+
+# Full payload via JSON
+docyrus messaging email send --accountId <accountUuid> \
+  --data '{"to":["a@b.com"],"subject":"Hi","body":"<p>Hi</p>","attachments":[{"filePath":"records/abc/attachments/foo.pdf","fileName":"foo.pdf"}]}' --json
+docyrus messaging email send --accountId <accountUuid> --from-file ./send.json --json
+```
+
+Limits: up to 50 recipients per `to`/`cc`/`bcc`/`replyTo`, subject max 998 chars, body max 1 000 000 chars, up to 10 attachments per send. Attachment `filePath` references a tenant-scoped storage path. The response payload contains `messageId`, `provider`, `accepted`, and `rejected`.
 
 ### Connectors and Actions (`connect`)
 
@@ -396,6 +493,11 @@ It requires Bun installed locally. The TUI reuses the existing CLI command graph
 - `connect curl` sends requests through the connector's provider auth (OAuth tokens, base URL); the `--headers` option can override the Authorization header
 - `connect curl` data is sent as body for POST/PUT/PATCH and as query params for GET
 - `connect run-action` runs actions via `/v1/apps/:appSlug/actions/:actionKey/run` with `--params` as the JSON body
+- `automation` commands route through `/v1/dev/apps/:appId/automations`; trigger and node `create`/`update` use typed URLs (`/triggers/<type>`, `/nodes/<type>`), but `delete-trigger` and `delete-node` use the type-independent route
+- `automation` CLI flags are camelCase and are converted to `snake_case` in the request body; nested objects (`data`, `field_mapping`, `condition`, etc.) must be supplied via `--data` / `--from-file`
+- `automation create --triggerType` uses camelCase (`recordCreated`); trigger/node CRUD commands use kebab-case `--type` values (`record-created`, `http-request`, ...)
+- `messaging` commands route through `/v1/messaging/email/*` and require the `Messaging.Email.Send` OAuth2 scope; the `accounts` endpoint never returns credentials
+- `messaging email send` accepts either individual flags (`--to`, `--cc`, `--bcc`, `--replyTo`, `--subject`, `--body`, `--sendAsUser`) or a full JSON payload via `--data` / `--from-file`; recipient flags are comma-separated
 
 ## References
 

@@ -1,6 +1,6 @@
 ---
 name: docyrus-api-dev
-description: Develop applications using the Docyrus API with @docyrus/api-client and @docyrus/signin libraries. Use when building apps that authenticate with Docyrus OAuth2 (PKCE, iframe, client credentials, device code), make REST API calls to Docyrus data source endpoints, construct query payloads with filters, aggregations, formulas, pivots, and child queries, or integrate with external connectors (discover connectors, send requests through provider auth, run actions). Triggers on tasks involving Docyrus API integration, @docyrus/api-client usage, @docyrus/signin authentication, data source query building, Docyrus REST endpoint consumption, connector discovery, or external provider requests.
+description: Develop applications using the Docyrus API with @docyrus/api-client and @docyrus/signin libraries. Use when building apps that authenticate with Docyrus OAuth2 (PKCE, iframe, client credentials, device code), make REST API calls to Docyrus data source endpoints, construct query payloads with filters, aggregations, formulas, pivots, and child queries, integrate with external connectors (discover connectors, send requests through provider auth, run actions), manage dev-app schema and saved views via the studio endpoints (data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX export templates, email templates), wire up tenant automations (CRUD plus typed triggers and action nodes), or send transactional email through tenant messaging accounts. Triggers on tasks involving Docyrus API integration, @docyrus/api-client usage, @docyrus/signin authentication, data source query building, Docyrus REST endpoint consumption, connector discovery, external provider requests, automation CRUD, automation triggers (record-created/modified/deleted, recurrence, app-event, webhook, emailhook, webform, button-activation, manual-activation) and action nodes (external-action, send-email, send-notification, create-record, update-records, request-approval, request-input, http-request, data-source-query, custom-query, generate-document, ai-prompt, ai-agent, execute-script), tenant email account discovery, or sending email via `/v1/messaging/email`.
 ---
 
 # Docyrus API Developer
@@ -124,6 +124,162 @@ POST   /v1/apps/{appSlug}/actions/{actionSlug}/run                         — R
 
 Action run accepts arbitrary JSON body as input. Optional headers: `x-connection-id`, `x-connection-account-id`.
 
+### Studio (Dev) Schema Endpoints
+
+The studio surface manages dev-app schema objects. Most routes are gated by the `Architect.Read.All` / `Architect.ReadWrite.All` scopes, and the app is identified by its tenant `app_id` UUID.
+
+```
+# Apps (mutations only — list uses /v1/apps)
+DELETE /v1/dev/apps/{appId}                                                 — Archive app
+POST   /v1/dev/apps/{appId}/restore                                         — Restore archived app
+DELETE /v1/dev/apps/{appId}/permanent                                       — Permanently delete app
+
+# Data sources
+GET    /v1/dev/apps/{appId}/data-sources                                    — List data sources (?expand=fields,...)
+GET    /v1/dev/apps/{appId}/data-sources/{dataSourceId}                     — Get data source
+POST   /v1/dev/apps/{appId}/data-sources                                    — Create data source
+PATCH  /v1/dev/apps/{appId}/data-sources/{dataSourceId}                     — Update data source
+DELETE /v1/dev/apps/{appId}/data-sources/{dataSourceId}                     — Archive data source
+POST   /v1/dev/apps/{appId}/data-sources/{dataSourceId}/restore             — Restore archived data source
+DELETE /v1/dev/apps/{appId}/data-sources/{dataSourceId}/permanent           — Permanently delete data source
+POST   /v1/dev/apps/{appId}/data-sources/bulk                               — Bulk create (body: { dataSources })
+
+# Fields
+GET    /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields                       — List fields
+GET    /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/{fieldId}             — Get field
+POST   /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields                       — Create field
+PATCH  /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/{fieldId}             — Update field
+DELETE /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/{fieldId}             — Delete field
+POST   /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/batch                 — Bulk create (body: { fields })
+PATCH  /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/batch                 — Bulk update (body: { fields[].fieldId })
+DELETE /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/batch                 — Bulk delete (body: { fieldIds })
+
+# Field enums
+GET    /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/{fieldId}/enums       — List enum options
+POST   /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/{fieldId}/enums       — Create enums (body: { enums })
+PATCH  /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/{fieldId}/enums       — Update enums (body: { enums[].enumId })
+DELETE /v1/dev/apps/{appId}/data-sources/{dataSourceId}/fields/{fieldId}/enums       — Delete enums (body: { enumIds })
+
+# Data views (saved views) — slug-scoped
+GET    /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/views                        — List views
+GET    /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/views/{viewId}               — Get view
+POST   /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/views                        — Create view
+PUT    /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/views/{viewId}               — Update view
+DELETE /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/views/{viewId}               — Delete view
+
+# Forms (record-entry layouts) — slug-scoped
+GET    /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/forms                        — List forms
+GET    /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/forms/{formId}               — Get form
+POST   /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/forms                        — Create form
+PUT    /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/forms/{formId}               — Update form
+DELETE /v1/apps/{appSlug}/data-sources/{dataSourceSlug}/forms/{formId}               — Delete form
+
+# Webforms (public-facing forms)
+GET    /v1/dev/webforms                                                              — List webforms (?dataSourceId)
+GET    /v1/dev/webforms/{webformId}                                                  — Get webform
+POST   /v1/dev/webforms                                                              — Create webform
+PATCH  /v1/dev/webforms/{webformId}                                                  — Update webform
+DELETE /v1/dev/webforms/{webformId}                                                  — Delete webform
+
+# HTML / PDF / DOCX export templates
+GET    /v1/dev/html-templates                                                        — List (?dataSourceId,&isDefault,&limit,&offset)
+GET    /v1/dev/html-templates/{templateId}                                           — Get template
+POST   /v1/dev/html-templates                                                        — Create template
+PUT    /v1/dev/html-templates/{templateId}                                           — Update template
+DELETE /v1/dev/html-templates/{templateId}                                           — Delete template
+
+# Email templates
+GET    /v1/dev/email-templates                                                       — List (?dataSourceId,&limit,&offset)
+GET    /v1/dev/email-templates/{templateId}                                          — Get template
+POST   /v1/dev/email-templates                                                       — Create template
+PUT    /v1/dev/email-templates/{templateId}                                          — Update template
+DELETE /v1/dev/email-templates/{templateId}                                          — Delete template
+```
+
+Notes:
+- The bulk update DTOs do not mirror the list/get response shapes. Send `fields[].fieldId` and `enums[].enumId` (not `id`).
+- A webform created without `dataSourceId` posts submissions into the tenant-schema `webform_record` table instead of a data source.
+- Archived data sources cannot be reliably resolved by slug; use the ID for `restore` and `permanent` routes.
+
+### Automation Endpoints
+
+Tenant-app automation CRUD plus typed trigger and action node mutations. Gated by `Architect.Read.All` / `Architect.ReadWrite.All`.
+
+```
+# Automations
+GET    /v1/dev/apps/{appId}/automations                                              — List automations
+GET    /v1/dev/apps/{appId}/automations/{id}                                         — Get automation (includes triggers)
+POST   /v1/dev/apps/{appId}/automations                                              — Create automation + first trigger
+PATCH  /v1/dev/apps/{appId}/automations/{id}                                         — Update automation (name, status, source_data_source_id)
+DELETE /v1/dev/apps/{appId}/automations/{id}                                         — Delete automation (204)
+
+# Triggers — typed create/update, type-independent delete
+POST   /v1/dev/apps/{appId}/automations/{automationId}/triggers/{type}               — Create trigger
+PATCH  /v1/dev/apps/{appId}/automations/{automationId}/triggers/{type}/{triggerId}   — Update trigger
+DELETE /v1/dev/apps/{appId}/automations/{automationId}/triggers/{triggerId}          — Delete trigger (204)
+
+# Action nodes — typed create/update, type-independent delete
+GET    /v1/dev/apps/{appId}/automations/{automationId}/nodes                         — List nodes
+GET    /v1/dev/apps/{appId}/automations/{automationId}/nodes/{nodeId}                — Get node
+POST   /v1/dev/apps/{appId}/automations/{automationId}/nodes/{type}                  — Create node
+PATCH  /v1/dev/apps/{appId}/automations/{automationId}/nodes/{type}/{nodeId}         — Update node
+DELETE /v1/dev/apps/{appId}/automations/{automationId}/nodes/{nodeId}                — Delete node (204)
+```
+
+Trigger `{type}` values (kebab-case URL segments): `record-created`, `record-modified`, `record-deleted`, `recurrence`, `app-event`, `webhook`, `emailhook`, `webform`, `button-activation`, `manual-activation`.
+
+Action node `{type}` values: `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`.
+
+`POST /v1/dev/apps/{appId}/automations` accepts `trigger_type` in camelCase (e.g. `recordCreated`, `recordModified`, `recordDeleted`, `recurrence`, `appEvent`, `webhook`, `emailhook`, `webform`, `buttonActivation`, `manualActivation`) on `CreateAutomationDto`. The typed trigger CRUD endpoints use the kebab-case form in the URL.
+
+Request bodies use `snake_case` keys (e.g. `source_data_source_id`, `max_run_per_record`, `modified_columns`, `recurrence_frequency`, `core_data_provider_id`, `webhook_id`, `tenant_webform_id`, `action_type_id`, `field_mapping`, `dynamic_field_mapping`, `condition`, `input_template`, `input_transformer`, `custom_headers`, `pre_action_request`, `post_action_request`, `target_data_source_condition`).
+
+Important: creating a node with `type=external-action` requires `action_type_id` (maps to `core_action.id`). The backend validates the supplied `data` against `core_action.input_json_schema` and inserts the linked `tenant_action` row in the same transaction.
+
+### Action / Approval RPC (Production)
+
+These are separate from the dev-app automation CRUD above. They drive the runtime engine.
+
+```
+PUT  /v1/automation/processAction                                                    — Execute action payload (IActionPayload)
+POST /v1/automation/exchange-rates    (alias /v1/automation/syncExchangeRates)       — Fetch/save FX rates (admin or api)
+PUT  /v1/automation/sendApprovalRequests                                             — { approvalStatusFieldId, recordId }
+PUT  /v1/automation/sendApprovalResponse                                             — Approve response
+PUT  /v1/automation/sendApprovalRevisionRequest                                      — Approval revision request
+PUT  /v1/automation/sendPushNotification/{notificationId}                            — Push notification (admin or api)
+```
+
+### Messaging Endpoints
+
+Tenant email accounts and transactional send. All routes require the `Messaging.Email.Send` OAuth2 scope.
+
+```
+GET  /v1/messaging/email/accounts                                                    — List active tenant email accounts (no credentials)
+POST /v1/messaging/email/accounts/{accountId}/send                                   — Send email through an account
+```
+
+`POST /v1/messaging/email/accounts/{accountId}/send` body (`SendEmailDto`):
+```json
+{
+  "to": ["user@example.com"],
+  "cc": ["manager@example.com"],
+  "bcc": ["audit@example.com"],
+  "replyTo": ["support@example.com"],
+  "subject": "Daily summary",
+  "body": "<p>Hello</p>",
+  "sendAsUser": false,
+  "attachments": [
+    { "filePath": "records/abc/attachments/foo.pdf", "fileName": "foo.pdf", "mimeType": "application/pdf" }
+  ]
+}
+```
+
+Limits: `to`/`cc`/`bcc`/`replyTo` accept up to 50 RFC-5322 addresses each, subject is capped at 998 characters, body at 1 000 000 characters, attachments at 10 items, and `filePath` at 2048 characters. `sendAsUser` only takes effect when the account allows it (see `allowOverrideName` / `allowOverrideEmail` from the accounts list).
+
+`EmailAccountDto` (returned by list) exposes: `id`, `name`, `provider`, `senderEmail`, `senderName`, `isUserAccessible`, `allowOverrideName`, `allowOverrideEmail`, `createdOn`. Credentials, tokens, and provider secrets are never returned.
+
+`SendEmailResponseDto`: `{ messageId, provider, accepted, rejected }`.
+
 ### ACL / Role Management Endpoints
 ```
 GET    /v1/users/acl?dataSourceId={uuid}&recordId={uuid}   — Read record ACL rows
@@ -220,6 +376,10 @@ The GET items endpoint accepts a powerful query payload:
 9. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
 10. **Send role-query `query` as raw JSON** and let backend derive `tenantAppId` from `dataSourceId` when applicable.
 11. **After deleting a role, refresh dependent ACL state** — role lists, user-role lists, role-query lists, and any UI showing primary-role labels.
+12. **Studio bulk update DTOs use scoped IDs** — send `fields[].fieldId` and `enums[].enumId` (not `id`) for the `PATCH .../fields/batch` and `PATCH .../enums` routes; the list/get response shapes do not match the bulk update DTOs.
+13. **Automation request bodies use `snake_case`** keys (e.g. `source_data_source_id`, `field_mapping`). Trigger and node create/update URLs are typed (`/triggers/<type>`, `/nodes/<type>`), but delete URLs are type-independent. `POST /automations` accepts `trigger_type` in camelCase (`recordCreated`, etc.) while typed trigger routes use kebab-case (`record-created`, etc.).
+14. **`external-action` automation nodes require `action_type_id`** — the backend validates the supplied `data` against `core_action.input_json_schema` and creates the matching `tenant_action` row in the same transaction.
+15. **Messaging endpoints require the `Messaging.Email.Send` scope** and never return credentials. `sendAsUser` only takes effect when the listed account allows the override.
 
 ## References
 

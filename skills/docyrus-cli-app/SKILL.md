@@ -338,18 +338,23 @@ docyrus automation create-node --appSlug crm --automationId <automationId> \
   --type external-action --actionTypeId <coreActionId> --from-file ./external-action.json --json
 docyrus automation update-node --appSlug crm --automationId <automationId> \
   --type send-email --nodeId <nodeId> --data '{"data":{"to":"user@example.com","subject":"Hi"}}' --json
+docyrus automation create-node --appSlug crm --automationId <automationId> \
+  --type wait-for --name "Wait 2 hours" --parent <previousNodeId> \
+  --data '{"data":{"delayValue":2,"delayUnit":"hours"}}' --json
 docyrus automation delete-node --appSlug crm --automationId <automationId> --nodeId <nodeId> --json
 ```
 
 Trigger `--type` values (kebab-case URL form): `record-created`, `record-modified`, `record-deleted`, `recurrence`, `app-event`, `webhook`, `emailhook`, `webform`, `button-activation`, `manual-activation`.
 
-Node `--type` values (kebab-case URL form): `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`.
+Node `--type` values (kebab-case URL form): `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`, `wait-for`.
 
 Note: `automation create --triggerType` uses the camelCase form (e.g. `recordCreated`, `recordModified`) to match `CreateAutomationDto.trigger_type`. Trigger CRUD commands use kebab-case for `--type`.
 
 Convenience flags are camelCase on the CLI but converted to `snake_case` in the request body. Complex nested objects (trigger `data`, node `data`, `field_mapping`, `dynamic_field_mapping`, `condition`, `input_template`, `input_transformer`, `custom_headers`, `pre_action_request`, `post_action_request`, `target_data_source_condition`, etc.) must be supplied via `--data` / `--from-file` — the CLI does not flatten them. `--recurrenceWeekDays` and `--modifiedColumns` accept comma-separated values and are sent as arrays.
 
 `create-node --type external-action` requires `--actionTypeId` and the backend validates the supplied `data` against the linked `core_action.input_json_schema`.
+
+`create-node --type wait-for` takes no flat convenience flags beyond the common base. Set the delay inside `data`: either `delaySeconds` (integer, capped at 30 days / 2_592_000) or the `delayValue` + `delayUnit` (`seconds` / `minutes` / `hours` / `days`) pair. The action forwards input data through unchanged and queues each next step with `tenant_job_queue.process_after = clock_timestamp() + delaySeconds` (the queue worker must filter on `process_after IS NULL OR process_after <= clock_timestamp()` for the delay to defer execution).
 
 ### Messaging (`messaging`)
 

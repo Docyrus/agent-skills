@@ -1015,7 +1015,7 @@ Selector rules:
 - app selector: exactly one of `--appId` or `--appSlug`
 - automation selector: `--automationId` only (no slug)
 - trigger `--type` (URL kebab-case): `record-created`, `record-modified`, `record-deleted`, `recurrence`, `app-event`, `webhook`, `emailhook`, `webform`, `button-activation`, `manual-activation`
-- node `--type` (URL kebab-case): `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`
+- node `--type` (URL kebab-case): `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`, `wait-for`
 
 Write payload rules:
 - write commands accept `--data '<json>'` or `--from-file ./payload.json` (JSON only)
@@ -1211,6 +1211,18 @@ Same flags as `create-trigger`, plus `--triggerId` (required).
 | `--errorTransformer` | string | Error transformer expression (http-request) |
 
 Note: `external-action` create validates `data` against the linked `core_action.input_json_schema` and creates the associated `tenant_action` row in the same transaction.
+
+Note: `wait-for` nodes take no flat convenience flags beyond the common base. Configure the delay inside `data` via `delaySeconds` (integer, ≤ 30 days / 2_592_000) or the `delayValue` + `delayUnit` (`seconds` / `minutes` / `hours` / `days`) pair. The action forwards input data through unchanged and queues next step(s) with a deferred `tenant_job_queue.process_after = clock_timestamp() + delaySeconds` (worker poll must filter on `process_after IS NULL OR process_after <= clock_timestamp()` for the delay to defer execution).
+
+```sh
+docyrus automation create-node \
+  --appSlug crm \
+  --automationId 9c4f… \
+  --type wait-for \
+  --name "Wait 2 hours" \
+  --parent <previous-node-id> \
+  --data '{"data":{"delayValue":2,"delayUnit":"hours"}}'
+```
 
 ### docyrus automation update-node
 

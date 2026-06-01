@@ -64,7 +64,7 @@ See [references/platform-services.md](references/platform-services.md).
 
 ### Developer Tools
 
-Auto-generated OpenAPI specs, MCP server, full-featured CLI, REST API client libraries, React auth provider with current-user and authorization helpers, and auto-generated collection hooks.
+Auto-generated OpenAPI specs, MCP server, full-featured CLI (data + schema + automation CRUD, custom AI agent management, app agent context and AI tools, connectors, messaging, plus the pi agent runtime and repo dev tooling), REST API client libraries, React auth provider with current-user and authorization helpers, and auto-generated collection hooks.
 
 See [references/developer-tools.md](references/developer-tools.md).
 

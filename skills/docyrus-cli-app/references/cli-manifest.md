@@ -1,6 +1,6 @@
 # Docyrus CLI Manifest
 
-LLM-ready reference for the `docyrus` CLI tool.
+LLM-ready reference for the `docyrus` CLI tool (`@docyrus/docyrus`). Generated from the live command graph (`docyrus --llms`).
 
 ---
 
@@ -10,24 +10,33 @@ LLM-ready reference for the `docyrus` CLI tool.
 |------|------|-------------|
 | `-g`, `--global` | boolean | Force global `~/.docyrus/` settings instead of local `./.docyrus/` |
 | `--format <toon\|json\|yaml\|md\|jsonl>` | string | Output format |
-| `--help` | boolean | Show help |
-| `--llms` | boolean | Print LLM-readable manifest |
-| `--mcp` | boolean | Start as MCP stdio server |
+| `--help` | boolean | Show help (prints flags in kebab-case) |
+| `--llms` | boolean | Print the full LLM-readable manifest |
+| `--mcp` | boolean | Start as an MCP stdio server |
 | `--verbose` | boolean | Show full output envelope |
 | `--version` | boolean | Show version |
+
+**Flag forms:** `--help` prints flags in kebab-case (`--app-slug`, `--from-file`); the parser also accepts the camelCase schema keys (`--appSlug`, `--fromFile`). Both forms work. This manifest uses camelCase.
 
 ## Environment Variables
 
 | Name | Description |
 |------|-------------|
 | `DOCYRUS_API_CLIENT_ID` | Default Docyrus OAuth2 client id |
+| `DOCYRUS_SANDBOX_APP_ID` | Active sandbox app id (injected by the sandbox runtime; default for `--appId` on sandbox/release commands) |
 
 ## Settings Scope
 
 - Default scope is local: `./.docyrus/`
-- Use `-g` or `--global` to force global scope: `~/.docyrus/`
-- OpenAPI cache path is `<settings-root>/tenans/<tenantId>/openapi.json`
+- Use `-g`/`--global` for global scope: `~/.docyrus/`
+- Auth state: `<settings-root>/auth.json`
+- Environment config: `<settings-root>/config.json`
+- OpenAPI cache: `<settings-root>/tenans/<tenantId>/openapi.json`
 - `docyrus` without a subcommand returns active environment, help commands, and auth `context`
+
+## Output Model
+
+Every successful command injects a top-level `context` object (`email`, `tenantName`, `tenantNo`, `tenantDisplay`); it is `null` when there is no active session. Object payloads are merged with `context`; non-object payloads become `{ data, context }`.
 
 ---
 
@@ -49,52 +58,17 @@ docyrus env use <selector>
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
-| `selector` | string | yes | Environment id or name (`live`, `prod`, `beta`, `alpha`, `dev`) |
+| `selector` | string | yes | Environment id or name (`live`, `prod`, `beta`, `alpha`, `dev`, `local-development`) |
 
 Built-in environments:
-- `live` -> `https://api.docyrus.com`
+- `live` (`prod` alias) -> `https://api.docyrus.com`
 - `beta` -> `https://beta-api.docyrus.com`
 - `alpha` -> `https://alpha-api.docyrus.com`
-- `dev` -> `https://localhost:3366`
+- `dev` (`local-development` alias) -> `https://localhost:3366`
 
----
+### docyrus env which
 
-## docyrus apps
-
-App commands. `list` uses `/v1/apps`; mutations route through `/v1/dev/apps/:appId`.
-
-### docyrus apps list
-
-List apps (`/v1/apps`).
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appType` | string | Optional app type filter |
-
-### docyrus apps delete
-
-Archive (soft-delete) an app.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-
-### docyrus apps restore
-
-Restore an archived app.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID (required; archived apps cannot be resolved by slug) |
-
-### docyrus apps permanent-delete
-
-Permanently delete an app.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID (required) |
+Show which environment is active for the current folder, plus the resolved settings scope (`local`/`global`), `settingsRoot`, `configFilePath`, `authFilePath`, `cwd`, and whether a local `.docyrus/` exists.
 
 ---
 
@@ -109,22 +83,36 @@ Authorize CLI using OAuth2 device flow, or provide tokens manually.
 | Flag | Type | Description |
 |------|------|-------------|
 | `--clientId` | string | OAuth2 client id |
-| `--scope` | string | OAuth2 scopes (default: `openid email profile offline_access ReadWrite.All User.ReadWrite Users.Read.All Tenant.Read Teams.Read.All DS.ReadWrite.All Docs.ReadWrite.All Architect.ReadWrite.All`) |
+| `--scope` | string | OAuth2 scopes (default below) |
 | `--accessToken` | string | Manual access token; skips device flow |
 | `--refreshToken` | string | Manual refresh token; requires `--accessToken` |
 
+Default scope: `openid email profile offline_access ReadWrite.All Architect.ReadWrite.All Automations.Run Reports.Run.CustomQuery Messaging.Email.Send Messaging.Sms.Send Messaging.Whatsapp.Send MCP.Connect`
+
 Login notes:
-- Resolution order for client ID is `--clientId` -> `DOCYRUS_API_CLIENT_ID` -> saved local config -> saved global config
+- Client ID resolution order: `--clientId` -> `DOCYRUS_API_CLIENT_ID` -> saved local config -> saved global config -> `manual-token` (manual-token auth only)
 - Manual token login falls back to `manual-token` only when no client ID can be resolved
-- Local login can reuse the globally saved client ID when local config does not have one
+- Local login can reuse the globally saved client ID when local config has none
+
+### docyrus auth set-tokens
+
+Set custom access and refresh tokens for the active environment. Same flags as `auth login` (`--clientId`, `--scope`, `--accessToken`, `--refreshToken`).
 
 ### docyrus auth logout
 
 Revoke and clear all tenant sessions for the active account in the current environment.
 
+| Flag | Type | Description |
+|------|------|-------------|
+| `--clientId` | string | OAuth2 client id override |
+
 ### docyrus auth who
 
 Return the current authenticated user (`/v1/users/me`).
+
+### docyrus auth tenant
+
+Return the active tenant record (`GET /v1/tenant/current`). Read-only; no flags. Returns `id`, `no`, `name`, `accountStatus`, product/subscription refs, seat counts, `paymentChannel`, trial and subscription dates, and `onboardingStatus`. Distinct from the `auth tenants` (plural) account-management group.
 
 ### docyrus auth accounts list
 
@@ -163,199 +151,88 @@ docyrus auth tenants use <tenantSelector> [options]
 | `--userId` | string | User ID; defaults to active account |
 | `--scope` | string | Scope used only when tenant bootstrap login is required |
 
-Selector rules:
-- numeric selector -> match by `tenantNo`
-- non-numeric selector must be a UUID tenant id
+Selector rules: numeric -> match by `tenantNo`; non-numeric must be a UUID tenant id.
+
+### Sandbox / CI token helpers
+
+Mostly invoked by the sandbox runtime; all default `--appId` to `DOCYRUS_SANDBOX_APP_ID`.
+
+| Command | Description | Key flags |
+|---------|-------------|-----------|
+| `docyrus auth sandbox` | Refresh and inject fresh auth tokens into the active sandbox | `--appId` |
+| `docyrus auth github` | Regenerate the GitHub token and inject it into the active sandbox | `--appId`, `--cwd` |
+| `docyrus auth git-credential` | Git credential helper supplying a repo-scoped GitHub token | `--operation`, `--appId` |
+| `docyrus auth sso-session` | Create a short-lived SSO session token for headless browser auth | `--clientId`, `--scope`, `--targetOrigin` |
 
 ---
 
-## docyrus curl
+## docyrus apps
 
-Send arbitrary requests to Docyrus API.
+App commands. `list` uses `/v1/apps`; mutations and AI sub-resources route through `/v1/dev/apps/:appId`. `--appSlug` resolution first consults the bundled SYSTEM/APP catalog, then falls back to `GET /v1/apps`.
 
-```
-docyrus curl <path> [options]
-```
+### docyrus apps list
 
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `path` | string | yes | API path (no absolute URL) |
-
-| Flag | Alias | Type | Description |
-|------|-------|------|-------------|
-| `--request` | `-X` | string | HTTP method |
-| `--header` | `-H` | array | Request header (repeatable) |
-| `--data` | `-d` | string | Request payload |
-| `--get` | `-G` | boolean | Send data as query string |
-| `--include` | `-i` | boolean | Include status and response headers |
-| `--noAuth` | | boolean | Skip Authorization header |
-
----
-
-## docyrus discover
-
-Discovery commands for exploring the tenant OpenAPI spec. All discover commands require an active login session. Commands other than `discover api` auto-download the spec if it does not exist locally.
-
-### docyrus discover api
-
-Download tenant OpenAPI spec for the active tenant.
-
-### docyrus discover namespaces
-
-List API namespaces from the active tenant OpenAPI spec. Returns deduplicated namespace prefixes such as `/v1/users` and `/v1/apps`.
-
-### docyrus discover path
-
-List endpoints with method and description for a matching path prefix.
-
-```
-docyrus discover path <prefix>
-```
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `prefix` | string | yes | Path prefix, for example `/v1/users` (the `/v1` prefix is optional) |
-
-### docyrus discover endpoint
-
-Return the full OpenAPI endpoint object for a path and HTTP method.
-
-```
-docyrus discover endpoint <selector>
-```
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `selector` | string | yes | Endpoint selector such as `/v1/users/me` or `[PUT]/v1/users/me/photo` |
-
-Selector format: `/path` defaults to GET; `[METHOD]/path` specifies an explicit HTTP method. The `/v1` prefix is optional.
-
-### docyrus discover entity
-
-Return the full schema definition object for an entity by name.
-
-```
-docyrus discover entity <name>
-```
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | yes | Entity name (case-sensitive), for example `UserEntity` |
-
-### docyrus discover search
-
-Search endpoint paths and entity names by comma-separated terms.
-
-```
-docyrus discover search <query>
-```
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `query` | string | yes | One or more comma-separated search strings, for example `users,UserEntity` |
-
-Endpoint results include method and description when available.
-
----
-
-## docyrus connect
-
-Connector and action commands. Interact with external integration connectors and run actions.
-
-### docyrus connect list-connectors
-
-List available integration connectors.
+List apps (`/v1/apps`).
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `--q` | string | Keyword search on name, slug, or description |
-| `--limit` | number | Max results (default: 100) |
-| `--offset` | number | Result offset (default: 0) |
+| `--appType` | string | Optional app type filter |
 
-### docyrus connect get-connector
+### docyrus apps update
 
-Get connector details with data sources and actions.
+`PATCH /dev/apps/:appId`. Store fields and array/object values must be supplied via `--data`/`--from-file`. An empty resulting payload is rejected.
 
-```
-docyrus connect get-connector <slug>
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` / `--appSlug` | string | App selector |
+| `--data` / `--from-file` | string | JSON payload / file |
+| `--name` | string | App name |
+| `--slug` | string | New app slug |
+| `--description` | string | App description |
+| `--icon` | string | App icon |
+| `--color` | string | App color |
+| `--status` | string | App status (`active`, `design`, `development`, `draft`, `inactive`) |
+| `--betaUrl` | string | Beta URL |
+| `--chromeExtensionPath` | string | Chrome extension path |
+| `--mobileVersionPath` | string | Mobile version path |
+| `--agentContext` | string | Agent context |
+| `--routePath` | string | Route path under the shared repo host (e.g. `/crm`) |
 
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `slug` | string | yes | Data provider slug (e.g. `msgraph`) |
+### docyrus apps set-agent-context
 
-### docyrus connect get-action
+`PATCH /dev/apps/:appId` (`agent_context`). Provide exactly one of `--value`, `--from-file`, or `--clear`.
 
-Get connector action details including input/output schemas.
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` / `--appSlug` | string | App selector |
+| `--value` | string | Agent context value (inline) |
+| `--from-file` | string | Path to a text/markdown file holding the value |
+| `--clear` | boolean | Clear the agent context (set to empty string) |
 
-```
-docyrus connect get-action <slug> <actionKey>
-```
+### docyrus apps delete / restore / permanent-delete
 
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `slug` | string | yes | Data provider slug (e.g. `msgraph`) |
-| `actionKey` | string | yes | Action key (e.g. `sendEmailWithOutlook`) |
+Archive / restore / hard-delete an app.
 
-### docyrus connect list-connections
+| Flag | Type | Description |
+|------|------|-------------|
+| `--appId` / `--appSlug` | string | App selector |
 
-Get tenant and user connections for a connector.
+### docyrus apps ai-tools
 
-```
-docyrus connect list-connections <slug>
-```
+CRUD over app-scoped `tenant_ai_tool` rows (`/dev/apps/:appId/ai-tools`). All commands take `--appId`/`--appSlug`.
 
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `slug` | string | yes | Data provider slug (e.g. `msgraph`) |
+- `list` — list AI tools for an app
+- `get` / `delete` — `--toolId`
+- `create` — `--name` and `--key` required
+- `update` — `--toolId` plus changed fields
 
-### docyrus connect curl
-
-Send an HTTP request through a connector's provider auth.
-
-```
-docyrus connect curl <slug> <endpoint> [options]
-```
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `slug` | string | yes | Data provider slug (e.g. `msgraph`, `meta`) |
-| `endpoint` | string | yes | Relative endpoint path or absolute URL |
-
-| Flag | Alias | Type | Description |
-|------|-------|------|-------------|
-| `--method` | `-X` | string | HTTP method (default: `GET`) |
-| `--data` | `-d` | string | JSON request payload |
-| `--contentType` | | string | Content-Type header (defaults to `application/json`) |
-| `--headers` | | string | JSON object of additional headers |
-| `--connectionId` | `-c` | string | Tenant connection ID override |
-| `--connectionAccountId` | | string | Connection account ID |
-
-### docyrus connect run-action
-
-Run a connector or app action.
-
-```
-docyrus connect run-action <appSlug> <actionKey> [options]
-```
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `appSlug` | string | yes | App slug (e.g. `base`, or a custom app slug) |
-| `actionKey` | string | yes | Action key (e.g. `sendEmailWithOutlook`) |
-
-| Flag | Alias | Type | Description |
-|------|-------|------|-------------|
-| `--params` | `-p` | string | JSON object with action input parameters |
-| `--connectionId` | `-c` | string | Tenant connection ID override |
-| `--connectionAccountId` | | string | Tenant connection account ID |
-| `--dryRun` | `-n` | boolean | Preview the request without executing |
+Create/update convenience flags: `--name`, `--key`, `--description`, `--icon`, `--group`, `--type`, `--avatar` (JSON), `--clientSideExecution`, `--needsApproval`, `--restricted`, `--environments` (CSV), `--dynamicApprovalFormula`, `--inputJsonSchema` (JSON), `--outputJsonSchema` (JSON), `--secureExecCode`, `--coreActionId`, `--coreDataProviderId`, `--customQuerySqlQuery`, `--customQueryFilters` (JSON), `--dataSourceQueryDataSourceId`, `--dataSourceQueryColumns` (JSON), `--dataSourceQueryFilters` (JSON), `--dataSourceQueryFormulas` (JSON), `--dataSourceQueryChildQueries` (JSON), `--dataSourceQueryLimit`, `--cost`, `--developmentStatus`, `--ownerProductId` (CSV), plus `--data`/`--from-file`.
 
 ---
 
 ## docyrus ds
 
-Data source commands for CRUD operations on records.
+Data source commands for CRUD on records.
 
 ### docyrus ds get
 
@@ -367,7 +244,7 @@ docyrus ds get <appSlug> <dataSourceSlug>
 
 ### docyrus ds list
 
-List data source items with optional filtering, sorting, and pagination.
+List data source items with the full query engine.
 
 ```
 docyrus ds list <appSlug> <dataSourceSlug> [options]
@@ -375,16 +252,25 @@ docyrus ds list <appSlug> <dataSourceSlug> [options]
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `--columns` | string | Comma-separated field slugs to select |
-| `--filters` | string | JSON filter object |
-| `--limit` | number | Max records to return |
+| `--columns` | string | Columns to select; comma-separated or JSON array (supports relation `()`, spread `...`, alias `:`, function `@`) |
+| `--distinctColumns` | string | Distinct columns; comma-separated or JSON array |
+| `--filters` | string | JSON filter group (`{"combinator":"and","rules":[...]}`) |
+| `--filterKeyword` | string | Full-text keyword filter |
+| `--orderBy` | string | Sort order string or JSON object/array |
+| `--limit` | number | Max records |
 | `--offset` | number | Skip N records |
-| `--orderBy` | string | Sort expression |
-| `--fullCount` | boolean | Include total count in response |
+| `--fullCount` | boolean | Include total count |
+| `--formulas` | string | JSON formulas object |
+| `--calculations` | string | JSON calculations array |
+| `--groupSummaries` | boolean | Return per-group summaries when calculations are used |
+| `--collapseRows` | boolean | Collapse rows into a single aggregated array |
+| `--expand` | string | Expand columns; comma-separated or JSON array |
+| `--pivot` | string | JSON pivot configuration |
+| `--childQueries` | string | JSON child query array |
 
 ### docyrus ds create
 
-Create data source item(s). If payload is an array, CLI sends a bulk request to `POST /apps/:appSlug/data-sources/:dataSourceSlug/items/bulk`.
+Create item(s). Array payload triggers `POST /apps/:appSlug/data-sources/:dataSourceSlug/items/bulk` (max 50 items).
 
 ```
 docyrus ds create <appSlug> <dataSourceSlug> [options]
@@ -393,15 +279,11 @@ docyrus ds create <appSlug> <dataSourceSlug> [options]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--data` | string | JSON payload for record fields |
-| `--from-file` | string | Path to `.json` or `.csv` payload file |
-
-Batch rules:
-- array payload triggers bulk create endpoint
-- maximum 50 items per batch
+| `--from-file` | string | Path to a `.json` or `.csv` payload file |
 
 ### docyrus ds update
 
-Update data source item(s). If payload is an array, CLI sends a bulk request to `PATCH /apps/:appSlug/data-sources/:dataSourceSlug/items/bulk`.
+Update item(s). Object payload uses the single-item endpoint and requires `recordId`; array payload uses the bulk endpoint, requires `id` in each item, and must not include positional `recordId`. Max 50 per batch.
 
 ```
 docyrus ds update <appSlug> <dataSourceSlug> [recordId] [options]
@@ -410,33 +292,54 @@ docyrus ds update <appSlug> <dataSourceSlug> [recordId] [options]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--data` | string | JSON payload for record fields |
-| `--from-file` | string | Path to `.json` or `.csv` payload file |
-
-Update rules:
-- object payload uses the single-item endpoint and requires `recordId`
-- array payload uses the bulk update endpoint and requires `id` in each item
-- do not provide positional `recordId` for batch update
-- maximum 50 items per batch
+| `--from-file` | string | Path to a `.json` or `.csv` payload file |
 
 ### docyrus ds delete
 
-Delete a data source item.
+Delete an item.
 
 ```
 docyrus ds delete <appSlug> <dataSourceSlug> <recordId>
 ```
 
-Successful command responses include a top-level `context` object with:
-- `email`
-- `tenantName`
-- `tenantNo`
-- `tenantDisplay`
+### docyrus ds comments create
+
+Create a record-scoped comment.
+
+```
+docyrus ds comments create <appSlug> <dataSourceSlug> <recordId> [options]
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--message` | string | Comment message |
+| `--data` / `--from-file` | string | Full comment DTO as JSON / file |
+| `--parentId` | string | Parent comment ID |
+| `--assignedTo` | string | Assigned user ID |
+| `--attachments` | string | JSON attachments payload |
+| `--level` | number | Comment level |
+| `--status` | number | Comment status |
+| `--done` | boolean | Mark comment as done |
+
+### docyrus ds files upload
+
+Upload a record-scoped file attachment (`multipart/form-data`).
+
+```
+docyrus ds files upload <appSlug> <dataSourceSlug> <recordId> [options]
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--file` | string | Path to the local file |
+| `--contentType` | string | Override the inferred MIME type |
+| `--publicFile` | boolean | Store the file in the public tenant bucket |
 
 ---
 
 ## docyrus studio
 
-Dev app data source schema CRUD commands under `/v1/dev/apps/:app_id/data-sources`.
+Dev-app schema CRUD. Data-source/field commands route through `/v1/dev/apps/:appId/data-sources...`; data-view/form commands route through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/...`; webform/html-template/email-template commands route through `/v1/dev/webforms`, `/v1/dev/html-templates`, `/v1/dev/email-templates`.
 
 Selector rules:
 - app selector: exactly one of `--appId` or `--appSlug`
@@ -445,813 +348,266 @@ Selector rules:
 
 Write payload rules:
 - use `--data '<json>'` or `--from-file ./payload.json` (JSON only), not both
-- flags override conflicting keys from JSON payload
-- batch commands accept either a root array or a root object containing the expected DTO key
+- flags override conflicting keys from the JSON payload
+- batch commands accept a root array or a root object containing the expected DTO key
 
 ### Data source commands
 
-#### docyrus studio list-data-sources
-
-`GET /dev/apps/:app_id/data-sources`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--expand` | string | Optional comma-separated expansions such as `fields` |
-
-#### docyrus studio get-data-source
-
-`GET /dev/apps/:app_id/data-sources/:id`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-
-#### docyrus studio create-data-source
-
-`POST /dev/apps/:app_id/data-sources`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--title` | string | Data source title |
-| `--name` | string | Data source name |
-| `--slug` | string | Data source slug |
-| `--type` | string | Data source type |
-| `--icon` | string | Icon |
-| `--dataSharing` | string | Data sharing value |
-| `--meta` | string | JSON meta payload |
-
-#### docyrus studio update-data-source
-
-`PATCH /dev/apps/:app_id/data-sources/:id`
-
-Same flags as `create-data-source`, plus selector flags:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-
-#### docyrus studio delete-data-source
-
-`DELETE /dev/apps/:app_id/data-sources/:id` (archives the data source)
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-
-#### docyrus studio restore-data-source
-
-Restore an archived data source. Slug resolution is unavailable for archived rows, so `--dataSourceId` is required.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID (required) |
-
-#### docyrus studio permanent-delete-data-source
-
-Permanently delete a data source.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID (required) |
-
-#### docyrus studio bulk-create-data-sources
-
-`POST /dev/apps/:app_id/data-sources/bulk`
-
-Expected DTO key: `dataSources`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list-data-sources` | `GET /dev/apps/:app/data-sources` | `--expand fields` |
+| `get-data-source` | `GET .../:id` | app + data source selector |
+| `create-data-source` | `POST .../data-sources` | `--title`, `--name`, `--slug`, `--type`, `--icon`, `--dataSharing`, `--meta` (JSON) |
+| `update-data-source` | `PATCH .../:id` | create flags + data source selector |
+| `delete-data-source` | `DELETE .../:id` | archives the data source |
+| `restore-data-source` | restore | requires `--dataSourceId` (slug unavailable for archived rows) |
+| `permanent-delete-data-source` | hard delete | requires `--dataSourceId` |
+| `bulk-create-data-sources` | `POST .../bulk` | DTO key `dataSources` |
 
 ### Field commands
 
-#### docyrus studio list-fields
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list-fields` | `GET .../:ds/fields` | app + data source selector |
+| `get-field` | `GET .../fields/:id` | + field selector |
+| `create-field` | `POST .../fields` | `--name`, `--slug`, `--type`, `--readOnly`, `--status`, `--defaultValue`, `--relationDataSourceId`, `--sortOrder`, `--tenantEnumSetId`, `--options` (JSON), `--validations` (JSON) |
+| `update-field` | `PATCH .../fields/:id` | create flags + field selector |
+| `delete-field` | `DELETE .../fields/:id` | app + data source + field selector |
+| `create-fields-batch` | `POST .../fields/batch` | DTO key `fields` |
+| `update-fields-batch` | `PATCH .../fields/batch` | DTO key `fields`; backend expects `fields[].fieldId` |
+| `delete-fields-batch` | `DELETE .../fields/batch` | DTO key `fieldIds` |
 
-`GET /dev/apps/:app_id/data-sources/:data_source_id/fields`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-
-#### docyrus studio get-field
-
-`GET /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--fieldId` | string | Field ID |
-| `--fieldSlug` | string | Field slug |
-
-#### docyrus studio create-field
-
-`POST /dev/apps/:app_id/data-sources/:data_source_id/fields`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Field name |
-| `--slug` | string | Field slug |
-| `--type` | string | Field type |
-| `--readOnly` | boolean | Read-only flag |
-| `--status` | string | Field status |
-| `--defaultValue` | string | Default value |
-| `--relationDataSourceId` | string | Related data source ID |
-| `--sortOrder` | number | Sort order |
-| `--tenantEnumSetId` | string | Tenant enum set ID |
-| `--options` | string | JSON options payload |
-| `--validations` | string | JSON validations payload |
-
-#### docyrus studio update-field
-
-`PATCH /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id`
-
-Same flags as `create-field`, plus selector flags:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--fieldId` | string | Field ID |
-| `--fieldSlug` | string | Field slug |
-
-#### docyrus studio delete-field
-
-`DELETE /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--fieldId` | string | Field ID |
-| `--fieldSlug` | string | Field slug |
-
-#### docyrus studio create-fields-batch
-
-`POST /dev/apps/:app_id/data-sources/:data_source_id/fields/batch`
-
-Expected DTO key: `fields`
-
-#### docyrus studio update-fields-batch
-
-`PATCH /dev/apps/:app_id/data-sources/:data_source_id/fields/batch`
-
-Expected DTO key: `fields`
-
-#### docyrus studio delete-fields-batch
-
-`DELETE /dev/apps/:app_id/data-sources/:data_source_id/fields/batch`
-
-Expected DTO key: `fieldIds`
+The CLI normalizes common live-output shapes before sending batches: `id -> fieldId`, `id -> enumId`, `read_only -> readOnly`, `default_value -> defaultValue`, `relation_data_source_id -> relationDataSourceId`, `options -> editorOptions`.
 
 ### Enum commands
 
-#### docyrus studio list-enums
+| Command | Route | DTO key |
+|---------|-------|---------|
+| `list-enums` | `GET .../fields/:id/enums` | — |
+| `create-enums` | `POST .../fields/:id/enums` | `enums` |
+| `update-enums` | `PATCH .../fields/:id/enums` | `enums` (backend expects `enums[].enumId`) |
+| `delete-enums` | `DELETE .../fields/:id/enums` | `enumIds` |
 
-`GET /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
+### Search commands (tenant-wide, paged)
 
-#### docyrus studio create-enums
-
-`POST /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
-
-Expected DTO key: `enums`
-
-#### docyrus studio update-enums
-
-`PATCH /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
-
-Expected DTO key: `enums`
-
-#### docyrus studio delete-enums
-
-`DELETE /dev/apps/:app_id/data-sources/:data_source_id/fields/:field_id/enums`
-
-Expected DTO key: `enumIds`
+| Command | Description | Flags |
+|---------|-------------|-------|
+| `search-fields` | Search fields across all data sources | `--dataSourceId` (CSV), `--type` (CSV), `--keyword`, `--limit`, `--offset` |
+| `search-enums` | Search enums across data sources, fields, and enum sets | `--dataSourceId`, `--enumSetId`, `--fieldId`, `--limit`, `--offset` |
+| `search-enum-sets` | Search enum sets | `--limit`, `--offset` |
 
 ### Data view commands
 
-Saved view definitions for a data source. These commands route through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/views` (app + data source identified by slug). Pass either `--appId` or `--appSlug` and either `--dataSourceId` or `--dataSourceSlug`; the CLI resolves whichever side you didn't provide.
+Route through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/views`. Pass either `--appId`/`--appSlug` and either `--dataSourceId`/`--dataSourceSlug`; the CLI resolves the missing side.
 
-#### docyrus studio list-data-views
-
-`GET /apps/:appSlug/data-sources/:dataSourceSlug/views`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--tenantAppId` | string | Optional tenant app ID to scope the view list |
-
-#### docyrus studio get-data-view
-
-`GET /apps/:appSlug/data-sources/:dataSourceSlug/views/:viewId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--viewId` | string | Data source view ID (required) |
-
-#### docyrus studio create-data-view
-
-`POST /apps/:appSlug/data-sources/:dataSourceSlug/views`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | View name |
-| `--description` | string | View description |
-| `--tenantAppId` | string | Optional tenant app ID |
-| `--columns` | string | JSON columns payload |
-| `--filters` | string | JSON filters payload |
-| `--sort` | string | JSON sort payload |
-| `--color` | string | Color |
-| `--icon` | string | Icon |
-| `--colorRules` | string | JSON color rules payload |
-| `--quickFilterFields` | string | JSON array of quick filter field slugs |
-| `--isDefault` | boolean | Mark as default view |
-| `--sortOrder` | number | Sort order |
-
-#### docyrus studio update-data-view
-
-`PUT /apps/:appSlug/data-sources/:dataSourceSlug/views/:viewId`
-
-Same flags as `create-data-view`, plus:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--viewId` | string | Data source view ID (required) |
-| `--archived` | boolean | Archive flag |
-
-#### docyrus studio delete-data-view
-
-`DELETE /apps/:appSlug/data-sources/:dataSourceSlug/views/:viewId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--viewId` | string | Data source view ID (required) |
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list-data-views` | `GET .../views` | `--tenantAppId` optional |
+| `get-data-view` | `GET .../views/:viewId` | `--viewId` required |
+| `create-data-view` | `POST .../views` | `--name`, `--description`, `--tenantAppId`, `--columns` (JSON), `--filters` (JSON), `--sort` (JSON), `--color`, `--icon`, `--colorRules` (JSON), `--quickFilterFields` (JSON), `--isDefault`, `--sortOrder` |
+| `update-data-view` | `PUT .../views/:viewId` | create flags + `--viewId`, `--archived` |
+| `delete-data-view` | `DELETE .../views/:viewId` | `--viewId` required |
 
 ### Form commands
 
-Data source form definitions used by record-entry UIs. Routes through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/forms`.
+Route through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/forms`.
 
-#### docyrus studio list-forms
-
-`GET /apps/:appSlug/data-sources/:dataSourceSlug/forms`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-
-#### docyrus studio get-form
-
-`GET /apps/:appSlug/data-sources/:dataSourceSlug/forms/:formId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--formId` | string | Form ID (required) |
-
-#### docyrus studio create-form
-
-`POST /apps/:appSlug/data-sources/:dataSourceSlug/forms`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Form name |
-| `--description` | string | Description |
-| `--title` | string | Title |
-| `--subtopic` | string | Subtopic |
-| `--color` | string | Color |
-| `--icon` | string | Icon |
-| `--layout` | string | JSON layout payload |
-| `--isDefault` | boolean | Mark as default form |
-| `--status` | number | Form status |
-
-#### docyrus studio update-form
-
-`PUT /apps/:appSlug/data-sources/:dataSourceSlug/forms/:formId`
-
-Same flags as `create-form`, plus:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--formId` | string | Form ID (required) |
-| `--archived` | boolean | Archive flag |
-
-#### docyrus studio delete-form
-
-`DELETE /apps/:appSlug/data-sources/:dataSourceSlug/forms/:formId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--dataSourceId` | string | Data source ID |
-| `--dataSourceSlug` | string | Data source slug |
-| `--formId` | string | Form ID (required) |
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list-forms` | `GET .../forms` | — |
+| `get-form` | `GET .../forms/:formId` | `--formId` required |
+| `create-form` | `POST .../forms` | `--name`, `--description`, `--title`, `--subtopic`, `--color`, `--icon`, `--layout` (JSON), `--isDefault`, `--status` |
+| `update-form` | `PUT .../forms/:formId` | create flags + `--formId`, `--archived` |
+| `delete-form` | `DELETE .../forms/:formId` | `--formId` required |
 
 ### Webform commands
 
-Public-facing webforms that submit into either a tenant data source or, when unbound, a tenant-schema `webform_record` table. Routes through `/v1/dev/webforms`. Pass `--dataSourceId` directly, or `--dataSourceSlug` together with `--appId`/`--appSlug` to resolve the ID.
+Route through `/v1/dev/webforms`. CRUD by `--webformId`. List/create accept `--dataSourceId`, or `--dataSourceSlug` with `--appId`/`--appSlug` to resolve. When `dataSourceId` is omitted on create, submissions land in the tenant-schema `webform_record` table.
 
-#### docyrus studio list-webforms
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list-webforms` | `GET /dev/webforms` | optional data source filter |
+| `get-webform` | `GET /dev/webforms/:id` | `--webformId` |
+| `create-webform` | `POST /dev/webforms` | `--name`, `--schema` (JSON), `--status` (1 active, 2 inactive), `--webformOptions` (JSON), `--sandbox`, `--css` |
+| `update-webform` | `PATCH /dev/webforms/:id` | `--webformId` + same fields |
+| `delete-webform` | `DELETE /dev/webforms/:id` | `--webformId` |
 
-`GET /dev/webforms`
+### HTML template commands (HTML / PDF / DOCX export)
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
-| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
-| `--dataSourceId` | string | Filter by data source ID |
-| `--dataSourceSlug` | string | Filter by data source slug (requires `--appId` or `--appSlug`) |
+Route through `/v1/dev/html-templates`. CRUD by `--templateId`. Data source binding by `--dataSourceId` or `--dataSourceSlug` (slug requires `--appId`/`--appSlug`).
 
-#### docyrus studio get-webform
-
-`GET /dev/webforms/:webformId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--webformId` | string | Webform ID (required) |
-
-#### docyrus studio create-webform
-
-`POST /dev/webforms`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
-| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
-| `--dataSourceId` | string | Data source ID to bind the webform to |
-| `--dataSourceSlug` | string | Data source slug (requires `--appId` or `--appSlug`) |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Webform name |
-| `--schema` | string | JSON schema payload |
-| `--status` | number | Status (1 active, 2 inactive) |
-| `--webformOptions` | string | JSON options payload |
-| `--sandbox` | boolean | Sandbox flag |
-| `--css` | string | Custom CSS |
-
-#### docyrus studio update-webform
-
-`PATCH /dev/webforms/:webformId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--webformId` | string | Webform ID (required) |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Webform name |
-| `--schema` | string | JSON schema payload |
-| `--status` | number | Status (1 active, 2 inactive) |
-| `--webformOptions` | string | JSON options payload |
-| `--sandbox` | boolean | Sandbox flag |
-| `--css` | string | Custom CSS |
-
-#### docyrus studio delete-webform
-
-`DELETE /dev/webforms/:webformId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--webformId` | string | Webform ID (required) |
-
-### HTML template commands
-
-HTML/PDF/DOCX export templates. Routes through `/v1/dev/html-templates`. Identify a data source either by ID or by slug (slug requires `--appId` or `--appSlug`).
-
-#### docyrus studio list-html-templates
-
-`GET /dev/html-templates`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
-| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
-| `--dataSourceId` | string | Filter by data source ID |
-| `--dataSourceSlug` | string | Filter by data source slug (requires `--appId` or `--appSlug`) |
-| `--isDefault` | boolean | Filter by default flag |
-| `--limit` | number | Page size (default 100) |
-| `--offset` | number | Page offset (default 0) |
-
-#### docyrus studio get-html-template
-
-`GET /dev/html-templates/:templateId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--templateId` | string | HTML template ID (required) |
-
-#### docyrus studio create-html-template
-
-`POST /dev/html-templates`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
-| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
-| `--dataSourceId` | string | Data source ID this template binds to |
-| `--dataSourceSlug` | string | Data source slug (requires `--appId` or `--appSlug`) |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Template name |
-| `--filenameTmpl` | string | Filename template |
-| `--pageOrientation` | string | Page orientation |
-| `--sourceType` | string | Source type (`html`, `pdf`, `docx`, ...) |
-| `--marginLeft` | number | Left margin |
-| `--marginRight` | number | Right margin |
-| `--marginTop` | number | Top margin |
-| `--marginBottom` | number | Bottom margin |
-| `--pageFormat` | string | Page format (`A4`, `Letter`, ...) |
-| `--body` | string | HTML body |
-| `--isDefault` | boolean | Mark as default template |
-| `--headerTmpl` | string | Header template |
-| `--footerTmpl` | string | Footer template |
-| `--styles` | string | Inline CSS styles |
-
-#### docyrus studio update-html-template
-
-`PUT /dev/html-templates/:templateId`
-
-Same flags as `create-html-template`, plus:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--templateId` | string | HTML template ID (required) |
-
-#### docyrus studio delete-html-template
-
-`DELETE /dev/html-templates/:templateId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--templateId` | string | HTML template ID (required) |
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list-html-templates` | `GET /dev/html-templates` | `--isDefault`, `--limit`, `--offset` |
+| `get-html-template` | `GET /dev/html-templates/:id` | `--templateId` |
+| `create-html-template` | `POST /dev/html-templates` | `--name`, `--filenameTmpl`, `--pageOrientation`, `--sourceType` (`html`/`pdf`/`docx`), `--marginLeft/Right/Top/Bottom`, `--pageFormat` (`A4`/`Letter`), `--body`, `--isDefault`, `--headerTmpl`, `--footerTmpl`, `--styles` |
+| `update-html-template` | `PUT /dev/html-templates/:id` | create flags + `--templateId` |
+| `delete-html-template` | `DELETE /dev/html-templates/:id` | `--templateId` |
 
 ### Email template commands
 
-Transactional email templates. Routes through `/v1/dev/email-templates`. The data source binding is optional on create/update.
+Route through `/v1/dev/email-templates`. CRUD by `--templateId`. Data source binding optional.
 
-#### docyrus studio list-email-templates
-
-`GET /dev/email-templates`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
-| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
-| `--dataSourceId` | string | Filter by data source ID |
-| `--dataSourceSlug` | string | Filter by data source slug (requires `--appId` or `--appSlug`) |
-| `--limit` | number | Page size (default 100) |
-| `--offset` | number | Page offset (default 0) |
-
-#### docyrus studio get-email-template
-
-`GET /dev/email-templates/:templateId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--templateId` | string | Email template ID (required) |
-
-#### docyrus studio create-email-template
-
-`POST /dev/email-templates`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | Optional app ID used only to resolve `--dataSourceSlug` |
-| `--appSlug` | string | Optional app slug used only to resolve `--dataSourceSlug` |
-| `--dataSourceId` | string | Optional data source ID to bind the template to |
-| `--dataSourceSlug` | string | Data source slug (requires `--appId` or `--appSlug`) |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Template name |
-| `--subject` | string | Email subject |
-| `--body` | string | Email body |
-| `--ownership` | string | Ownership (e.g. `system`, `user`) |
-
-#### docyrus studio update-email-template
-
-`PUT /dev/email-templates/:templateId`
-
-Same flags as `create-email-template`, plus:
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--templateId` | string | Email template ID (required) |
-
-#### docyrus studio delete-email-template
-
-`DELETE /dev/email-templates/:templateId`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--templateId` | string | Email template ID (required) |
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list-email-templates` | `GET /dev/email-templates` | `--limit`, `--offset` |
+| `get-email-template` | `GET /dev/email-templates/:id` | `--templateId` |
+| `create-email-template` | `POST /dev/email-templates` | `--name`, `--subject`, `--body`, `--ownership` (`system`/`user`) |
+| `update-email-template` | `PUT /dev/email-templates/:id` | create flags + `--templateId` |
+| `delete-email-template` | `DELETE /dev/email-templates/:id` | `--templateId` |
 
 ---
 
 ## docyrus automation
 
-Automation, trigger, and action node CRUD. Routes through `/v1/dev/apps/:app_id/automations`.
+Automation, trigger, and action node CRUD. Routes through `/v1/dev/apps/:appId/automations`.
 
 Selector rules:
 - app selector: exactly one of `--appId` or `--appSlug`
 - automation selector: `--automationId` only (no slug)
-- trigger `--type` (URL kebab-case): `record-created`, `record-modified`, `record-deleted`, `recurrence`, `app-event`, `webhook`, `emailhook`, `webform`, `button-activation`, `manual-activation`
-- node `--type` (URL kebab-case): `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`, `wait-for`
+- trigger `--type` (kebab-case): `record-created`, `record-modified`, `record-deleted`, `recurrence`, `app-event`, `webhook`, `emailhook`, `webform`, `button-activation`, `manual-activation`
+- node `--type` (kebab-case): `external-action`, `send-email`, `send-notification`, `create-record`, `update-records`, `request-approval`, `request-input`, `http-request`, `data-source-query`, `custom-query`, `generate-document`, `ai-prompt`, `ai-agent`, `execute-script`, `wait-for`
 
 Write payload rules:
 - write commands accept `--data '<json>'` or `--from-file ./payload.json` (JSON only)
-- convenience flags are camelCase and are converted to `snake_case` in the request body
-- nested objects (`data`, `field_mapping`, `dynamic_field_mapping`, `condition`, `input_template`, `input_transformer`, `custom_headers`, `pre_action_request`, `post_action_request`, `target_data_source_condition`) must be supplied via `--data` / `--from-file`
-- `delete`, `delete-trigger`, and `delete-node` return `{ deleted: true, id }` (API itself returns 204)
+- convenience flags are camelCase and converted to `snake_case`
+- nested objects (`data`, `field_mapping`, `dynamic_field_mapping`, `condition`, `input_template`, `input_transformer`, `custom_headers`, `pre_action_request`, `post_action_request`, `target_data_source_condition`) must be supplied via `--data`/`--from-file`
+- `delete`, `delete-trigger`, `delete-node` return `{ deleted: true, id }` (API returns 204)
 
-### docyrus automation list
+### Automation CRUD
 
-`GET /dev/apps/:app_id/automations`
+| Command | Route | Notes |
+|---------|-------|-------|
+| `list` | `GET .../automations` | app selector |
+| `get` | `GET .../automations/:id` | `--automationId` |
+| `create` | `POST .../automations` | `--name`, `--triggerType` (camelCase: `recordCreated`, `recordModified`, `recordDeleted`, `recurrence`, `appEvent`, `webhook`, `emailhook`, `webform`, `buttonActivation`, `manualActivation`), `--status`, `--sourceDataSourceId`, `--triggerDataSourceId`, `--triggerDataProviderId`, `--triggerWebhookId` |
+| `update` | `PATCH .../automations/:id` | `--automationId`, `--name`, `--status`, `--sourceDataSourceId` |
+| `delete` | `DELETE .../automations/:id` | `--automationId` |
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
+### Trigger commands
 
-### docyrus automation get
+`list-triggers` / `get-trigger` are derived from the automation GET response. `create-trigger`/`update-trigger` route through `POST|PATCH .../triggers/:type[/ :triggerId]`; `delete-trigger` routes through `DELETE .../triggers/:triggerId` (type-independent).
 
-`GET /dev/apps/:app_id/automations/:id`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-
-### docyrus automation create
-
-`POST /dev/apps/:app_id/automations`
+`create-trigger` flags (`--automationId`, `--type` required):
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Automation name |
-| `--triggerType` | string | Initial trigger type (camelCase: `recordCreated`, `recordModified`, `recordDeleted`, `recurrence`, `appEvent`, `webhook`, `emailhook`, `webform`, `buttonActivation`, `manualActivation`) |
-| `--status` | number | Automation status |
-| `--sourceDataSourceId` | string | Source data source ID |
-| `--triggerDataSourceId` | string | Trigger data source ID |
-| `--triggerDataProviderId` | string | Trigger data provider ID |
-| `--triggerWebhookId` | string | Trigger webhook ID |
-
-### docyrus automation update
-
-`PATCH /dev/apps/:app_id/automations/:id`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Automation name |
-| `--status` | number | Automation status |
-| `--sourceDataSourceId` | string | Source data source ID |
-
-### docyrus automation delete
-
-`DELETE /dev/apps/:app_id/automations/:id`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-
-### docyrus automation list-triggers
-
-Derived from the automation GET response.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-
-### docyrus automation get-trigger
-
-Derived from the automation GET response.
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-| `--triggerId` | string | Trigger ID (required) |
-
-### docyrus automation create-trigger
-
-`POST /dev/apps/:app_id/automations/:automation_id/triggers/:type`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-| `--type` | string | Trigger type (kebab-case, required) |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
 | `--active` | boolean | Whether the trigger is active |
-| `--sourceDataSourceId` | string | Source data source ID (record-*, recurrence, button/manual) |
+| `--sourceDataSourceId` | string | Source data source (record-*, recurrence, button/manual) |
 | `--maxRunPerRecord` | number | Max runs per record (record-*, recurrence) |
 | `--modifiedColumns` | string | Comma-separated modified columns (record-modified) |
 | `--modifiedColumnsCondition` | string | `all` or `any` (record-modified) |
 | `--recurrenceFrequency` | string | `hour`, `day`, `week`, `month`, `year` (recurrence) |
 | `--recurrenceInterval` | number | Recurrence interval (recurrence) |
-| `--recurrenceMinutes` | number | Recurrence minutes 0\|15\|30\|45 (recurrence) |
-| `--recurrenceWeekDays` | string | Comma-separated week days `MON,TUE,...` (recurrence) |
+| `--recurrenceMinutes` | number | Minutes `0\|15\|30\|45` (recurrence) |
+| `--recurrenceWeekDays` | string | Comma-separated `MON,TUE,...` (recurrence) |
 | `--recurrenceMonthDays` | string | `DAY_OF_MONTH` or `DAY_OF_WEEK` (recurrence) |
-| `--recurrenceStartDate` | string | ISO date (recurrence) |
-| `--recurrenceEndDate` | string | ISO date (recurrence) |
+| `--recurrenceStartDate` / `--recurrenceEndDate` | string | ISO date (recurrence) |
 | `--recurrenceRunAt` | string | `HH:mm` (recurrence) |
-| `--coreDataProviderId` | string | Core data provider ID (app-event) |
-| `--coreDataProviderWebhookId` | string | Core data provider webhook ID (app-event) |
-| `--webhookId` | string | Webhook ID (webhook, emailhook) |
+| `--dataProviderId` | string | Data provider id, a.k.a. connector (app-event); obtain via `docyrus connect list-connectors` |
+| `--dataProviderWebhookId` | string | Data provider webhook id (app-event); obtain via `docyrus connect get-connector <slug>` |
+| `--webhookId` | string | Webhook id (webhook, emailhook) |
 | `--webhookName` | string | Name for auto-created webhook (webhook, emailhook) |
-| `--tenantWebformId` | string | Tenant webform ID (webform) |
+| `--webformId` | string | Webform id (webform) |
+| `--data` / `--from-file` | string | JSON payload / file |
 
-### docyrus automation update-trigger
+`update-trigger` adds `--triggerId` (required). `delete-trigger` takes `--automationId` and `--triggerId`.
 
-`PATCH /dev/apps/:app_id/automations/:automation_id/triggers/:type/:trigger_id`
+### Action node commands
 
-Same flags as `create-trigger`, plus `--triggerId` (required).
+`list-nodes` (`GET .../nodes`), `get-node` (`GET .../nodes/:nodeId`). `create-node`/`update-node` route through `POST|PATCH .../nodes/:type[/ :nodeId]`; `delete-node` routes through `DELETE .../nodes/:nodeId` (type-independent).
 
-### docyrus automation delete-trigger
-
-`DELETE /dev/apps/:app_id/automations/:automation_id/triggers/:trigger_id` (type-independent)
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-| `--triggerId` | string | Trigger ID (required) |
-
-### docyrus automation list-nodes
-
-`GET /dev/apps/:app_id/automations/:automation_id/nodes`
+`create-node` flags (`--automationId`, `--type` required):
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-
-### docyrus automation get-node
-
-`GET /dev/apps/:app_id/automations/:automation_id/nodes/:node_id`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-| `--nodeId` | string | Node ID (required) |
-
-### docyrus automation create-node
-
-`POST /dev/apps/:app_id/automations/:automation_id/nodes/:type`
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-| `--type` | string | Node type (kebab-case, required) |
-| `--data` | string | JSON payload |
-| `--from-file` | string | Path to JSON payload file |
-| `--name` | string | Node name |
-| `--description` | string | Node description |
+| `--name` / `--description` | string | Node name / description |
 | `--subType` | string | Sub type discriminator |
-| `--parent` | string | Parent node ID |
+| `--parent` | string | Parent node id |
 | `--active` | boolean | Whether the node is active |
-| `--actionTypeId` | string | Action type ID (required for `external-action` create; maps to `core_action.id`) |
-| `--sourceDataSourceId` | string | Source data source ID (external-action) |
-| `--targetDataSourceId` | string | Target data source ID (create-record, update-records, http-request, data-source-query, external-action) |
-| `--targetDataSourceFieldId` | string | Target data source field ID (update-records) |
-| `--connectionId` | string | Connection ID (http-request, external-action) |
-| `--connectionAccountId` | string | Connection account ID (http-request, external-action) |
-| `--webhookId` | string | Webhook ID (external-action) |
-| `--inputDataSourceId` | string | Input data source ID (request-approval, request-input) |
-| `--requestMethod` | string | HTTP method (http-request): `GET`, `POST`, `PUT`, `PATCH`, `DELETE` |
+| `--actionTypeId` | string | Action type id (required for `external-action`; maps to `core_action.id`) |
+| `--sourceDataSourceId` | string | Source data source id (external-action) |
+| `--targetDataSourceId` | string | Target data source id (create-record, update-records, http-request, data-source-query, external-action) |
+| `--targetDataSourceFieldId` | string | Target field id (update-records) |
+| `--connectionId` / `--connectionAccountId` | string | Connection (http-request, external-action) |
+| `--webhookId` | string | Webhook id (external-action) |
+| `--inputDataSourceId` | string | Input data source id (request-approval, request-input) |
+| `--requestMethod` | string | HTTP method (http-request) |
 | `--contentType` | string | HTTP content type (http-request) |
 | `--customEndpoint` | string | HTTP endpoint (http-request) |
-| `--relativeEndpoint` | boolean | Whether the endpoint is relative to the connection base URL (http-request) |
-| `--batch` | boolean | Whether to send the HTTP request in batches (http-request) |
-| `--batchSize` | number | HTTP batch size 1..10000 (http-request) |
-| `--outputTransformer` | string | Output transformer expression (http-request) |
-| `--batchTransformer` | string | Batch transformer expression (http-request) |
-| `--errorTransformer` | string | Error transformer expression (http-request) |
+| `--relativeEndpoint` | boolean | Endpoint relative to connection base url (http-request) |
+| `--batch` / `--batchSize` | boolean / number | HTTP batching 1..10000 (http-request) |
+| `--outputTransformer` / `--batchTransformer` / `--errorTransformer` | string | Transformer expressions (http-request) |
+| `--data` / `--from-file` | string | JSON payload / file |
 
-Note: `external-action` create validates `data` against the linked `core_action.input_json_schema` and creates the associated `tenant_action` row in the same transaction.
+`update-node` adds `--nodeId` (required). `delete-node` takes `--automationId` and `--nodeId`.
 
-Note: `wait-for` nodes take no flat convenience flags beyond the common base. Configure the delay inside `data` via `delaySeconds` (integer, ≤ 30 days / 2_592_000) or the `delayValue` + `delayUnit` (`seconds` / `minutes` / `hours` / `days`) pair. The action forwards input data through unchanged and queues next step(s) with a deferred `tenant_job_queue.process_after = clock_timestamp() + delaySeconds` (worker poll must filter on `process_after IS NULL OR process_after <= clock_timestamp()` for the delay to defer execution).
+Notes:
+- `external-action` create validates `data` against the linked `core_action.input_json_schema` and creates the `tenant_action` row in the same transaction.
+- `wait-for` takes no flat flags beyond the common base. Set the delay inside `data`: `delaySeconds` (integer ≤ 30 days / 2_592_000) or `delayValue` + `delayUnit` (`seconds`/`minutes`/`hours`/`days`). It forwards input unchanged and queues next step(s) with a deferred `tenant_job_queue.process_after`.
 
 ```sh
 docyrus automation create-node \
-  --appSlug crm \
-  --automationId 9c4f… \
-  --type wait-for \
-  --name "Wait 2 hours" \
-  --parent <previous-node-id> \
+  --appSlug crm --automationId 9c4f… \
+  --type wait-for --name "Wait 2 hours" --parent <previous-node-id> \
   --data '{"data":{"delayValue":2,"delayUnit":"hours"}}'
 ```
 
-### docyrus automation update-node
+---
 
-`PATCH /dev/apps/:app_id/automations/:automation_id/nodes/:type/:node_id`
+## docyrus agent
 
-Same flags as `create-node`, plus `--nodeId` (required).
+Custom-agent CRUD for the dev controller (`/v1/dev/apps/:appId/agents...`). Distinct from the pi-agent launchers (`opsy`/`cody`/`coder`).
 
-### docyrus automation delete-node
+Selector and payload rules:
+- app selector: exactly one of `--appId` or `--appSlug`
+- the parent agent is `--agentId`; an individual sub-resource row is `--id`
+- `create`/`update` accept `--data`/`--from-file` (JSON) plus camelCase convenience flags that map 1:1 onto the matching `Create*Dto`/`Update*Dto` `snake_case` keys
+- JSON flags are parsed from JSON; list flags (e.g. `--standardSuggestions`, `--supportedFileFormats`, `--ownerProductId`) are comma-separated arrays
+- `createOnly` fields appear only on `create`; `updateOnly` fields (e.g. `--archived`) only on `update`; incur rejects unknown flags
+- `delete` returns `{ deleted: true, id }`
 
-`DELETE /dev/apps/:app_id/automations/:automation_id/nodes/:node_id` (type-independent)
+### Agent resource
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--appId` | string | App ID |
-| `--appSlug` | string | App slug |
-| `--automationId` | string | Automation ID (required) |
-| `--nodeId` | string | Node ID (required) |
+| Command | Notes |
+|---------|-------|
+| `list` / `get` / `delete` | `--agentId` for get/delete |
+| `create` | requires `--skillName` |
+| `update` | `--agentId` + changed fields; supports `--archived` |
+| `upload` | multipart image; `--column` (`avatar`/`gallery_image`), `--file`, `--contentType` |
+
+`create`/`update` convenience flags: `--name`, `--agentName`, `--skillName`, `--description`, `--category`, `--mode`, `--instructions`, `--welcomeMessage`, `--defaultAiModelId`, `--backupAiModelId`, `--cotAiModelId`, `--defaultReasoningLevel`, `--parent`, `--ownership` (`SYSTEM`/`APP`/`TENANT`), `--tenantAppId`, `--workDataSourceId`, `--status`, `--developmentStatus`, `--sortOrder`, `--temperature`, `--maxTokens`, `--isAgent`, `--isAssistant`, `--isSkill`, `--jsonOutput`, `--hasWorkflow`, `--multipleDeployment`, `--supportTools`, `--supportDataSources`, `--supportFiles`, `--supportKnowledgeBase`, `--supportWebSearch`, `--standardSuggestions` (CSV), `--supportedFileFormats` (CSV), `--ownerProductId` (CSV), `--instructionSchema` (JSON), `--inputFormSchema` (JSON), `--outputRenderSchema` (JSON), `--memoryOptions` (JSON), `--helpDocs` (JSON), plus `--data`/`--from-file`. The long tail (`compaction_*`, `context_clear_*`, `output_*`, `prompt_*`, …) goes through `--data`/`--from-file`.
+
+### Sub-resource groups
+
+Each group supports `list`/`get`/`create`/`update`/`delete` (unless noted). All take `--appId`/`--appSlug` and `--agentId`; row commands take `--id`. Key create flags shown.
+
+| Group | Key create flags / notes |
+|-------|--------------------------|
+| `models` | DTO fields via flags or `--data`/`--from-file` |
+| `tools` | `--coreAiToolId` (required), `--defaultParams` (JSON), `--tenantConnectionId`, `--tenantConnectionAccountId` |
+| `data-sources` | `--tenantDataSourceId` (required), `--privilege` |
+| `docs` | DTO fields via flags or `--data`/`--from-file` |
+| `mcps` | DTO fields via flags or `--data`/`--from-file` |
+| `connections` | `--connectedAiAgentId` (required), `--connectionType` (required); routes via `agent-connections` segment |
+| `dynamic-contexts` | DTO fields via flags or `--data`/`--from-file` |
+| `tasks` | `--parent_message_id` (createOnly); `--status`/`--error_message`/`--retry_count` (updateOnly) |
+| `recurring-tasks` | backend requires `cronExpression`/`nextRunAt` |
+| `workflow-steps` | backend requires `inputSchema`/`outputSchema` |
+| `deployments` | nested arrays (`tools`) via `--tools` JSON or `--data`/`--from-file` |
+| `deployment-tools` | nested under a deployment; `list`/`create`/`update`/`delete` (no `get`); requires `--deploymentId` |
+| `deployment-data-sources` | same as `deployment-tools` |
+| `workflow-jobs` | read-only: `list`/`get`/`traces`/`delete` |
 
 ---
 
 ## docyrus messaging
 
-Tenant email account discovery and transactional email send. Routes through `/v1/messaging/email/*`. Requires the `Messaging.Email.Send` OAuth2 scope.
+Tenant email account discovery and transactional email send. Routes through `/v1/messaging/email/*`. Requires the `Messaging.Email.Send` OAuth2 scope. Credentials are never returned.
 
 ### docyrus messaging accounts
 
-`GET /messaging/email/accounts`
-
-Lists active tenant email accounts. Credentials are never returned. Each account exposes `id`, `name`, `provider`, `senderEmail`, `senderName`, `isUserAccessible`, `allowOverrideName`, `allowOverrideEmail`, and `createdOn`.
+`GET /messaging/email/accounts`. Each account exposes `id`, `name`, `provider`, `senderEmail`, `senderName`, `isUserAccessible`, `allowOverrideName`, `allowOverrideEmail`, `createdOn`.
 
 ### docyrus messaging email send
 
@@ -1260,19 +616,251 @@ Lists active tenant email accounts. Credentials are never returned. Each account
 | Flag | Type | Description |
 |------|------|-------------|
 | `--accountId` | string | Tenant email account UUID (required) |
-| `--to` | string | Comma-separated recipient addresses |
-| `--cc` | string | Comma-separated CC addresses |
-| `--bcc` | string | Comma-separated BCC addresses |
-| `--replyTo` | string | Comma-separated reply-to addresses |
-| `--subject` | string | Email subject (max 998 chars) |
-| `--body` | string | Email body (HTML or text, max 1 000 000 chars) |
+| `--to` / `--cc` / `--bcc` / `--replyTo` | string | Comma-separated addresses |
+| `--subject` | string | Subject (max 998 chars) |
+| `--body` | string | HTML or text body (max 1 000 000 chars) |
 | `--sendAsUser` | boolean | Send using the authenticated user's identity when allowed |
-| `--data` | string | Full JSON payload; overrides individual flags when set |
-| `--from-file` | string | Read full JSON payload from a JSON file |
+| `--data` / `--from-file` | string | Full JSON payload; overrides individual flags |
 
-Limits: up to 50 recipients per list, up to 10 attachments. Attachment objects are `{ filePath, fileName?, mimeType? }` and reference tenant-scoped storage paths.
+Limits: up to 50 addresses per list, up to 10 attachments. Attachments are `{ filePath, fileName?, mimeType? }` referencing tenant-scoped storage paths. Response: `{ messageId, provider, accepted, rejected }`.
 
-Response payload: `{ messageId, provider, accepted, rejected }`.
+---
+
+## docyrus connect
+
+Connector and action commands.
+
+### docyrus connect list-connectors
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--q` | string | — | Keyword search on name, slug, or description |
+| `--limit` | number | 100 | Max results |
+| `--offset` | number | 0 | Result offset |
+
+### docyrus connect get-connector / get-action / list-connections
+
+```
+docyrus connect get-connector <slug>
+docyrus connect get-action <slug> <actionKey>
+docyrus connect list-connections <slug>
+```
+
+`get-connector` returns data sources + actions; `get-action` returns input/output JSON schemas; `list-connections` returns tenant and user connections.
+
+### docyrus connect curl
+
+Send an HTTP request through a connector's provider auth.
+
+```
+docyrus connect curl <slug> <endpoint> [options]
+```
+
+| Flag | Alias | Type | Default | Description |
+|------|-------|------|---------|-------------|
+| `--method` | `-X` | string | GET | HTTP method |
+| `--data` | `-d` | string | — | JSON payload (body for POST/PUT/PATCH, query for GET) |
+| `--contentType` | | string | application/json | Content-Type header |
+| `--headers` | | string | — | JSON object of additional headers (can override Authorization) |
+| `--connectionId` | `-c` | string | — | Tenant connection ID override |
+| `--connectionAccountId` | | string | — | Connection account ID |
+
+### docyrus connect run-action
+
+Run a connector or app action via `POST /v1/apps/:appSlug/actions/:actionKey/run`.
+
+```
+docyrus connect run-action <appSlug> <actionKey> [options]
+```
+
+| Flag | Alias | Type | Default | Description |
+|------|-------|------|---------|-------------|
+| `--params` | `-p` | string | — | JSON object with action input parameters |
+| `--connectionId` | `-c` | string | — | Tenant connection ID override |
+| `--connectionAccountId` | | string | — | Tenant connection account ID |
+| `--dryRun` | `-n` | boolean | false | Preview the request without executing |
+
+---
+
+## docyrus discover
+
+Discovery commands for the tenant OpenAPI spec. All require an active login session. Commands other than `discover api` auto-download the spec if missing locally (public bucket -> authenticated `GET /v1/api/openapi.json` -> public retry).
+
+| Command | Description |
+|---------|-------------|
+| `discover api` | Download tenant OpenAPI spec for the active tenant |
+| `discover namespaces` | List deduplicated namespace prefixes (e.g. `/v1/users`) |
+| `discover path <prefix>` | List endpoints (method + description) for a path prefix (`/v1` optional) |
+| `discover endpoint <selector>` | Full endpoint object; selector `/path` (GET) or `[METHOD]/path` |
+| `discover entity <name>` | Full entity schema by name (case-sensitive, e.g. `UserEntity`) |
+| `discover search <query>` | Search endpoint paths and entity names (comma-separated terms) |
+
+---
+
+## docyrus curl
+
+Send arbitrary requests to the Docyrus API.
+
+```
+docyrus curl <path> [options]
+```
+
+| Flag | Alias | Type | Description |
+|------|-------|------|-------------|
+| `--request` | `-X` | string | HTTP method |
+| `--header` | `-H` | array | Request header (repeatable) |
+| `--data` | `-d` | string | Request payload |
+| `--get` | `-G` | boolean | Send data as query string |
+| `--include` | `-i` | boolean | Include status and response headers |
+| `--noAuth` | | boolean | Skip Authorization header |
+
+Notes: path-only (no absolute URLs); `/v1` prefix auto-normalized; JSON payloads auto-detect `Content-Type: application/json`; default method GET (POST if `-d` provided).
+
+---
+
+## docyrus docy
+
+Chat with the platform's main AI agent.
+
+```
+docyrus docy "<prompt>"
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--agentId` | string | Agent ID; defaults to the Docyrus CLI agent |
+| `--deploymentId` | string | Optional agent deployment ID |
+
+Renders markdown in a TTY; preserves structured output with `--json`/`--verbose`/`--format`.
+
+---
+
+## docyrus opsy / cody / coder (pi agents)
+
+Launch the pi agent runtime. `opsy` = Cowork Agent; `cody` = Coding Agent (`coder` is an alias of `cody`). Each takes an optional `prompt` argument (omit to open the interactive TUI).
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--print` | boolean | One-shot print mode instead of the TUI |
+| `--mode` | string | Print mode output: `text` or `json` |
+| `--continue` | boolean | Continue the previous pi session |
+| `--resume` | boolean | Open the pi session picker |
+| `--provider` | string | Model provider |
+| `--model` | string | Model pattern or full `provider/model` id |
+| `--thinking` | string | Thinking level |
+| `--session` / `--sessionDir` | string | Specific session file / storage dir override |
+| `--apiKey` | string | Temporary provider API key override for this run |
+| `--verbose` | boolean | Verbose pi startup output |
+
+---
+
+## docyrus server
+
+Start an HTTP server bridging a pi agent to the AI SDK `useChat` protocol (SSE chat stream with reconnect/resume).
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--profile` | string | `coder` | Agent profile to use |
+| `--port` | number | 3111 | Server port |
+| `--provider` / `--model` / `--thinking` | string | — | Model selection |
+| `--sessionDir` | string | — | Session storage directory override |
+| `--apiKey` | string | — | Temporary provider API key override |
+| `--auth` | string | — | Require this bearer token for all HTTP requests |
+| `--verbose` | boolean | — | Verbose pi startup output |
+| `--sandbox` | boolean | — | Enable sandbox browser mode (remote Cloudflare Browser Rendering) |
+| `--desktop` | boolean | — | Enable desktop browser automation tools (`docyrus_browser_*`) |
+
+---
+
+## docyrus browser
+
+Browser automation (local Chrome on `:9222` or remote Cloudflare). Commands return JSON with a `mode` field.
+
+| Command | Description | Key flags / args |
+|---------|-------------|------------------|
+| `start` | Start a session | `--profile` (copy default Chrome profile, local only) |
+| `close` | Close the session | `--kill` (kill local Chrome) |
+| `nav <url>` | Navigate / open URL | `--new`, `--reload` |
+| `tabs` | List/switch tabs | `--switch <index>` |
+| `info` | Page URL, title, viewport, scroll | — |
+| `snapshot` | Compact element refs (`@e1`) for interaction | `--all`, `--selector` |
+| `click <target> [y]` | Click ref `@e1`, CSS selector, or `x y` coords | `--timeout` |
+| `fill <target> <value>` | Type into input/textarea | `--timeout` |
+| `select <target> <value>` | Select a dropdown option | `--timeout` |
+| `eval <code>` | Evaluate JS in the active tab | `--timeout` |
+| `wait [ms]` | Wait for delay/condition | `--idle`, `--selector`, `--url`, `--timeout` |
+| `screenshot` | Capture the tab | `--full`, `--base64` |
+| `content <url>` | Extract readable markdown | — |
+| `cookies` | Show cookies | `--name`, `--domain` |
+| `console` | Capture console messages | `--level`, `--listen <ms>` |
+| `network` | Inspect captured requests | `--method`, `--status`, `--url`, `--listen <ms>` |
+| `devtools <subcommand>` | Read `@docyrus/devtools` state/errors/issues/console | `--level` |
+| `run-script <script>` | Run a CDP script file | `--appSlug`, `--appId`, `--keepAlive` |
+
+---
+
+## docyrus knowledge
+
+Repo knowledge-graph commands operating on `docyrus/knowledge`. Local dev-workflow tooling.
+
+| Command | Description |
+|---------|-------------|
+| `init` | Initialize `docyrus/knowledge` + external-agent integration files (`--brief`, `--installGitHook`) |
+| `generate-initial` | Generate/refresh starter structure from repo facts (`brief` arg) |
+| `refresh` | Refresh managed starter files (`--staged`, `--sections`) |
+| `search <query>` | Semantic search (`--limit`, `--reindex`) |
+| `section <query>` | Show a section with refs and backlinks |
+| `locate <query>` | Find sections by exact/short/fuzzy match |
+| `refs <query>` | Find markdown/code references to a section or symbol (`--scope`) |
+| `expand [text]` | Expand `[[refs]]` into resolved context (`--stdin`) |
+| `check` | Validate the graph (links/backlinks) |
+| `doctor` | Explain drift, quality issues, hot spots |
+| `config` | Show resolved graph/cache/provider config |
+| `list-impacted` | List sections likely impacted by changes (`--staged`) |
+| `audit-staged` | Run a staged-diff knowledge audit |
+| `pre-commit` | Hook-oriented staged knowledge gate |
+| `hook <agent> <event>` | Internal hook command for external-agent integrations |
+
+---
+
+## docyrus project-plan
+
+Repo-tracked project plan graph (phases -> features -> tasks). Token-efficient list/find/upsert/status commands. Local dev-workflow tooling.
+
+| Command | Description |
+|---------|-------------|
+| `ensure` / `check` / `config` | Ensure graph exists / validate / show resolved paths |
+| `show` / `summary` | Show hierarchy / summary statistics |
+| `list-phases` / `list-features` / `list-tasks` | Slim listings (`list-tasks`: `--phaseId`, `--featureId`, `--status`, `--limit`, `--includeSummary`) |
+| `find-tasks` | Filter tasks (`--title`, `--titleContains`, `--summaryContains`, `--status`, `--type`, `--assignee`, `--featureId`, `--phaseId`, `--taskId`, `--limit`) |
+| `get-task` | Get a task with linked local subtasks (`--taskId`) |
+| `upsert-phase` / `upsert-feature` / `upsert-task` | Create/update graph nodes |
+| `set-order` | Set display order of a phase/feature/task (`--order`) |
+| `set-task-status` | Update a task status (`--taskId`, `--status`) |
+| `create-linked-todo` | Create a local `.pi/todos` subtask linked to a task |
+| `upsert-from-architect` / `upsert-from-plan` | Internal sync from `/architect` and `/plan` artifacts |
+
+---
+
+## docyrus release
+
+Release and versioning commands.
+
+### docyrus release status
+
+Show current release status and unreleased changes.
+
+### docyrus release new-version
+
+Create a new release with version bump, changelog generation, and optional GitHub release.
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--bump` | string | SemVer bump type (auto-detect if omitted) |
+| `--version` | string | Explicit target version (e.g. `1.0.0`) |
+| `--appId` | string | App ID for the release record; defaults to `DOCYRUS_SANDBOX_APP_ID` |
+| `--dryRun` | boolean | Preview changes without committing |
+| `--skipChangelog` / `--skipTag` / `--skipGithubRelease` / `--skipDbRelease` | boolean | Skip individual steps |
 
 ---
 

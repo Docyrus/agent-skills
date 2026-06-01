@@ -5,6 +5,25 @@ Complete command reference for the Docyrus CLI (`@docyrus/docyrus`).
 ## Global Flags
 
 - `-g, --global` — Use global `~/.docyrus` settings instead of local project settings
+- `--format <toon|json|yaml|md|jsonl>` — Output format
+- `--llms` — Print the full LLM-readable manifest
+- `--mcp` — Start as an MCP stdio server
+
+**Flag forms:** `--help` prints flags in kebab-case (`--app-slug`, `--from-file`); the parser also accepts the camelCase schema keys (`--appSlug`, `--fromFile`). Both work.
+
+---
+
+## env — Environments
+
+The CLI uses saved named environments, not `API_BASE_URL`.
+
+| Command | Description |
+|---|---|
+| `docyrus env list` | List available environments |
+| `docyrus env use <selector>` | Switch active environment by id or name |
+| `docyrus env which` | Show the active environment and resolved settings scope (`local`/`global`) for the current folder |
+
+Built-in: `live` (`prod` alias) → `https://api.docyrus.com`, `beta`, `alpha`, `dev` (`local-development` alias) → `https://localhost:3366`.
 
 ---
 
@@ -23,7 +42,7 @@ Authorize CLI using OAuth2 device flow or manual token entry.
 
 **Client ID resolution order:** explicit `--clientId` > `DOCYRUS_API_CLIENT_ID` env var > local config > global config > `manual-token` fallback.
 
-**Default scopes:** `openid email profile offline_access ReadWrite.All User.ReadWrite Users.ReadWrite.All Tenant.Read Teams.Read.All DS.ReadWrite.All Docs.ReadWrite.All Architect.ReadWrite.All AI.ReadWrite.All`
+**Default scopes:** `openid email profile offline_access ReadWrite.All Architect.ReadWrite.All Automations.Run Reports.Run.CustomQuery Messaging.Email.Send Messaging.Sms.Send Messaging.Whatsapp.Send MCP.Connect`
 
 ### `docyrus auth set-tokens`
 
@@ -83,13 +102,28 @@ Revoke and clear all tenant sessions for the active account.
 
 Return current authenticated user (`/v1/users/me`).
 
+### `docyrus auth tenant`
+
+Return the active tenant record (`GET /v1/tenant/current`, scope `Tenant.Read`). Read-only passthrough with no flags — returns `id`, `no`, `name`, `accountStatus`, product/subscription references, seat counts, `paymentChannel`, trial/subscription dates, and `onboardingStatus`. Distinct from the `auth tenants` (plural) account-management group.
+
+### Sandbox / CI token helpers
+
+Mostly invoked by the sandbox runtime; all default `--appId` to `DOCYRUS_SANDBOX_APP_ID`.
+
+| Command | Description |
+|---|---|
+| `docyrus auth sandbox` | Refresh and inject fresh auth tokens into the active sandbox |
+| `docyrus auth github` | Regenerate the GitHub token and inject it into the active sandbox (`--cwd`) |
+| `docyrus auth git-credential` | Git credential helper supplying a repo-scoped GitHub token (`--operation`) |
+| `docyrus auth sso-session` | Create a short-lived SSO session token for headless browser auth (`--clientId`, `--targetOrigin`) |
+
 ---
 
-## ai — AI Agent Chat
+## docy — AI Agent Chat
 
-### `docyrus ai "<prompt>"`
+### `docyrus docy "<prompt>"`
 
-Send a prompt to a Docyrus AI agent.
+Send a single prompt to the platform's main AI agent. (Previously `docyrus ai`.)
 
 | Argument | Type | Required | Description |
 |---|---|---|---|
@@ -104,60 +138,34 @@ Send a prompt to a Docyrus AI agent.
 - TTY mode: renders markdown for human readability
 - `--json`, `--verbose`, or `--format`: preserves structured output
 
-**Response fields:** `agentId`, `deploymentId`, `prompt`, `text`, `reasoning` (optional), `data` (optional).
+The pi agent launchers `docyrus opsy` (Cowork Agent) and `docyrus cody` / `docyrus coder` (Coding Agent), plus the `docyrus server` bridge, are covered under [Dev Workflow Tooling](#dev-workflow-tooling).
 
 ---
 
 ## browser — Browser Automation
 
-Browser automation commands (local Chrome or remote Cloudflare Browser Rendering). All commands return JSON with a `mode` field (`"local"` or `"remote"`).
+Browser automation commands (local Chrome on `:9222` or a remote Cloudflare session). Commands return JSON with a `mode` field (`"local"` or `"remote"`).
 
-### `docyrus browser start`
-
-Start a browser session. Local mode launches Chrome on `:9222`. Sandbox mode creates a Cloudflare session.
-
-| Option | Type | Description |
+| Command | Description | Key flags / args |
 |---|---|---|
-| `--profile` | boolean | Copy the default Chrome profile (local mode only) |
-
-### `docyrus browser nav <url>`
-
-Navigate the active tab or open the URL in a new tab.
-
-| Option | Type | Description |
-|---|---|---|
-| `--new` | boolean | Open the URL in a new tab |
-| `--reload` | boolean | Force a reload after navigation |
-
-### `docyrus browser eval <code>`
-
-Execute JavaScript in the active tab and print the result.
-
-### `docyrus browser screenshot`
-
-Capture the current viewport and return the temporary screenshot file path.
-
-### `docyrus browser pick <message>`
-
-Open an interactive element picker in the active tab and return information about the selected element or elements.
-
-### `docyrus browser cookies`
-
-Print cookies for the active tab, including domain, path, `httpOnly`, and `secure` flags.
-
-### `docyrus browser content <url>`
-
-Navigate to a URL and extract readable content as markdown.
-
-### `docyrus browser run-script <script>`
-
-Run a CDP script file on the active browser session.
-
-| Option | Type | Description |
-|---|---|---|
-| `--appId` | string | App ID for browser session resolution |
-| `--appSlug` | string | App slug for browser session resolution |
-| `--keepAlive` | number | Session keep-alive in milliseconds |
+| `browser start` | Start a session | `--profile` (copy default Chrome profile, local only) |
+| `browser close` | Close the session | `--kill` (kill local Chrome) |
+| `browser nav <url>` | Navigate / open URL | `--new`, `--reload` |
+| `browser tabs` | List/switch tabs | `--switch <index>` |
+| `browser info` | Page URL, title, viewport, scroll position | — |
+| `browser snapshot` | Compact element refs (`@e1`) for interaction | `--all`, `--selector` |
+| `browser click <target> [y]` | Click ref `@e1`, CSS selector, or `x y` coords | `--timeout` |
+| `browser fill <target> <value>` | Type into an input/textarea | `--timeout` |
+| `browser select <target> <value>` | Select a dropdown option | `--timeout` |
+| `browser eval <code>` | Evaluate JS in the active tab | `--timeout` |
+| `browser wait [ms]` | Wait for delay/condition | `--idle`, `--selector`, `--url`, `--timeout` |
+| `browser screenshot` | Capture the active tab | `--full`, `--base64` |
+| `browser content <url>` | Extract readable markdown from a URL | — |
+| `browser cookies` | Show cookies for the active tab | `--name`, `--domain` |
+| `browser console` | Capture console messages | `--level`, `--listen <ms>` |
+| `browser network` | Inspect captured network requests | `--method`, `--status`, `--url`, `--listen <ms>` |
+| `browser devtools <subcommand>` | Read `@docyrus/devtools` state/errors/issues/console | `--level` |
+| `browser run-script <script>` | Run a CDP script file on the active session | `--appSlug`, `--appId`, `--keepAlive` |
 
 ---
 
@@ -428,11 +436,32 @@ Run a connector or app action via `POST /v1/apps/:appSlug/actions/:actionKey/run
 
 ### `docyrus apps list`
 
-List apps.
+List apps (`/v1/apps`). Mutations route through `/v1/dev/apps/:appId`.
 
 | Option | Type | Description |
 |---|---|---|
 | `--appType` | string | Filter by app type |
+
+### `docyrus apps update`
+
+`PATCH /v1/dev/apps/:appId`. Convenience flags (`--name`, `--slug`, `--description`, `--icon`, `--color`, `--status`, `--betaUrl`, `--chromeExtensionPath`, `--mobileVersionPath`, `--agentContext`, `--routePath`) merge over `--data`/`--fromFile`. Store fields and array/object values must go through `--data`/`--fromFile`. `--status` ∈ {`active`, `design`, `development`, `draft`, `inactive`}.
+
+### `docyrus apps set-agent-context`
+
+Set an app's freeform AI agent context (`PATCH /v1/dev/apps/:appId` `agent_context`). Provide exactly one of `--value` (inline), `--fromFile` (text/markdown), or `--clear`.
+
+### `docyrus apps ai-tools`
+
+CRUD over app-scoped `tenant_ai_tool` rows (`/v1/dev/apps/:appId/ai-tools`). All commands take `--appId`/`--appSlug`.
+
+| Command | Notes |
+|---|---|
+| `apps ai-tools list` | List AI tools for an app |
+| `apps ai-tools get` / `delete` | `--toolId` |
+| `apps ai-tools create` | `--name` and `--key` required |
+| `apps ai-tools update` | `--toolId` + changed fields |
+
+Convenience flags cover the common columns (`--description`, `--icon`, `--group`, `--type`, `--clientSideExecution`, `--needsApproval`, `--restricted`, `--cost`, …). JSON-shaped fields (`--inputJsonSchema`, `--outputJsonSchema`, `--customQueryFilters`, `--dataSourceQueryColumns`, `--avatar`, …) are parsed as JSON; the long tail can go through `--data`/`--fromFile`.
 
 ### `docyrus apps delete`
 
@@ -462,6 +491,41 @@ Permanently delete an app.
 |---|---|---|
 | `--appId` | string | App ID |
 | `--appSlug` | string | App slug |
+
+---
+
+## agent — Custom AI Agents
+
+CRUD for dev-app custom agents and their sub-resources (`/v1/dev/apps/:appId/agents...`). The parent agent is `--agentId`; an individual sub-resource row is `--id`. This is distinct from the pi-agent launchers (`opsy`/`cody`/`coder`).
+
+### Agent resource
+
+| Command | Notes |
+|---|---|
+| `agent list` / `get` / `delete` | `--agentId` for get/delete |
+| `agent create` | requires `--skillName` |
+| `agent update` | `--agentId` + changed fields; supports `--archived` |
+| `agent upload` | multipart image; `--column` (`avatar`/`gallery_image`), `--file`, `--contentType` |
+
+`create`/`update` accept `--data`/`--fromFile` (JSON) plus camelCase convenience flags mapping 1:1 onto `Create*Dto`/`Update*Dto` `snake_case` keys (`--name`, `--description`, `--instructions`, `--defaultAiModelId`, `--temperature`, `--maxTokens`, `--supportTools`, `--supportDataSources`, `--supportFiles`, `--supportKnowledgeBase`, `--supportWebSearch`, …). JSON flags (`--instructionSchema`, `--inputFormSchema`, `--memoryOptions`, …) are parsed as JSON; list flags (`--standardSuggestions`, `--supportedFileFormats`) are comma-separated. The long tail goes through `--data`/`--fromFile`.
+
+### Sub-resource groups
+
+Each supports `list`/`get`/`create`/`update`/`delete` (unless noted); all take `--appId`/`--appSlug` and `--agentId`, row commands take `--id`.
+
+| Group | Key create flags / notes |
+|---|---|
+| `models` | DTO fields via flags or `--data`/`--fromFile` |
+| `tools` | `--coreAiToolId` (required), `--defaultParams` (JSON), `--tenantConnectionId` |
+| `data-sources` | `--tenantDataSourceId` (required), `--privilege` |
+| `docs` / `mcps` / `dynamic-contexts` | DTO fields via flags or `--data`/`--fromFile` |
+| `connections` | `--connectedAiAgentId` (required), `--connectionType` (required) |
+| `tasks` / `recurring-tasks` / `workflow-steps` | backend enforces required fields (e.g. `cronExpression`, `inputSchema`/`outputSchema`) |
+| `deployments` | nested arrays (`tools`) via `--tools` JSON or `--data`/`--fromFile` |
+| `deployment-tools` / `deployment-data-sources` | nested under a deployment (`--deploymentId`); `list`/`create`/`update`/`delete`, no `get` |
+| `workflow-jobs` | read-only: `list`/`get`/`traces`/`delete` |
+
+`createOnly` flags appear only on `create`; `updateOnly` (e.g. `--archived`) only on `update`. `delete` returns `{ deleted: true, id }`.
 
 ---
 
@@ -627,6 +691,16 @@ Same options as `create-enums` (without `--enumSetId`).
 #### `docyrus studio delete-enums`
 
 Same options. Payload key: `enumIds`.
+
+### Search Commands
+
+Tenant-wide, paged search across schema objects — useful for discovery and refactors.
+
+| Command | Description | Options |
+|---|---|---|
+| `docyrus studio search-fields` | Search fields across all data sources | `--dataSourceId` (CSV), `--type` (CSV), `--keyword`, `--limit`, `--offset` |
+| `docyrus studio search-enums` | Search enums across data sources, fields, and enum sets | `--dataSourceId`, `--enumSetId`, `--fieldId`, `--limit`, `--offset` |
+| `docyrus studio search-enum-sets` | Search shared enum sets | `--limit`, `--offset` |
 
 ### Data View Commands
 
@@ -970,11 +1044,11 @@ Routes through `POST .../triggers/:type`.
 | `--recurrenceStartDate` | string | ISO date (recurrence) |
 | `--recurrenceEndDate` | string | ISO date (recurrence) |
 | `--recurrenceRunAt` | string | `HH:mm` (recurrence) |
-| `--coreDataProviderId` | string | Core data provider ID (app-event) |
-| `--coreDataProviderWebhookId` | string | Core data provider webhook ID (app-event) |
+| `--dataProviderId` | string | Data provider (connector) ID (app-event); obtain via `docyrus connect list-connectors` |
+| `--dataProviderWebhookId` | string | Data provider webhook ID (app-event); obtain via `docyrus connect get-connector <slug>` |
 | `--webhookId` | string | Webhook ID (webhook, emailhook) |
 | `--webhookName` | string | Name for auto-created webhook (webhook, emailhook) |
-| `--tenantWebformId` | string | Tenant webform ID (webform) |
+| `--webformId` | string | Webform ID (webform) |
 
 #### `docyrus automation update-trigger`
 
@@ -1120,6 +1194,41 @@ Send arbitrary requests to the Docyrus API.
 
 ---
 
+## Dev Workflow Tooling
+
+Beyond data/schema operations, the CLI bundles the pi agent runtime and repo dev tooling. For full flags see `docyrus <command> --help` or the `docyrus-cli-app` skill.
+
+### pi Agents and Server
+
+| Command | Description |
+|---|---|
+| `docyrus opsy [prompt]` | Launch the Cowork Agent (interactive TUI, or `--print` one-shot) |
+| `docyrus cody [prompt]` | Launch the Coding Agent (`coder` is an alias) |
+| `docyrus server` | HTTP server bridging a pi agent to the AI SDK `useChat` protocol (`--profile`, `--port`, `--auth`, `--sandbox`, `--desktop`) |
+
+Launchers accept `--provider`, `--model`, `--thinking`, `--continue`, `--resume`, `--session`, `--apiKey`, and `--print`/`--mode`.
+
+### Repo Knowledge Graph (`knowledge`)
+
+Manages the repo's `docyrus/knowledge` graph: `init`, `generate-initial`, `refresh`, `search`, `section`, `locate`, `refs`, `expand`, `check`, `doctor`, `config`, `list-impacted`, `audit-staged`, `pre-commit`, `hook`.
+
+### Project Plan (`project-plan`)
+
+Repo-tracked plan graph (phases → features → tasks): `ensure`, `check`, `config`, `show`, `summary`, `list-phases`, `list-features`, `list-tasks`, `find-tasks`, `get-task`, `upsert-phase`, `upsert-feature`, `upsert-task`, `set-order`, `set-task-status`, `create-linked-todo`, `upsert-from-architect`, `upsert-from-plan`.
+
+### Releases (`release`)
+
+| Command | Description |
+|---|---|
+| `docyrus release status` | Show current release status and unreleased changes |
+| `docyrus release new-version` | Bump version, generate changelog, optional git tag + GitHub release + DB release record (`--bump`, `--version`, `--dryRun`, `--skip*`) |
+
+### Terminal UI
+
+`docyrus tui` launches the OpenTUI interface (requires Bun); it reuses the existing CLI command graph.
+
+---
+
 ## Settings & Persistence
 
 ### Storage Locations
@@ -1137,3 +1246,4 @@ Send arbitrary requests to the Docyrus API.
 | Variable | Description |
 |---|---|
 | `DOCYRUS_API_CLIENT_ID` | OAuth2 client ID fallback |
+| `DOCYRUS_SANDBOX_APP_ID` | Active sandbox app ID (injected by the sandbox runtime; default `--appId` for sandbox/release commands) |

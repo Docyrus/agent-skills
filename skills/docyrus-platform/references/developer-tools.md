@@ -14,10 +14,11 @@
 ## CLI
 
 - Full-featured CLI (`@docyrus/docyrus`) for terminal and AI agent use
-- Commands: environment management, authentication, data operations, record comments, record file attachments, schema management (studio: data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX export templates, email templates), automation management (automation, trigger, and action node CRUD), tenant email account discovery and transactional email send (messaging), app management, API discovery, connector discovery and provider-auth requests, AI chat, and direct API requests
-- Multi-account, multi-tenant session management
-- OpenAPI discovery with caching and fallback generation
-- Interactive TUI mode
+- Data & schema: data operations (`ds`, full query engine + comments + file attachments), schema management (`studio`: data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX export templates, email templates, plus tenant-wide field/enum search), automation management (`automation`: automation, trigger, and action node CRUD)
+- App & AI configuration: app management including AI agent context and app-scoped AI tools (`apps`), custom AI agent builder with full sub-resource CRUD — models, tools, data sources, docs, MCPs, connections, tasks, recurring tasks, workflow steps, deployments, and workflow jobs (`agent`)
+- Messaging, connectors & discovery: tenant email account discovery and transactional send (`messaging`), connector discovery, provider-auth requests, and action runs (`connect`), OpenAPI discovery (`discover`), direct API requests (`curl`)
+- Agent runtime & dev tooling: platform AI chat (`docy`), pi Cowork/Coding agents (`opsy`/`cody`/`coder`), agent bridge server (`server`), browser automation (`browser`), repo knowledge graph (`knowledge`), project plan graph (`project-plan`), and release management (`release`)
+- Multi-account, multi-tenant session management; named environments (not `API_BASE_URL`); OpenAPI discovery with caching and fallback generation; interactive TUI mode
 
 For full CLI command reference, see [docyrus-cli-usage.md](docyrus-cli-usage.md).
 

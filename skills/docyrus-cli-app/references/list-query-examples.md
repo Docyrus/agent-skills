@@ -1,6 +1,8 @@
 # List Query Examples
 
-Practical examples for `docyrus ds list` with columns, filters, sorting, and pagination.
+Practical examples for `docyrus ds list` with columns, filters, sorting, pagination, and the advanced query engine (keyword search, calculations, formulas, pivots, child queries).
+
+JSON flags (`--filters`, `--calculations`, `--formulas`, `--pivot`, `--childQueries`, etc.) take the same payload shapes the `/items` query endpoint accepts. For the full payload reference see the `docyrus-platform` skill's `data-source-query-guide.md`.
 
 ---
 
@@ -12,6 +14,7 @@ Practical examples for `docyrus ds list` with columns, filters, sorting, and pag
 4. [Sorting](#sorting)
 5. [Pagination](#pagination)
 6. [Combined Examples](#combined-examples)
+7. [Advanced Queries](#advanced-queries)
 
 ---
 
@@ -245,4 +248,84 @@ docyrus ds list crm tasks \
   --filters '{"combinator":"and","rules":[{"field":"record_owner","operator":"active_user"},{"field":"created_on","operator":"this_quarter"}]}' \
   --orderBy "due_date" \
   --limit 50
+```
+
+---
+
+## Advanced Queries
+
+### Keyword search
+
+Full-text keyword filter across searchable fields:
+
+```bash
+docyrus ds list crm contacts --columns "name, email" --filterKeyword "renewal"
+```
+
+### Calculations (aggregations / group-by)
+
+Group by a column (via `--columns`) and aggregate with `--calculations`. Each rule is `{ field, func, name, isDistinct? }` (`func`: `count`, `sum`, `avg`, `min`, `max`). Add `--groupSummaries` to include per-group summary rows.
+
+```bash
+# Count open tasks per owner
+docyrus ds list crm tasks \
+  --columns "record_owner(name)" \
+  --calculations '[{"field":"id","func":"count","name":"open_tasks"}]' \
+  --filters '{"rules":[{"field":"task_status","operator":"=","value":1}]}' --json
+
+# Multiple aggregations per category, with group summaries
+docyrus ds list crm deals \
+  --columns "category" \
+  --calculations '[{"field":"id","func":"count","name":"total"},{"field":"amount","func":"sum","name":"totalAmount"},{"field":"amount","func":"avg","name":"avgAmount"}]' \
+  --groupSummaries --json
+
+# Distinct count
+docyrus ds list crm contacts \
+  --calculations '[{"field":"email","func":"count","name":"unique_emails","isDistinct":true}]' --json
+```
+
+### Formulas (computed columns)
+
+`--formulas` is a `{ name: definition }` object; each name must also appear in `--columns`.
+
+```bash
+# Inline math formula
+docyrus ds list crm accounts \
+  --columns "id, name, balance_pct" \
+  --formulas '{"balance_pct":{"inputs":[{"kind":"math","op":"/","inputs":[{"kind":"column","name":"balance"},{"kind":"literal","literal":100}]}]}}' --json
+
+# Subquery formula (count child records)
+docyrus ds list crm accounts \
+  --columns "id, name, contacts_count" \
+  --formulas '{"contacts_count":{"from":"crm_contacts","with":"account","inputs":[{"kind":"aggregate","name":"count","inputs":[]}]}}' --json
+```
+
+### Pivot
+
+`--pivot` builds a matrix of cross-joined dimensions left-joined onto the main query, so every combination appears even with zero matches.
+
+```bash
+docyrus ds list crm orders \
+  --columns "...order_status(orderStatus:name)" \
+  --pivot '{"matrix":[{"using":"created_on","columns":"day:to_char[DD/MM/YYYY]@created_on","dateRange":{"interval":"day","min":"2025-09-01T00:00:00Z","max":"2025-09-30T00:00:00Z"},"spread":true}]}' --json
+```
+
+### Child queries (nested records)
+
+`--childQueries` embeds related rows under an alias that must also appear in `--columns`. Each entry is `{ alias, from, using, columns?, filters?, calculations?, orderBy?, limit? }`; `from` uses `appSlug_slug` and `using` is the child field referencing the parent `id`.
+
+```bash
+docyrus ds list crm accounts \
+  --columns "id, name, recent_deals" \
+  --childQueries '[{"alias":"recent_deals","from":"crm_deals","using":"account","columns":"name, amount","orderBy":"created_on DESC","limit":5}]' --json
+```
+
+### Expand and distinct columns
+
+```bash
+# Expand related/nested columns
+docyrus ds list crm contacts --columns "name, email" --expand "related_account" --json
+
+# Deduplicate rows by selected columns (e.g. one row per email)
+docyrus ds list crm contacts --columns "email, name, created_on" --distinctColumns "email" --json
 ```

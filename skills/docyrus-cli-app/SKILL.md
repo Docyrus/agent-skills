@@ -337,7 +337,7 @@ docyrus apps ai-tools update --appSlug crm --toolId <toolId> --description "Upda
 docyrus apps ai-tools delete --appSlug crm --toolId <toolId> --json
 ```
 
-`--name` and `--key` are required on create. Convenience flags cover the common columns; complex/JSON fields (`--inputJsonSchema`, `--outputJsonSchema`, `--customQueryFilters`, `--dataSourceQueryColumns`, `--avatar`, etc.) are parsed from JSON, and the long tail can go through `--data`/`--from-file`.
+`--name` and `--key` are required on create. Convenience flags cover the common columns; complex/JSON fields (`--inputJsonSchema`, `--outputJsonSchema`, `--customQueryFilters`, `--dataSourceQueryColumns`, etc.) are parsed from JSON, and the long tail can go through `--data`/`--from-file`. Platform-managed fields (`group`, `avatar`, `restricted`, `cost`, `development_status`, `owner_product_id`, `core_action_id`, `core_data_provider_id`) are not settable on app-scoped tools.
 
 ### Automations (`automation`)
 

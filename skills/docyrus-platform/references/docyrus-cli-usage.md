@@ -461,7 +461,7 @@ CRUD over app-scoped `tenant_ai_tool` rows (`/v1/dev/apps/:appId/ai-tools`). All
 | `apps ai-tools create` | `--name` and `--key` required |
 | `apps ai-tools update` | `--toolId` + changed fields |
 
-Convenience flags cover the common columns (`--description`, `--icon`, `--group`, `--type`, `--clientSideExecution`, `--needsApproval`, `--restricted`, `--cost`, …). JSON-shaped fields (`--inputJsonSchema`, `--outputJsonSchema`, `--customQueryFilters`, `--dataSourceQueryColumns`, `--avatar`, …) are parsed as JSON; the long tail can go through `--data`/`--fromFile`.
+Convenience flags cover the common columns (`--description`, `--icon`, `--type`, `--clientSideExecution`, `--needsApproval`, …). JSON-shaped fields (`--inputJsonSchema`, `--outputJsonSchema`, `--customQueryFilters`, `--dataSourceQueryColumns`, …) are parsed as JSON; the long tail can go through `--data`/`--fromFile`. Platform-managed fields (`group`, `avatar`, `restricted`, `cost`, `development_status`, `owner_product_id`, `core_action_id`, `core_data_provider_id`) are not settable on app-scoped tools.
 
 ### `docyrus apps delete`
 

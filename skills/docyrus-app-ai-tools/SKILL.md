@@ -1,17 +1,20 @@
 ---
 name: docyrus-app-ai-tools
-description: Create and manage app-scoped AI tools for Docyrus AI agents using the `docyrus apps ai-tools` CLI commands, and set app-level agent guidance with `docyrus apps set-agent-context`. Use when building custom tools an AI agent can call — covering all four executable tool types — `data_source_query` (read one data source with author-fixed shaping and parameter-bound filters), `custom_query` (hand-written read-only SELECT SQL with Handlebars templating), `secure_exec` (sandboxed JavaScript that calls the Docyrus REST API), and `client_side` (tool executed in the user's browser/app). Triggers on tasks like "create an AI tool for an app", "add a data source query tool", "build a custom query tool", "write a secure_exec tool", "make a client-side tool", "let the agent query/look up X", `docyrus apps ai-tools create/update/list/get/delete`, `docyrus apps set-agent-context`, wiring a tenant_ai_tool to an agent, or writing the agent context that tells an agent when to use which tool.
+description: Create and manage app-scoped AI tools for Docyrus AI agents using the `docyrus apps ai-tools` CLI commands, and set app-level agent guidance with `docyrus apps set-agent-context`. Use when building custom tools an AI agent can call — covering all four executable tool types — `data_source_query` (read one data source with author-fixed shaping and parameter-bound filters), `custom_query` (hand-written read-only SELECT SQL with Handlebars templating), `secure_exec` (sandboxed JavaScript that calls the Docyrus REST API), and `client_side` (tool executed in the user's browser/app). Triggers on tasks like "create an AI tool for an app", "add a data source query tool", "build a custom query tool", "write a secure_exec tool", "make a client-side tool", "let the agent query/look up X", `docyrus apps ai-tools create/update/list/get/delete`, `docyrus apps set-agent-context`, or writing the agent context that tells the system base assistant (Docy) when to use which app-scoped tool.
 ---
 
 # Docyrus App-Scoped AI Tools
 
-Build custom tools that a Docyrus AI agent can call during a conversation. Tools are created per app (`tenant_ai_tool`, `ownership=CUSTOM`, `tenant_app_id=<app>`) with the `docyrus apps ai-tools` CLI, then attached to an agent and (optionally) explained to the agent via the app's agent context.
+Build custom tools that the Docyrus system base assistant ("Docy") can call during a conversation. Tools are created per app (`tenant_ai_tool`, `ownership=CUSTOM`, `tenant_app_id=<app>`) with the `docyrus apps ai-tools` CLI. Once the app is installed in the tenant, its tools are **automatically available to the base assistant** — there is no per-agent wiring.
 
-## End-to-end workflow (always all three steps)
+## End-to-end workflow
 
 1. **Create the tool** — `docyrus apps ai-tools create` with the right `--type` and that type's config.
-2. **Attach it to an agent** — `docyrus agent tools create --agentId <id> --coreAiToolId <toolId>`. **A created tool does nothing until it is attached** — an agent's tools come from the `tenant_ai_agent_tool` join, not from app membership.
-3. **Guide the agent** (optional but recommended) — `docyrus apps set-agent-context` to tell the agent *when to use which tool*.
+2. **Guide the base assistant** (optional but recommended) — `docyrus apps set-agent-context` to tell "Docy" *when to use which tool*.
+
+**App-scoped tools are owned by the app and exclusive to the system base assistant ("Docy").** When the app is installed in the tenant, its tools are attached to Docy automatically — you do **not** (and cannot) wire them to a specific agent, and there is no `agent tools` attach step. If the app is **not** installed in the tenant, its tools are not loaded.
+
+> App-scoped tools cannot be attached to custom AI agents. Giving a *custom* agent its own tools is a different, agent-owned flow (`docyrus agent tools …`) outside this skill's scope.
 
 All commands need an authenticated CLI session (`docyrus auth who` to verify). The app is selected with **exactly one** of `--appId` or `--appSlug` on every command.
 
@@ -61,19 +64,9 @@ Type-specific flags (`--secureExecCode`, `--customQuerySqlQuery`, `--customQuery
 
 > The endpoint forces `ownership=CUSTOM` and `tenant_app_id`. Platform-managed fields (`group`, `avatar`, `restricted`, `cost`, `development_status`, `core_action_id`, `core_data_provider_id`, `owner_product_id`) are not settable here.
 
-## Step 2 — attach the tool to an agent
+## Set the app's agent context
 
-```bash
-docyrus agent list --appSlug <slug>                      # find the agentId
-docyrus agent tools create --appSlug <slug> \
-  --agentId <agentId> --coreAiToolId <toolId>            # POST .../agents/:agentId/tools
-```
-
-`--coreAiToolId` is the `id` returned by `ai-tools create`. List an agent's tools with `docyrus agent tools list --appSlug <slug> --agentId <id>`; detach with `docyrus agent tools delete --appSlug <slug> --agentId <id> --id <rowId>`.
-
-## Step 3 — set the app's agent context
-
-`agent_context` is app-level guidance text injected into the agent's prompt. Use it to orchestrate: name each tool's `key` and say **when** to reach for it, what each returns, and any ordering ("look up the customer with `get_customer` before calling `get_customer_balance`").
+`agent_context` is app-level guidance text injected into the base assistant's prompt. Use it to orchestrate: name each tool's `key` and say **when** to reach for it, what each returns, and any ordering ("look up the customer with `get_customer` before calling `get_customer_balance`").
 
 ```bash
 docyrus apps set-agent-context --appSlug <slug> --from-file agent-context.md   # recommended for prose
@@ -88,7 +81,7 @@ Provide **exactly one** of `--value`, `--from-file`, or `--clear`. (This writes 
 - `--type` set, and the matching config provided (see the type's reference file).
 - `input_json_schema` present (even if empty) and describing **only** what the LLM should supply.
 - `description` is specific enough for the model to choose the tool correctly; `key` is `snake_case` and stable.
-- Tool **attached to an agent** (step 2) — otherwise it is never offered.
+- The app is **installed in the tenant** — that's what surfaces its tools to the base assistant (Docy). App-scoped tools auto-attach to Docy only; they're never wired to custom agents.
 - Mutating tools (`secure_exec` writes, etc.) consider `--needsApproval true`.
 - Agent context mentions the new tool's `key` and trigger conditions.
-- Verify with `docyrus apps ai-tools get --toolId <id>`, then exercise it via the agent (e.g. `docyrus docy --agentId <id> "..."`).
+- Verify with `docyrus apps ai-tools get --toolId <id>`, then exercise it by chatting with the base assistant (`docyrus docy "..."`).

@@ -55,4 +55,4 @@ Authoring the skill only creates the contract (key + schemas + description). The
 docyrus apps ai-tools create --appSlug crm --from-file open-record.json
 ```
 
-Then attach it to the agent (`docyrus agent tools create … --coreAiToolId <id>`) and make sure the web app registers an `open_record` handler. Mention in the agent context when to call it (e.g. "use `open_record` only after confirming the record with the user").
+Once the app is installed in the tenant, the tool is available to the base assistant automatically — make sure the web app registers an `open_record` handler for it. Mention in the agent context when to call it (e.g. "use `open_record` only after confirming the record with the user").

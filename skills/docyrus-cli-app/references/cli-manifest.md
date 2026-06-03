@@ -177,6 +177,7 @@ List apps (`/v1/apps`).
 | Flag | Type | Description |
 |------|------|-------------|
 | `--appType` | string | Optional app type filter |
+| `--noCache` | boolean | Bypass the server cache and read all apps directly from the database |
 
 ### docyrus apps update
 
@@ -229,6 +230,19 @@ CRUD over app-scoped `tenant_ai_tool` rows (`/dev/apps/:appId/ai-tools`). All co
 Create/update convenience flags: `--name`, `--key`, `--description`, `--icon`, `--type`, `--clientSideExecution`, `--needsApproval`, `--environments` (CSV), `--dynamicApprovalFormula`, `--inputJsonSchema` (JSON), `--outputJsonSchema` (JSON), `--secureExecCode`, `--customQuerySqlQuery`, `--customQueryFilters` (JSON), `--dataSourceQueryDataSourceId`, `--dataSourceQueryColumns` (JSON), `--dataSourceQueryFilters` (JSON), `--dataSourceQueryFormulas` (JSON), `--dataSourceQueryChildQueries` (JSON), `--dataSourceQueryLimit`, plus `--data`/`--from-file`.
 
 Platform-managed fields (`group`, `avatar`, `restricted`, `cost`, `development_status`, `owner_product_id`, `core_action_id`, `core_data_provider_id`) are not settable on app-scoped tools — the endpoint leaves them at their defaults.
+
+### docyrus apps actions
+
+CRUD over standalone `tenant_action` rows (`/dev/apps/:appId/actions`), plus the action-type picker and run. All commands take `--appId`/`--appSlug`.
+
+- `list` — list app actions
+- `types` — list selectable action types (`/dev/apps/:appId/actions/types`); excludes client-only and automation-flow-only actions (create/update record, wait-for); each row carries `color` (Tailwind color name)
+- `get` / `delete` — `--actionId`
+- `create` — `--name` and `--coreActionId` required (`--coreActionId` is create-only / immutable)
+- `update` — `--actionId` plus changed fields (`--coreActionId` is rejected)
+- `run` — `--actionId`; posts the body as the action input record to the slug-based public endpoint `POST /v1/apps/:appSlug/actions/:actionId/run` (accepts `--appId`, reverse-resolved to the slug); body via `--data`/`--from-file` (an empty body is allowed)
+
+Create/update convenience flags: `--name`, `--coreActionId` (create only), `--status`, `--options` (JSON), `--conditions` (JSON), `--sourceDataSourceId`, `--inputDataSourceId`, `--targetDataSourceId`, `--targetDataSourceFieldId`, `--targetDataSourceCondition` (JSON), `--connectionId`, `--connectionAccountId`, `--webhookId`, `--requestMethod`, `--contentType`, `--customEndpoint`, `--relativeEndpoint`, `--batch`, `--batchSize`, `--customHeaders` (JSON), `--inputTransformer` (JSON), `--outputTransformer`, `--batchTransformer`, `--errorTransformer`, `--inputTemplate` (JSON), `--preActionRequest` (JSON), `--postActionRequest` (JSON), `--inputJsonSchema` (JSON), `--outputJsonSchema` (JSON), plus `--data`/`--from-file`.
 
 ---
 
@@ -669,10 +683,10 @@ docyrus connect curl <slug> <endpoint> [options]
 
 ### docyrus connect run-action
 
-Run a connector or app action via `POST /v1/apps/:appSlug/actions/:actionKey/run`.
+Run a connector action directly by provider slug + action key via `POST /v1/connectors/:slug/actions/:actionKey/run`. (To run a persisted app action, use `apps actions run`.)
 
 ```
-docyrus connect run-action <appSlug> <actionKey> [options]
+docyrus connect run-action <slug> <actionKey> [options]
 ```
 
 | Flag | Alias | Type | Default | Description |

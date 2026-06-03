@@ -414,13 +414,13 @@ Send an HTTP request through a connector's provider auth.
 | `--connectionId` | `-c` | string | — | Tenant connection ID override |
 | `--connectionAccountId` | | string | — | Connection account ID |
 
-### `docyrus connect run-action <appSlug> <actionKey>`
+### `docyrus connect run-action <slug> <actionKey>`
 
-Run a connector or app action via `POST /v1/apps/:appSlug/actions/:actionKey/run`.
+Run a connector action directly by provider slug + action key via `POST /v1/connectors/:slug/actions/:actionKey/run`. (To run a persisted app action, use `apps actions run`.)
 
 | Argument | Type | Required | Description |
 |---|---|---|---|
-| `appSlug` | string | yes | App slug (e.g., `base`) |
+| `slug` | string | yes | Data provider slug (e.g., `msgraph`, `twilio`) |
 | `actionKey` | string | yes | Action key (e.g., `sendEmailWithOutlook`) |
 
 | Option | Alias | Type | Default | Description |
@@ -441,6 +441,7 @@ List apps (`/v1/apps`). Mutations route through `/v1/dev/apps/:appId`.
 | Option | Type | Description |
 |---|---|---|
 | `--appType` | string | Filter by app type |
+| `--noCache` | boolean | Bypass the server cache and read apps directly from the database |
 
 ### `docyrus apps update`
 
@@ -449,6 +450,21 @@ List apps (`/v1/apps`). Mutations route through `/v1/dev/apps/:appId`.
 ### `docyrus apps set-agent-context`
 
 Set an app's freeform AI agent context (`PATCH /v1/dev/apps/:appId` `agent_context`). Provide exactly one of `--value` (inline), `--fromFile` (text/markdown), or `--clear`.
+
+### `docyrus apps actions`
+
+CRUD over standalone `tenant_action` rows (`/v1/dev/apps/:appId/actions`), plus the action-type picker and run. All commands take `--appId`/`--appSlug`.
+
+| Command | Notes |
+|---|---|
+| `apps actions list` | List app actions |
+| `apps actions types` | List selectable action types; excludes create/update-record + wait-for; `color` = Tailwind name |
+| `apps actions get` / `delete` | `--actionId` |
+| `apps actions create` | `--name` and `--coreActionId` required (`--coreActionId` is create-only / immutable) |
+| `apps actions update` | `--actionId` + changed fields (`--coreActionId` rejected) |
+| `apps actions run` | `--actionId`; posts the body as input to `POST /v1/apps/:appSlug/actions/:actionId/run` (accepts `--appId`, reverse-resolved to a slug) |
+
+Convenience flags cover the common columns (`--status`, `--connectionId`, `--connectionAccountId`, `--requestMethod`, `--customEndpoint`, `--batch`, …). JSON-shaped fields (`--options`, `--conditions`, `--customHeaders`, `--inputTransformer`, `--inputTemplate`, `--inputJsonSchema`, `--outputJsonSchema`, …) are parsed as JSON; the long tail can go through `--data`/`--fromFile`.
 
 ### `docyrus apps ai-tools`
 

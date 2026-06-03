@@ -21,6 +21,7 @@ Guide for using the `docyrus` CLI (`@docyrus/docyrus`) to interact with the Docy
 | `docyrus apps list` | List apps from `/v1/apps` |
 | `docyrus apps update` / `delete` / `restore` / `permanent-delete` | Mutate apps via `/v1/dev/apps/:appId` |
 | `docyrus apps set-agent-context` | Set an app's AI agent context |
+| `docyrus apps actions ...` | CRUD app-scoped actions, list action types, and run an action |
 | `docyrus apps ai-tools ...` | CRUD app-scoped AI tools |
 | `docyrus ds get` / `list` | Read data source metadata and query records |
 | `docyrus ds create` / `update` / `delete` | Mutate records, including bulk create/update |
@@ -324,6 +325,23 @@ docyrus apps set-agent-context --appSlug crm --clear --json
 
 Provide exactly one of `--value` (inline), `--from-file` (raw text/markdown), or `--clear`.
 
+#### App-Scoped Actions (`apps actions`)
+
+CRUD over standalone `tenant_action` rows scoped to an app (`/v1/dev/apps/:appId/actions`), plus the action-type picker and run:
+
+```bash
+docyrus apps actions list --appSlug crm --json
+docyrus apps actions types --appSlug crm --json            # selectable action types (excludes create/update-record + wait-for; color = Tailwind name)
+docyrus apps actions get --appSlug crm --actionId <id> --json
+docyrus apps actions create --appSlug crm --name "Request barcode" --coreActionId <coreActionId> \
+  --options '{"shipmentPackageId":987654}' --json
+docyrus apps actions update --appSlug crm --actionId <id> --status 2 --json
+docyrus apps actions delete --appSlug crm --actionId <id> --json
+docyrus apps actions run --appSlug crm --actionId <id> --data '{"foo":"x"}' --json
+```
+
+`--name` and `--coreActionId` are required on create; `--coreActionId` is create-only (immutable, rejected on `update`). Convenience flags cover the common columns; JSON fields (`--options`, `--conditions`, `--customHeaders`, `--inputTransformer`, `--inputTemplate`, `--inputJsonSchema`, `--outputJsonSchema`, …) are parsed from JSON, and the long tail can go through `--data`/`--from-file`. `run` posts the body as the action input record to the slug-based public endpoint (`/v1/apps/:appSlug/actions/:actionId/run`); it accepts `--appId` too (reverse-resolved to the slug).
+
 #### App-Scoped AI Tools (`apps ai-tools`)
 
 Full CRUD over `tenant_ai_tool` rows scoped to an app (`/v1/dev/apps/:appId/ai-tools`):
@@ -468,9 +486,9 @@ docyrus connect curl meta-whatsapp "418088118057836/messages" -X POST \
   -d '{"messaging_product":"whatsapp","to":"905551234567","type":"template","template":{"name":"sample_template","language":{"code":"en_US"}}}' \
   --contentType "application/json" --json
 
-# Run a predefined action (POST /v1/apps/:appSlug/actions/:actionKey/run)
-docyrus connect run-action base sendWhatsappMessage --params '{"to":"905551234567","templateName":"hello_world"}' --json
-docyrus connect run-action base sendWhatsappMessage --params '{"to":"905551234567"}' --dryRun --json
+# Run a connector action directly by provider slug + action key (POST /v1/connectors/:slug/actions/:actionKey/run)
+docyrus connect run-action meta-whatsapp sendWhatsappMessage --params '{"to":"905551234567","templateName":"hello_world"}' --json
+docyrus connect run-action meta-whatsapp sendWhatsappMessage --params '{"to":"905551234567"}' --dryRun --json
 ```
 
 Aliases: `connect curl` — `-X` (method), `-d` (data), `-c` (connectionId). `connect run-action` — `-p` (params), `-c` (connectionId), `-n` (dryRun). `connect curl` data is sent as body for POST/PUT/PATCH and as query params for GET; `--headers` can override the Authorization header.
@@ -568,7 +586,7 @@ Launches the OpenTUI interface (requires Bun). It reuses the existing CLI comman
 - `automation` routes through `/v1/dev/apps/:appId/automations`; trigger/node `create`/`update` use typed URLs (`/triggers/<type>`, `/nodes/<type>`), but `delete-trigger`/`delete-node` use the type-independent route. CLI flags are camelCase, converted to `snake_case`; nested objects go through `--data`/`--from-file`. `automation create --triggerType` is camelCase; trigger/node `--type` is kebab-case.
 - `agent` commands route through `/v1/dev/apps/:appId/agents...`; the parent agent is `--agentId` and a sub-resource row is `--id`. `agent create` requires `--skillName`. `createOnly`/`updateOnly` flags are filtered per command.
 - `messaging` routes through `/v1/messaging/email/*` and needs `Messaging.Email.Send`; `accounts` never returns credentials.
-- `connect` uses the `/v1/connectors` API; `connect curl` sends through provider auth; `connect run-action` posts to `/v1/apps/:appSlug/actions/:actionKey/run`.
+- `connect` uses the `/v1/connectors` API; `connect curl` sends through provider auth; `connect run-action <providerSlug> <actionKey>` is connector-scoped (`POST /v1/connectors/:slug/actions/:actionKey/run`). To run a persisted app action instead, use `apps actions run` (`POST /v1/apps/:appSlug/actions/:actionId/run`).
 - `tui` requires Bun; `docy`/`opsy`/`cody`/`coder`/`server` run the pi agent runtime; `knowledge`/`project-plan`/`release` are repo dev-workflow tools.
 
 ## References

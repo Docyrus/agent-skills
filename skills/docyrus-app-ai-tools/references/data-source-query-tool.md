@@ -11,6 +11,7 @@ Runtime: `DataSource.readData` inside an RLS-enforced transaction. Result return
 ## Contents
 - [Config fields](#config-fields)
 - [Parameter binding in filters (`{{param}}`)](#parameter-binding-in-filters)
+- [Full-text keyword search (`filter_keyword`)](#full-text-keyword-search)
 - [Filter rule shape & operators](#filter-rule-shape--operators)
 - [Columns, limit, formulas, child queries](#columns-limit-formulas-child-queries)
 - [Worked example: `get_customer_balance`](#worked-example-get_customer_balance)
@@ -22,6 +23,7 @@ Runtime: `DataSource.readData` inside an RLS-enforced transaction. Result return
 | `--dataSourceQueryDataSourceId` | `..._data_source_id` | **Yes** | UUID of the `tenant_data_source` to read. Find it with `docyrus studio list-data-sources --appSlug <slug>` (returns `id` + `slug`). |
 | `--inputJsonSchema` | `input_json_schema` | **Yes** | The scalar filter params the LLM supplies. Required even if empty (`{"type":"object","properties":{}}`). Keep params simple: `customerId` (uuid), `searchQuery` (text), `startYear` (number/date). |
 | `--dataSourceQueryFilters` | `..._filters` | No | Author filter template (`IQueryFilterGroup`). Binds params via `{{param}}`; see below. |
+| `--dataSourceQueryFilterKeyword` | `..._filter_keyword` | No | Full-text search keyword. A static string, or an LLM param bound via a whole `{{param}}` token; see below. |
 | `--dataSourceQueryColumns` | `..._columns` | No | Fixed projection. String `"a,b,c"` or string array. Default `"*"` (all fields). |
 | `--dataSourceQueryLimit` | `..._limit` | No | Fixed row cap. Default 1000, hard max 50000. Values ≤ 0 are ignored. |
 | `--dataSourceQueryFormulas` | `..._formulas` | No | Fixed formulas object keyed by alias (`{ "<alias>": { ...formula } }`). |
@@ -39,6 +41,17 @@ A filter rule references an input parameter by setting its `value` to the **exac
 - Rules **without** a token are static and always apply — use them for tenant/owner/status scoping that the LLM must never be able to drop.
 
 This is what makes optional filters work: declare params as optional in `input_json_schema`, add one bound rule per param, and the agent filters by whichever it provides.
+
+## Full-text keyword search
+
+`data_source_query_filter_keyword` runs a full-text search across the data source's text content (the same `filterKeyword` the REST query payload accepts), independent of the structured `filters` above. It uses the **same parameter binding** as filters, but it is a single string rather than a rule tree:
+
+- Set it to the **exact token** `{{paramName}}` to bind the LLM's value. As with filters, partial interpolation (`%{{q}}%`) is **not** supported — the whole value must be the token.
+- The bound value is coerced to a string (full-text search is text-only).
+- If the parameter is **absent** — `null`, `undefined`, `""`, or `[]` — the keyword is **dropped** (no keyword filter applied). So an omitted optional param means "don't keyword-search".
+- A plain string with no token is a **static** keyword that always applies.
+
+Typical use: declare an optional `searchQuery` param and set `data_source_query_filter_keyword` to `"{{searchQuery}}"`. The agent gets a free-text search lever without being able to shape the query. Combine it with structured `filters` to mix scoped filtering and keyword search in one tool.
 
 ## Filter rule shape & operators
 

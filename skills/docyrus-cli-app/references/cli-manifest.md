@@ -227,7 +227,7 @@ CRUD over app-scoped `tenant_ai_tool` rows (`/dev/apps/:appId/ai-tools`). All co
 - `create` — `--name` and `--key` required
 - `update` — `--toolId` plus changed fields
 
-Create/update convenience flags: `--name`, `--key`, `--description`, `--icon`, `--type`, `--clientSideExecution`, `--needsApproval`, `--environments` (CSV), `--dynamicApprovalFormula`, `--inputJsonSchema` (JSON), `--outputJsonSchema` (JSON), `--secureExecCode`, `--customQuerySqlQuery`, `--customQueryFilters` (JSON), `--dataSourceQueryDataSourceId`, `--dataSourceQueryColumns` (JSON), `--dataSourceQueryFilters` (JSON), `--dataSourceQueryFormulas` (JSON), `--dataSourceQueryChildQueries` (JSON), `--dataSourceQueryLimit`, plus `--data`/`--from-file`.
+Create/update convenience flags: `--name`, `--key`, `--description`, `--icon`, `--type`, `--clientSideExecution`, `--needsApproval`, `--environments` (CSV), `--dynamicApprovalFormula`, `--inputJsonSchema` (JSON), `--outputJsonSchema` (JSON), `--secureExecCode`, `--customQuerySqlQuery`, `--customQueryFilters` (JSON), `--dataSourceQueryDataSourceId`, `--dataSourceQueryColumns` (JSON), `--dataSourceQueryFilters` (JSON), `--dataSourceQueryFilterKeyword`, `--dataSourceQueryFormulas` (JSON), `--dataSourceQueryChildQueries` (JSON), `--dataSourceQueryLimit`, plus `--data`/`--from-file`.
 
 Platform-managed fields (`group`, `avatar`, `restricted`, `cost`, `development_status`, `owner_product_id`, `core_action_id`, `core_data_provider_id`) are not settable on app-scoped tools — the endpoint leaves them at their defaults.
 

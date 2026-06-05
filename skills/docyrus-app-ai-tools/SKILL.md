@@ -58,7 +58,7 @@ Common to every type:
 | `--needsApproval` | `needs_approval` | Require user approval before the call runs. Use for tools that mutate data. |
 | `--dynamicApprovalFormula` | `dynamic_approval_formula` | JSONata that decides approval per-call. |
 
-Type-specific flags (`--secureExecCode`, `--customQuerySqlQuery`, `--customQueryFilters`, `--dataSourceQueryDataSourceId`, `--dataSourceQueryColumns`, `--dataSourceQueryFilters`, `--dataSourceQueryFormulas`, `--dataSourceQueryChildQueries`, `--dataSourceQueryLimit`, `--clientSideExecution`) are documented in each type's reference file.
+Type-specific flags (`--secureExecCode`, `--customQuerySqlQuery`, `--customQueryFilters`, `--dataSourceQueryDataSourceId`, `--dataSourceQueryColumns`, `--dataSourceQueryFilters`, `--dataSourceQueryFilterKeyword`, `--dataSourceQueryFormulas`, `--dataSourceQueryChildQueries`, `--dataSourceQueryLimit`, `--clientSideExecution`) are documented in each type's reference file.
 
 `--from-file <path>` / `--data '<json>'` send a raw JSON payload (snake_case keys); convenience flags are merged **over** it. **Prefer `--from-file` for anything with JSON schemas, SQL, or code** — it sidesteps shell quoting. JSON-typed flags (`--inputJsonSchema`, `--dataSourceQueryFilters`, …) expect a JSON string when passed inline.
 

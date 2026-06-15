@@ -353,6 +353,89 @@ docyrus ds files upload <appSlug> <dataSourceSlug> <recordId> [options]
 
 ---
 
+## docyrus dsql
+
+Run read-only logical SQL queries and inspect the token-efficient DSQL schema. Logical tables are named `appSlug.dataSourceSlug` (e.g. `base.contact`). Requires `DS.Read.*` / `DS.ReadWrite.*` scopes.
+
+### docyrus dsql query
+
+Run a read-only PostgreSQL-compatible `SELECT` over logical data-source tables (`PUT /dsql/query`). The SQL is resolved from the positional argument, `--from-file`, or stdin (in that order). Throttled to 60 requests/minute.
+
+```
+docyrus dsql query "select id, email from base.contact limit 100"
+docyrus dsql query --from-file ./report.sql
+echo "select count(*) from base.task" | docyrus dsql query
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--from-file` | string | Path to a file containing the SQL query |
+
+Returns `{ data: [...], meta: { count } }`.
+
+### docyrus dsql generate
+
+Generate a DSQL query from a natural-language question using the base **DSQL generator agent** (`POST /ai/agents/:agentId/chat`). Returns the query text only — it does **not** run it. The question is resolved from the positional argument, `--from-file`, or stdin.
+
+```
+docyrus dsql generate "top 10 contacts by revenue this year"
+docyrus dsql generate --from-file ./question.txt
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--from-file` | string | Path to a file containing the question |
+| `--agentId` | string | Override the default DSQL generator agent id |
+| `--deploymentId` | string | Optional agent deployment id |
+
+The agent returns structured output: `{ prompt, query }` (it echoes a normalized `prompt` alongside the generated `query`).
+
+### docyrus dsql ask
+
+Generate a DSQL query from a natural-language question, then run it through `PUT /dsql/query` and return the rows. Combines `generate` + `query`.
+
+```
+docyrus dsql ask "how many open tasks are assigned to me?"
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--from-file` | string | Path to a file containing the question |
+| `--agentId` | string | Override the default DSQL generator agent id |
+| `--deploymentId` | string | Optional agent deployment id |
+
+Returns `{ prompt, query, data: [...], meta: { count } }`.
+
+### docyrus dsql schema app
+
+Return the DSQL schema for every queryable data source in an app (`GET /dsql/schema/apps/:appSlug`).
+
+```
+docyrus dsql schema app base
+```
+
+### docyrus dsql schema data-source
+
+Return the DSQL schema for a single data source (`GET /dsql/schema/apps/:appSlug/data-sources/:dataSourceSlug`).
+
+```
+docyrus dsql schema data-source base contact
+```
+
+### docyrus dsql schema data-sources
+
+Return the DSQL schema for the data sources matching the given ids (`GET /dsql/schema/data-sources?ids=...`).
+
+```
+docyrus dsql schema data-sources --ids ds-1,ds-2
+```
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--ids` | string | Comma-separated data source ids (required) |
+
+---
+
 ## docyrus studio
 
 Dev-app schema CRUD. Data-source/field commands route through `/v1/dev/apps/:appId/data-sources...`; data-view/form commands route through `/v1/apps/:appSlug/data-sources/:dataSourceSlug/...`; webform/html-template/email-template commands route through `/v1/dev/webforms`, `/v1/dev/html-templates`, `/v1/dev/email-templates`.

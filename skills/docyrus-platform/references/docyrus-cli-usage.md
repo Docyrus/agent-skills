@@ -309,6 +309,77 @@ Upload a record-scoped file attachment.
 
 ---
 
+## dsql — Logical SQL & Schema Discovery
+
+Read-only logical SQL over tables named `appSlug.dataSourceSlug` (e.g. `base.contact`), plus token-efficient schema discovery. Requires `DS.Read.*` / `DS.ReadWrite.*` scopes.
+
+### `docyrus dsql query [query]`
+
+Run a read-only PostgreSQL-compatible `SELECT` (`PUT /v1/dsql/query`). The SQL is resolved from the positional argument, then `--from-file`, then stdin. Throttled to 60 requests/minute. Returns `{ data, meta: { count } }`.
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `query` | string | no | SQL query; omit to use `--from-file` or stdin |
+
+| Option | Type | Description |
+|---|---|---|
+| `--from-file` | string | Path to a file containing the SQL query |
+
+### `docyrus dsql generate [question]`
+
+Generate a DSQL query from a natural-language question using the base DSQL generator agent (`POST /v1/ai/agents/:agentId/chat`). Returns the query text only (does not run it). The question is resolved from the positional argument, then `--from-file`, then stdin. Returns `{ query, prompt }`.
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `question` | string | no | Natural-language question; omit to use `--from-file` or stdin |
+
+| Option | Type | Description |
+|---|---|---|
+| `--from-file` | string | Path to a file containing the question |
+| `--agentId` | string | Override the default DSQL generator agent id |
+| `--deploymentId` | string | Optional agent deployment id |
+
+### `docyrus dsql ask [question]`
+
+Generate a DSQL query from a natural-language question, run it via `PUT /v1/dsql/query`, and return the rows (`generate` + `query`). Returns `{ query, prompt, data, meta: { count } }`.
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `question` | string | no | Natural-language question; omit to use `--from-file` or stdin |
+
+| Option | Type | Description |
+|---|---|---|
+| `--from-file` | string | Path to a file containing the question |
+| `--agentId` | string | Override the default DSQL generator agent id |
+| `--deploymentId` | string | Optional agent deployment id |
+
+### `docyrus dsql schema app <appSlug>`
+
+Return the DSQL schema of every queryable data source in the app (`GET /v1/dsql/schema/apps/:appSlug`).
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `appSlug` | string | yes | App slug |
+
+### `docyrus dsql schema data-source <appSlug> <dataSourceSlug>`
+
+Return the DSQL schema of a single data source (`GET /v1/dsql/schema/apps/:appSlug/data-sources/:dataSourceSlug`).
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `appSlug` | string | yes | App slug |
+| `dataSourceSlug` | string | yes | Data source slug |
+
+### `docyrus dsql schema data-sources`
+
+Return the DSQL schema for the data sources matching the given ids (`GET /v1/dsql/schema/data-sources?ids=...`).
+
+| Option | Type | Description |
+|---|---|---|
+| `--ids` | string | Comma-separated data source ids (required) |
+
+---
+
 ## discover — OpenAPI Discovery
 
 ### `docyrus discover api`

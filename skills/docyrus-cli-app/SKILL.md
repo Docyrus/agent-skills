@@ -26,6 +26,9 @@ Guide for using the `docyrus` CLI (`@docyrus/docyrus`) to interact with the Docy
 | `docyrus ds get` / `list` | Read data source metadata and query records |
 | `docyrus ds create` / `update` / `delete` | Mutate records, including bulk create/update |
 | `docyrus ds comments create` / `files upload` | Add a record comment / upload a record file attachment |
+| `docyrus dsql query` | Run a read-only logical SQL `SELECT` over `appSlug.dataSourceSlug` tables |
+| `docyrus dsql generate` / `ask` | Turn a natural-language question into a DSQL query (and optionally run it) via the DSQL generator agent |
+| `docyrus dsql schema app` / `data-source` / `data-sources` | Inspect the token-efficient DSQL schema for an app, a data source, or by ids |
 | `docyrus studio ...` | CRUD dev app data sources, fields, enums, data views, forms, webforms, HTML/PDF/DOCX templates, email templates; search fields/enums/enum-sets |
 | `docyrus automation ...` | CRUD automations, triggers, and action nodes for an app |
 | `docyrus agent ...` | CRUD custom AI agents and their sub-resources (models, tools, data-sources, docs, mcps, connections, dynamic-contexts, tasks, recurring-tasks, workflow-steps, deployments, workflow-jobs) |
@@ -203,6 +206,27 @@ docyrus ds list crm tasks --filters '{"rules":[{"field":"created_on","operator":
 `ds list` also supports the full query engine: `--formulas`, `--calculations`, `--groupSummaries`, `--pivot`, `--childQueries`, `--expand`, `--distinctColumns`, and `--collapseRows`.
 
 **See [references/list-query-examples.md](references/list-query-examples.md) for columns, filters, sorting, pagination, and advanced (formulas/calculations/pivot/child-query) examples.**
+
+### Logical SQL (`dsql`)
+
+`dsql query` runs a read-only PostgreSQL-compatible `SELECT` over logical tables named `appSlug.dataSourceSlug`. The SQL comes from the positional argument, `--from-file`, or stdin. Use the `dsql schema` commands first to discover queryable tables and columns.
+
+```bash
+docyrus dsql schema app base                       # schema for every data source in an app
+docyrus dsql schema data-source base contact       # schema for one data source
+docyrus dsql schema data-sources --ids ds-1,ds-2   # schema by data source ids
+docyrus dsql query "select id, email from base.contact limit 100"
+docyrus dsql query --from-file ./report.sql
+```
+
+Don't want to hand-write SQL? Let the DSQL generator agent do it:
+
+```bash
+docyrus dsql generate "top 10 contacts by revenue this year"   # returns the query text only
+docyrus dsql ask "how many open tasks are assigned to me?"      # generates the query, runs it, returns rows
+```
+
+DSQL is a read-only PostgreSQL subset with a strict function allow-list, logical `appSlug.dataSourceSlug` tables, `tenant.*` identity/scope pseudo-functions, and built-in row-level security. See **[references/dsql-reference.md](references/dsql-reference.md)** for the full capability and limitation reference before writing non-trivial queries.
 
 ### Record Mutations
 
@@ -593,3 +617,4 @@ Launches the OpenTUI interface (requires Bun). It reuses the existing CLI comman
 
 - **[CLI Manifest](references/cli-manifest.md)** — Complete command reference with flags, arguments, and command notes.
 - **[List Query Examples](references/list-query-examples.md)** — Practical `ds list` examples covering columns, filters, sorting, pagination, and advanced queries.
+- **[DSQL Reference](references/dsql-reference.md)** — Logical SQL (`dsql query`) capabilities and limits: table naming, allowed functions, `tenant.*` pseudo-functions, casts, row limits, access control, and the error catalog.

@@ -24,11 +24,13 @@ For detailed specifications of each building block, see [references/core-buildin
 
 ### Querying & Data Operations
 
-Unified query engine with column selection, 50+ filter operators, aggregations, formulas, pivots, child queries, and full-text search. Full CRUD with bulk operations, record comments, and file attachments.
+Unified query engine with column selection, 50+ filter operators, aggregations, formulas, pivots, child queries, and full-text search. Full CRUD with bulk operations, record comments, and file attachments. Also a read-only logical SQL endpoint (DSQL) for PostgreSQL-compatible `SELECT` queries over `appSlug.dataSourceSlug` tables.
 
 See [references/querying-and-data-operations.md](references/querying-and-data-operations.md).
 
 For complete query payload reference with examples, see [references/data-source-query-guide.md](references/data-source-query-guide.md).
+
+For logical SQL (DSQL) capabilities, limits, `tenant.*` pseudo-functions, and the error catalog, see [references/dsql-reference.md](references/dsql-reference.md).
 
 For block formula design (inline expressions and subqueries), see [references/formula-design-guide-llm.md](references/formula-design-guide-llm.md).
 

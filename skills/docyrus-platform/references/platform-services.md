@@ -16,9 +16,7 @@
 
 ### Webforms (Public Data Collection)
 
-- Public-facing forms (no authentication required)
-- Form field mapping to data sources
-- Submission webhooks, CAPTCHA support, and response tracking
+Public, unauthenticated forms whose submissions create records in a bound data source (with submission webhooks, CAPTCHA support, and response tracking). Design, validate, and test them with the **docyrus-webform-design** skill.
 
 ## Reporting & Analytics
 

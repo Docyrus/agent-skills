@@ -1,6 +1,6 @@
 # Agent Model & Sub-Resources
 
-Reference for the custom-agent data model and its sub-resources, as exposed by `docyrus agent`. Concepts live in **docyrus-platform** → `references/ai-capabilities.md`; exhaustive flag tables in **docyrus-cli-app** → `references/cli-manifest.md`. Source of truth: `apps/cli/src/commands/agentCommands.ts`, `apps/api/src/dev/dto/agent/*`, `libs/shared/src/types/KyselyCodegen.ts`.
+Reference for the custom-agent data model and its sub-resources, as exposed by `docyrus agent`. Concepts live in **docyrus-platform** → `references/ai-capabilities.md`; exhaustive flags via `docyrus agent <sub> --help` (command index: **docyrus-cli-app**). Source of truth: `apps/cli/src/commands/agentCommands.ts`, `apps/api/src/dev/dto/agent/*`, `libs/shared/src/types/KyselyCodegen.ts`.
 
 ## Table of Contents
 

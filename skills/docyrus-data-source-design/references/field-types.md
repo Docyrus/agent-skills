@@ -92,7 +92,7 @@ Most simple types (`text`, `email`, `number`, `date`, `checkbox`, …) need only
 - `duration` stores an integer; `rating` is an integer 1–5.
 
 ### Computed — `formula`, `display`
-- `formula`: a JSONata/block expression evaluated at query time. Read-only, **no default**, no stored column. See the docyrus-platform / docyrus-api-dev **formula-design-guide-llm** reference for expression syntax.
+- `formula`: a JSONata/block expression evaluated at query time. Read-only, **no default**, no stored column. See the **docyrus-api-dev** skill's `references/formula-design-guide-llm.md` for expression syntax.
 - `display`: read-only computed/echo text; **no default**.
 
 ### Nested data — `inlineData`, `inlineForm`

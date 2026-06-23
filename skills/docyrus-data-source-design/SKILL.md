@@ -120,7 +120,7 @@ docyrus studio permanent-delete-data-source --appId <id> --dataSourceId <id> --j
   - **Filter** with `rel_<relationSlug>/<fieldSlug>` (e.g. `rel_account/name`). This form is **filter-only** — it is not a column name.
   - **Expand to a nested object**: add the relation field to `--columns` and pass `--expand relation` → the value comes back as `{ "id": …, "name": … }`.
   - **Spread inline**: `...<relationFieldSlug>(field)` (e.g. `...account(name)`) flattens the related field into the row — alias to avoid collisions, since a related `name` overwrites the row's own `name`.
-  - Or pull children with `--childQueries`. See the docyrus-cli-app **list-query-examples** reference.
+  - Or pull children with `--childQueries` (see `docyrus ds list --help`).
 
 Create parent data sources first so their IDs exist when you wire up relation fields.
 

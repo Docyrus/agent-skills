@@ -5,7 +5,7 @@ description: Design, build, validate, and test a custom Docyrus AI agent end-to-
 
 # Docyrus Agent Design
 
-Build a custom AI agent with `docyrus agent`, then **validate** its configuration and **test** that it's well-formed. An agent is a row in `tenant_ai_agent` (identity + model + capability config) plus a set of **sub-resources** (tools, data sources, docs, MCPs, connections, dynamic contexts, workflow steps, deployments). This skill is the design workflow; the platform's conceptual capability catalog lives in **docyrus-platform** (`references/ai-capabilities.md`), and exhaustive CLI flag tables live in **docyrus-cli-app** (`references/cli-manifest.md`).
+Build a custom AI agent with `docyrus agent`, then **validate** its configuration and **test** that it's well-formed. An agent is a row in `tenant_ai_agent` (identity + model + capability config) plus a set of **sub-resources** (tools, data sources, docs, MCPs, connections, dynamic contexts, workflow steps, deployments). This skill is the design workflow; the platform's conceptual capability catalog lives in **docyrus-platform** (`references/ai-capabilities.md`), and exhaustive CLI flags are available via `docyrus agent <sub> --help` (command index: **docyrus-cli-app**).
 
 ## Workflow
 
@@ -110,4 +110,4 @@ Full test playbook in [references/workflow-examples.md](references/workflow-exam
 
 - **[references/agent-model.md](references/agent-model.md)** — Agent fields grouped by purpose (identity, models, shape, capabilities, render/output, memory, multi-agent), the enum values and server defaults, and the full sub-resource table (groups, required-on-create, createOnly, enums).
 - **[references/workflow-examples.md](references/workflow-examples.md)** — End-to-end worked agent (assistant + data source + tool + knowledge doc), validation checklist, test playbook.
-- **docyrus-platform** → `references/ai-capabilities.md` — what the agent builder can do. **docyrus-cli-app** → `references/cli-manifest.md` — exhaustive `agent` + sub-resource flag tables. **docyrus-app-ai-tools** — author the AI tools an agent calls (`apps ai-tools`); attach them to the agent here with `agent tools create --coreAiToolId`.
+- **docyrus-platform** → `references/ai-capabilities.md` — what the agent builder can do. **docyrus-cli-app** — CLI command index; `docyrus agent <sub> --help` for exhaustive flags. **docyrus-app-ai-tools** — author the AI tools an agent calls (`apps ai-tools`); attach them to the agent here with `agent tools create --coreAiToolId`.

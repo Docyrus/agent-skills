@@ -8,7 +8,7 @@ Read these files for data access, auth, query design, and collection patterns:
 
 - `api-client-and-auth.md`
 - `collections-and-patterns.md`
-- `../../docyrus-api-dev/references/acl-endpoints-frontend.md`
+- the **docyrus-acl-design** skill — ACL roles, permissions, and role-queries (`docyrus acl`); plus the ACL REST endpoints in **docyrus-api-dev**'s SKILL.md
 - `../../docyrus-api-dev/references/data-source-query-guide.md`
 - `../../docyrus-api-dev/references/formula-design-guide-llm.md`
 - `../../docyrus-api-dev/references/query-guide.md`

@@ -93,4 +93,4 @@ Full send-test playbook in [references/templating.md](references/templating.md#t
 ## References
 
 - **[references/templating.md](references/templating.md)** — The Handlebars context (record fields, expanded objects, built-ins, helpers), authoring patterns for email bodies, the worked example, validation checklist, and the send-test playbook.
-- **docyrus-automation-design** — the `send-email` action node that consumes the template. **docyrus-print-pdf-template-design** — HTML/PDF print/report templates (the sibling `studio *-html-template` flow). **docyrus-cli-app** → `references/cli-manifest.md` (flag tables) and the `messaging` section (`messaging email send`). **docyrus-platform** → `references/integrations-and-events.md` (email system concepts).
+- **docyrus-automation-design** — the `send-email` action node that consumes the template. **docyrus-print-pdf-template-design** — HTML/PDF print/report templates (the sibling `studio *-html-template` flow). **docyrus-cli-app** — CLI command index (`docyrus studio … --help`, `messaging email send`). **docyrus-platform** → `references/integrations-and-events.md` (email system concepts).

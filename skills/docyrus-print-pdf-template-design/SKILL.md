@@ -121,4 +121,4 @@ Full render/test playbook in [references/template-fields-and-rendering.md](refer
 ## References
 
 - **[references/template-fields-and-rendering.md](references/template-fields-and-rendering.md)** — Full field table (with the `source_type`/`page_orientation` option-set UUIDs and the format gotcha), the Handlebars context, the render endpoints (`/html`, `/pdf`, custom-PDF upload, `default`), a worked invoice/quote example, validation checklist, and the render test playbook.
-- **docyrus-automation-design** — the `generate-document` action node that renders a template against a record inside a workflow. **docyrus-email-template-design** — the sibling email-template flow. **docyrus-cli-app** → `references/cli-manifest.md` (flag tables). **docyrus-api-dev** — REST client + its HTML-to-PDF helper.
+- **docyrus-automation-design** — the `generate-document` action node that renders a template against a record inside a workflow. **docyrus-email-template-design** — the sibling email-template flow. **docyrus-cli-app** — CLI command index (`docyrus studio …-html-template --help`). **docyrus-api-dev** — REST client + its HTML-to-PDF helper.

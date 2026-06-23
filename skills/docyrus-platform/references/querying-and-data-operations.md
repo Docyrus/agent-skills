@@ -30,5 +30,6 @@ Every list/get call accepts a structured query payload:
 
 ## Detailed References
 
-- For complete query payload reference with all parameters, operators, and examples, see [data-source-query-guide.md](data-source-query-guide.md).
-- For block formula design (inline expressions and correlated subqueries), see [formula-design-guide-llm.md](formula-design-guide-llm.md).
+- For the complete query payload reference (all parameters, operators, examples), see the **docyrus-api-dev** skill's `references/data-source-query-guide.md`.
+- For block formula design (inline expressions and correlated subqueries), see the **docyrus-api-dev** skill's `references/formula-design-guide-llm.md`.
+- For DSQL (the read-only logical SQL language) and `dsql ask`, see the **docyrus-dsql-query-design** skill.

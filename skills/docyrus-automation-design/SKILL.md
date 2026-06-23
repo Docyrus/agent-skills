@@ -5,7 +5,7 @@ description: Design, build, validate, and test a Docyrus automation (workflow) e
 
 # Docyrus Automation Design
 
-Build an automation with `docyrus automation`, then **validate** its trigger/node graph and **test** that it actually fires. An automation = one **trigger** (the event) + an ordered graph of **action nodes** (what runs). This skill is the design workflow; the platform's conceptual catalog of every trigger and node type lives in the **docyrus-platform** skill (`references/automation-and-workflows.md`), and the exhaustive CLI flag tables live in the **docyrus-cli-app** skill (`references/cli-manifest.md`). This skill ties them together and records the gotchas that only surface when you actually run the commands.
+Build an automation with `docyrus automation`, then **validate** its trigger/node graph and **test** that it actually fires. An automation = one **trigger** (the event) + an ordered graph of **action nodes** (what runs). This skill is the design workflow; the platform's conceptual catalog of every trigger and node type lives in the **docyrus-platform** skill (`references/automation-and-workflows.md`), and the exhaustive CLI flags are available via `docyrus automation … --help` (command index: **docyrus-cli-app**). This skill ties them together and records the gotchas that only surface when you actually run the commands.
 
 ## Workflow
 
@@ -126,4 +126,4 @@ Full test playbook is in [references/workflow-examples.md](references/workflow-e
 
 - **[references/trigger-and-node-catalog.md](references/trigger-and-node-catalog.md)** — Every trigger type and action-node type: when to use it, its scalar flags, and its `data`/mapping shape (with key casing). Plus the validation/casing gotchas per type.
 - **[references/workflow-examples.md](references/workflow-examples.md)** — End-to-end worked automation (trigger + conditional multi-node graph), the validation checklist, and the run/test playbook.
-- **docyrus-platform** → `references/automation-and-workflows.md` — the conceptual catalog (what each trigger/node *means*). **docyrus-cli-app** → `references/cli-manifest.md` — exhaustive per-command flag tables. For `data-source-query`/`custom-query` node payloads and field mappings, see **docyrus-api-dev** → `references/data-source-query-guide.md` and `references/formula-design-guide-llm.md`.
+- **docyrus-platform** → `references/automation-and-workflows.md` — the conceptual catalog (what each trigger/node *means*). **docyrus-cli-app** — CLI command index; `docyrus automation … --help` for exhaustive flags. For `data-source-query`/`custom-query` node payloads and field mappings, see **docyrus-api-dev** → `references/data-source-query-guide.md` and `references/formula-design-guide-llm.md`.

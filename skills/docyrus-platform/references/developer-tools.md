@@ -20,7 +20,7 @@
 - Agent runtime & dev tooling: platform AI chat (`docy`), pi Cowork/Coding agents (`opsy`/`cody`/`coder`), agent bridge server (`server`), browser automation (`browser`), repo knowledge graph (`knowledge`), project plan graph (`project-plan`), and release management (`release`)
 - Multi-account, multi-tenant session management; named environments (not `API_BASE_URL`); OpenAPI discovery with caching and fallback generation; interactive TUI mode
 
-For full CLI command reference, see [docyrus-cli-usage.md](docyrus-cli-usage.md).
+For the full CLI command index, see the **docyrus-cli-app** skill (and `docyrus <cmd> --help` for flags).
 
 ## Client Libraries
   

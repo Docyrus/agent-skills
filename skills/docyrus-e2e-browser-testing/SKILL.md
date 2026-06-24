@@ -1,6 +1,6 @@
 ---
 name: docyrus-e2e-browser-testing
-description: End-to-end self-test a Docyrus-backed web app in a real browser — sign in headlessly, drive the UI, then read runtime problems back from @docyrus/devtools. Use after building or changing a Docyrus app feature to prove it works in the browser: authenticate without typing credentials via `docyrus auth sso-session`, navigate/click/fill with the docyrus browser tools, and fetch collected API errors, usage issues, and console errors via `docyrus browser devtools`. Triggers on "test the app in the browser", "e2e test this flow", "sign me into the app", "self-test the feature I built", "verify it works end to end", "check for runtime errors", "what's broken on the page", "is @docyrus/devtools installed".
+description: End-to-end self-test a Docyrus-backed web app in a real browser — sign in headlessly, drive the UI, then read runtime problems back from @docyrus/devtools. Use after building or changing a Docyrus app feature to prove it works in the browser — authenticate without typing credentials via `docyrus auth sso-session`, navigate/click/fill with the docyrus browser tools, and fetch collected API errors, usage issues, and console errors via `docyrus browser devtools`. Triggers on "test the app in the browser", "e2e test this flow", "sign me into the app", "self-test the feature I built", "verify it works end to end", "check for runtime errors", "what's broken on the page", "is @docyrus/devtools installed".
 ---
 
 # Docyrus E2E Browser Testing

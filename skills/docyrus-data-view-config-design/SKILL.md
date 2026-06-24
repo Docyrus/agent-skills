@@ -36,7 +36,7 @@ color_rules  → { row, cell }
    ```
    The `list-fields` output gives the **column ids / field slugs** you reference in `visibility`, `order`, `grouping`, `sorting`, filters, and color rules. For enum/select/status filter values you need enum **row UUIDs** — `docyrus studio list-enums --appSlug <app> --dataSourceSlug <ds> --fieldSlug <f> --json`. If there is no session, stop and ask the user to run `docyrus auth login`.
 
-2. **Decide the view's intent.** Per view settle: name (tab label), which columns are visible and in what order, default sort, any filter (simple column filters and/or a query), grouping, row height, display mode (table or gallery), color rules, paging, inline editing, whether it is the default view. Sketch this for the user when ambiguous.
+2. **Decide the view's intent.** Per view settle: name (tab label), which columns are visible and in what order, default sort, any filter (simple column filters and/or a query), grouping, row height, display mode (table or gallery), color rules, paging, inline editing, whether it is the default view. Sketch this for the user when ambiguous. **If the data source has a status/single-select field, default to status-based views — see [Status fields → design views per status](#status-fields--design-views-per-status).**
 
 3. **Build the payload.** Prefer `--from-file ./view.json` for anything beyond a trivial view — the blobs are nested JSON and awkward inline. Use the per-blob convenience flags (`--columns`, `--filters`, `--sort`, `--colorRules`, `--quickFilterFields` take JSON strings; `--name`, `--description`, `--icon`, `--color`, `--isDefault`, `--sortOrder` are scalars) only for small views. See [references/view-config-fields.md](references/view-config-fields.md) for every key's exact name, type, and accepted values, and [references/workflow-examples.md](references/workflow-examples.md) for ready-to-adapt payloads.
 
@@ -45,6 +45,43 @@ color_rules  → { row, cell }
 5. **Validate.** Re-read with `get-data-view` and confirm every blob has the intended sub-keys with the right column ids / enum UUIDs. See [Validate](#validate).
 
 6. **Test.** Confirm the saved JSON round-trips to the grid state you intended (and, if possible, that it filters/sorts real records correctly). See [Test](#test).
+
+## Status fields → design views per status
+
+**A status field (status / single-select / "stage"-style enum) is a strong signal to design status-based views.** The existence of such a field means the records move through stages, and the most useful tab strip on a list page is one that splits records by stage. When a data source has a status field, default to creating a set of status views (plus a default "All" view) unless the user wants otherwise.
+
+How many views depends on how many enum options the status field has:
+
+- **3–4 options → one view per option.** e.g. status `New`, `Active`, `Won`, `Lost` → four views `New` / `Active` / `Won` / `Lost`, each filtering `status = <enum uuid>`.
+- **More than ~4 options → group related statuses into fewer, meaningful views.** One tab per value becomes an unusable strip. Group them by stage of life, e.g. `New`, `In Progress`, `On Hold` → an **"Open"** view; `Done`, `Cancelled` → a **"Closed"** view. Pick group names the user's domain would recognise.
+- Usually also keep an **"All"** view (no status filter) and mark the most-used view (often "All" or "Open") as `is_default`.
+
+Each status view is an ordinary view whose `filters` blob targets the status field **by enum row UUID, never the label** (read UUIDs from `docyrus studio list-enums ... --fieldSlug status --json`):
+
+- **Single status:** one `filters.filterQuery` rule with `=` (or a `columnFilters` entry).
+- **Grouped (multi-status) view:** a `filters.filterQuery` rule using `in` with an array of UUIDs.
+
+Grouped "Open" view payload (filter only — merge with the rest of your view config):
+
+```jsonc
+{
+  "name": "Open",
+  "icon": "circle-dot",
+  "sort_order": 2,
+  "filters": {
+    "columnFilters": [],
+    "filterQuery": {
+      "combinator": "and",
+      "rules": [
+        { "field": "status", "operator": "in",
+          "value": ["<new-uuid>", "<in-progress-uuid>", "<on-hold-uuid>"] }
+      ]
+    }
+  }
+}
+```
+
+These status views are exactly what backs the view-type / status tab strip planned during project planning — keep one view per visible tab.
 
 ## Studio data-view command cheat-sheet
 

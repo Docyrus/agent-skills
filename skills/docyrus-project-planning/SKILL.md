@@ -1,133 +1,174 @@
 ---
 name: docyrus-project-planning
-description: Plan, structure, and track implementation of a Docyrus-backed application using the repo-local project plan system. Use when starting a new Docyrus project, designing backend phases, breaking a feature into tasks, or managing progress across data sources, automations, agents, templates, and integrations. Triggers on "create a project plan", "design phases", "plan a Docyrus app", "set up the plan", "add a feature to the plan", "track tasks", "update task status", "render diagrams", or any request to structure work for a Docyrus-backed application.
+description: Plan, structure, and track implementation of a Docyrus-backed application using the repo-local project plan system. Use when starting a new Docyrus project, designing implementation phases, breaking features into tasks, drafting the data model and feature map as Mermaid diagrams, or managing progress across data sources, UI pages, dashboards, templates, ACL, automations, and AI tools. Triggers on "create a project plan", "design phases", "plan a Docyrus app", "set up the plan", "add a feature to the plan", "track tasks", "update task status", "draw the data model", "feature mindmap", or any request to structure work for a Docyrus-backed application.
 ---
 
 # Docyrus Project Planning
 
-A repo-local planning system (`docyrus project-plan`) that tracks phases, features, and tasks for a Docyrus-backed application. It lives in `.docyrus/project-plan/` and renders to `PROJECT_PLAN.md` and two Mermaid diagram files. Use it to design the backend before writing any code — data model first, then automations, then agents, then templates.
+A repo-local planning system (`docyrus project-plan`) that tracks phases, features, and tasks for a Docyrus-backed application. It lives in `docyrus/project-plan/` and renders `PROJECT_PLAN.md` (human view) from `project-plan.json` (source of truth), alongside a `diagrams/` folder of **author-owned Mermaid diagrams**.
 
-For platform capabilities, see the **docyrus-platform** skill. For CLI flags, see the **docyrus-cli-app** skill.
+Use it to design the application before writing code — **data model first**, then the navigation/layout shell, then real UI content topic by topic, then the cross-cutting backend (dashboards, templates, ACL, automations, AI tools).
+
+For platform capabilities, see the **docyrus-platform** skill. For CLI flags, see the **docyrus-cli-app** skill and [references/command-reference.md](references/command-reference.md).
 
 ## Concepts
 
 | Entity | Description |
 |--------|-------------|
-| **Phase** | A lifecycle stage (e.g. "Data Model", "Automations"). Groups tasks by when they are done, not what they are. |
-| **Feature** | A coherent unit of backend functionality (e.g. "Invoice data source", "Payment reminder automation"). Belongs to one or more phases via its tasks. Versioned when redesigned. |
+| **Phase** | A lifecycle stage (e.g. "Data Sources", "Navigation & Layout", a per-topic UI phase). Groups tasks by *when* they are done. Phases are ordered. |
+| **Feature** | A coherent unit of functionality (e.g. "Invoices data source", "Deals kanban board"). Spans phases via its tasks. Versioned when redesigned. |
 | **Task** | An atomic work item inside a feature. Has a type, assignee (`agent`/`user`), and status. |
 
 **Task types:** `new-implementation`, `bug-fix`, `work`, `api-test`, `browser-automation-test`
 
 **Task statuses:** `planned` → `in_progress` → `done` (or `blocked`)
 
-**Generated files** (all in `.docyrus/project-plan/`):
+**Files in `docyrus/project-plan/`:**
 
-| File | Contents | Update trigger |
-|------|----------|----------------|
-| `project-plan.json` | Canonical graph (source of truth) | Every write command |
-| `PROJECT_PLAN.md` | Human-readable plan | Every write command |
-| `FEATURES.mermaid` | Flowchart of phases → features → progress | `render-diagrams` command |
-| `DATA_SOURCES.mermaid` | ER diagram of the data model | `render-diagrams --forceDataSources` (or auto-created on first run) |
+| Path | Contents | Owner |
+|------|----------|-------|
+| `project-plan.json` | Canonical graph (source of truth) | CLI (every write command) |
+| `PROJECT_PLAN.md` | Human-readable plan | CLI (every write command) |
+| `diagrams/*.mermaid` | Feature mindmap, data-source ER diagram, and any other diagrams | **You** (authored by hand) |
 
-## Recommended Phase Structure
+## Step 0 — Draw the diagrams first
 
-Design a Docyrus-backed application in these phases, in order. Later phases depend on earlier ones — don't start automations before the data model is solid.
+**Before** creating phases, features, or tasks, design the project visually. Write Mermaid diagrams into `docyrus/project-plan/diagrams/` as `*.mermaid` files. These are **never auto-generated** — you author them, and the project-plan dashboard automatically lists and renders every `.mermaid` file in the folder. Add as many as the project needs; the user may ask for more than the two defaults.
 
-### Phase 1 — Architecture
+Run `docyrus project-plan init` first to create the folder, then write the files (with your Write/file tools).
 
-Define the data model, feature map, and integration boundaries. No CLI commands yet — produce thinking artifacts.
+Always create at least these two:
 
-**Tasks:**
-- Draft `DATA_SOURCES.mermaid` (ER diagram) — entity names, key fields, relations
-- Draft `FEATURES.mermaid` (feature map) via `render-diagrams`
-- List every automation trigger and action chain needed
-- List every AI agent needed and its tools/knowledge
-- Identify outbound email and PDF/print templates needed
-- Identify external connectors and webhooks
+### 1. Feature mindmap — `feature-mindmap.mermaid`
 
-Skill: use the `/architect` command if available to produce `data-sources.plan.json` and `PLAN.md` artifacts, then sync with `project-plan upsert-from-architect`.
+Break the product down into feature areas. This becomes the basis for your features and per-topic UI phases.
 
-### Phase 2 — Data Model
+```mermaid
+%% title: Feature Mindmap
+mindmap
+  root((CRM App))
+    Contacts
+      List & detail
+      Import
+    Deals
+      Pipeline kanban
+      Deal detail
+    Activities
+      Calendar
+      Tasks
+    Reports
+      Sales dashboard
+```
 
-Create every data source, field, enum option list, and cross-source relation.
+### 2. Data source ER diagram — `data-source-er.mermaid`
+
+Model every entity, its key fields, and relations. **Design this before creating any data source** — a wrong field type is expensive to fix once data exists.
+
+```mermaid
+%% title: Data Source ER
+erDiagram
+    Contact {
+        string id PK
+        string name
+        string email
+    }
+    Deal {
+        string id PK
+        string contactId FK
+        number amount
+        string stage
+    }
+    Contact ||--o{ Deal : "has"
+```
+
+### More diagrams as needed
+
+Add whatever helps — a navigation map (`flowchart`), an automation flow (`sequenceDiagram`/`flowchart`), a state diagram for a status field, etc. One diagram per file. Start a file with `%% title: My Title` to control its dashboard title; otherwise the file name is humanized.
+
+Verify what the dashboard will show with `docyrus project-plan list-diagrams`.
+
+## Phase structure
+
+Plan in this order. Earlier phases are prerequisites for later ones. `init` seeds the backbone phases; you insert the topic-by-topic UI phases in the middle (orders 10–89 are left free).
+
+### Phase 1 — Data Sources (always first)
+
+Design and create the entire data model before any UI. Drive this from the ER diagram.
 
 **Tasks per data source:**
-- `new-implementation` / `agent` — create data source + all its fields + enums
-- `api-test` / `agent` — validate schema and round-trip a test record
+- `new-implementation` / `agent` — create the data source + all fields + enum option lists
+- `api-test` / `agent` — validate the schema and round-trip a test record
+
+Create parent/independent data sources before dependent ones (relation fields need the parent's data source ID first).
 
 Skill: **docyrus-data-source-design**
 
-Order: create parent/independent data sources before dependent ones (you need parent IDs for relation fields).
+### Phase 2 — Navigation & Layout (placeholders only)
 
-### Phase 3 — Automations
+Build the **shell** of the app with placeholder content for the right-hand/main content area. The goal is that every page exists and is reachable before any real content is implemented.
 
-Build event-driven workflows: record triggers, scheduled jobs, webhooks, button activations, webform submissions.
-
-**Tasks per automation:**
-- `new-implementation` / `agent` — create automation + trigger + action nodes
-- `api-test` / `agent` — fire the trigger (manually or via a test record) and verify the action chain ran
-
-Skill: **docyrus-automation-design** _(in development)_
-
-Common patterns:
-- Record-created trigger → send-email action (onboarding, confirmation)
-- Record-modified trigger → update-records action (status propagation)
-- Recurrence trigger → ai-agent action (scheduled batch processing)
-- Webhook trigger → create-record action (external intake)
-- Button-activation trigger → generate-document action (on-demand PDF)
-
-### Phase 4 — AI Agents
-
-Create AI agents, attach tools and data sources, upload knowledge, define workflow steps and recurring tasks.
-
-**Tasks per agent:**
-- `new-implementation` / `agent` — create agent with model + system prompt + data sources + tools
-- `new-implementation` / `agent` — configure workflow steps and/or recurring tasks if needed
-- `api-test` / `agent` — send a test task and verify the response
-
-Skills: **docyrus-agent-design** _(in development)_, **docyrus-app-ai-tools** (author the tools an agent calls)
-
-### Phase 5 — Communication Templates
-
-Design and publish the email and print/PDF templates the automations and agents will render.
-
-**Tasks per template:**
-- `new-implementation` / `agent` — design and create the template (email or HTML/PDF)
-- `api-test` / `agent` — render the template against a sample record and verify output
-
-Skills: **docyrus-email-template-design** _(in development)_, **docyrus-print-pdf-template-design** _(in development)_
-
-### Phase 6 — UI Components
-
-Define data views, record forms, and public webforms that the frontend will consume.
+Cover:
+- **Side navigation** and its **hierarchy** (groups, nested items, ordering).
+- **Dashboard slots** in the navigation (real dashboards come later).
+- **Per-page inner tabs** where needed — tabs rendered next to the page title row. Two common shapes:
+  - tabs for **different data sources**, each tab a data-grid listing of one data source; or
+  - tabs **focused on one data source** showing different view types — **list (grid/table)**, **kanban board**, **map view**, **pivot view**, **gallery view**, etc.
+- The main and inner navigation **planned and implemented with placeholders** standing in for the real content.
 
 **Tasks:**
-- `new-implementation` / `agent` — create data views (column sets, filters, sorting)
-- `new-implementation` / `agent` — create record detail forms
-- `new-implementation` / `agent` — create public webforms where needed
+- `new-implementation` / `agent` — main layout + side navigation hierarchy with placeholder pages
+- `new-implementation` / `agent` — per-page inner tab scaffolding (view-type tabs / multi-data-source tabs) with placeholders
 
-Skill: **docyrus-discover-ui-components** _(in development)_
+Skills: **docyrus-app-dev-react**, **docyrus-data-grid-page-design**
 
-### Phase 7 — Testing & Validation
+### Phase 3+ — UI implementation, topic by topic
 
-End-to-end validation of the entire backend before the frontend consumes it.
+From the 3rd phase onward, **each phase implements the real content of a group of pages for one topic** (one feature area from the mindmap — e.g. "Contacts", then "Deals", then "Activities"). Replace the placeholders with working pages: grids, detail/edit forms, the view types planned in Phase 2.
 
-**Tasks:**
-- `api-test` / `agent` — validate every data source schema (re-read + DSQL schema)
-- `api-test` / `agent` — exercise every automation with real trigger data
-- `api-test` / `agent` — run every agent with representative inputs
-- `api-test` / `user` — user acceptance check: record flows, form submissions, email delivery
+Skills: **docyrus-data-grid-page-design**, **docyrus-record-detail-form-design**, **docyrus-data-view-config-design**, **docyrus-app-dev-react**
 
-### Phase 8 — Deployment
+**Data-view task rule (required):** whenever a data listing page is implemented with **`useDocyrusDataGrid`** or **`useDocyrusDataTable`**, add a task to create that page's **data views** with the `docyrus studio` data-view CRUD commands (`create-data-view`, `update-data-view`, `list-data-views`, …). Data views are the saved column sets, filters, sort, grouping, paging, and color rules the grid/table loads — and they back the view-type tabs (list/kanban/map/pivot/gallery) and any multi-data-source tabs planned in Phase 2. Create the data views before the dummy-data and e2e tasks so the page renders against real views.
 
-Deploy the app and configure production concerns.
+- `new-implementation` / `agent` — create the data views for each `useDocyrusDataGrid`/`useDocyrusDataTable` listing page in this phase. Skill: **docyrus-data-view-config-design**
 
-**Tasks:**
-- `new-implementation` / `user` — deploy app and confirm deployment status
-- `new-implementation` / `user` — configure navigation menus
-- `work` / `user` — set up localization if needed
-- `work` / `user` — review audit log and access-control levels
+**Every UI implementation phase MUST end with these two tasks (in this order):**
+
+1. `new-implementation` / `agent` — **Generate dummy data** into the data sources used by the pages built in this phase (e.g. via `docyrus ds create` bulk inserts), so the UI can be exercised with realistic content.
+2. `browser-automation-test` / `agent` — **E2E browser tests** for the pages built in this phase, using the **docyrus-e2e-browser-testing** skill.
+
+Add one such phase per topic. Keep topics small enough that a phase is releasable on its own.
+
+### Tail phases (after all UI topics)
+
+Run these once the UI is in place. `init` seeds them at high orders so they sort after your topic phases. Skip the ones that aren't meaningful for the project's scope.
+
+| Phase | What it covers | Skill |
+|-------|----------------|-------|
+| **Dashboards** | Implement the dashboard page(s) and their widgets against real data | docyrus-data-grid-page-design, docyrus-app-dev-react |
+| **Templates** | Email templates and Print/PDF (HTML) templates — **only if meaningful** | docyrus-email-template-design, docyrus-print-pdf-template-design |
+| **Access Control** | Design the ACL: roles, permissions, and the organization hierarchy | docyrus-acl-design |
+| **Automations** | Event-driven and scheduled automations — **only if meaningful** | docyrus-automation-design |
+| **AI Tools (Docy)** | App-scoped AI tools for the base AI agent (Docy) | docyrus-app-ai-tools |
+
+## Do NOT plan or implement Workspace Settings pages
+
+The main shell application **already provides** the pages below under **Workspace Settings**. They are built-in — do **not** plan or implement them, **even if the user lists them in the initial requirements**. If a requirement maps to one of these, note that it is already provided and move on.
+
+| Main Page | Sub Pages (already provided) |
+|-----------|------------------------------|
+| **Regional Settings** | single page — language, timezone, locale, date/number formats, currency, working hours |
+| **Account Management** | Your Products · Bills & Payments · Billing Accounts · Payment Methods |
+| **Manage Organization** | Users · Teams · Organization Hierarchy (org chart) |
+| **Roles & Permissions** | Roles · Query Rules · AI Agents Access |
+| **Integrations** | API Connectors · Messaging Connectors · Microsoft Services · Google Services |
+| **Automations** | single workspace — build/manage automated workflows & triggers (Studio) |
+| **Templates** | Print / PDF Templates · Email Templates · Prompt Templates |
+| **Data & Backups** | Data · Import · Export · Backups |
+| **Audit Logs** | Data Source Operations · Customization Operations |
+| **Usage** | Summary · AI Credits · File Storage · Database Storage · Automation Runs · Integration Calls · AI Document Index Storage |
+| **Branding** | single page — tenant brands: visual identity, typography, voice, AI content rules |
+
+> Note: "Templates", "Automations", "Roles & Permissions", and "Organization Hierarchy" appear both here (as built-in *management* surfaces) and in the plan's tail phases. The tail phases are about **authoring the project's own** templates / automations / roles / org hierarchy as part of the app — not rebuilding these settings screens. Never build the settings screens themselves.
 
 ## Workflow
 
@@ -137,189 +178,140 @@ Deploy the app and configure production concerns.
 docyrus project-plan init
 ```
 
-One command creates the plan graph, all eight standard Docyrus phases, `FEATURES.mermaid`, and `DATA_SOURCES.mermaid` stubs. Safe to call on an already-initialised project — it prints a notice and exits without changing anything.
+Creates the plan graph, the backbone phases, and the empty `diagrams/` folder. Safe to re-run — it prints a notice and exits without changes. After init, **author the diagrams** (Step 0), then add features and per-topic UI phases.
 
 ### Adding a feature and its tasks
 
 ```bash
 # Create the feature
 docyrus project-plan upsert-feature \
-  --title "Invoice data source" \
-  --summary "Tracks customer invoices with line items and payment status"
+  --title "Contacts" \
+  --summary "Contact list, detail/edit, and import"
 
-# Create tasks (use phase IDs from list-phases; feature ID from upsert-feature output)
+# Create tasks (phase IDs from list-phases; feature ID from upsert-feature output)
 docyrus project-plan upsert-task \
-  --featureId <feature-id> --phaseId <data-model-phase-id> \
-  --title "Create Invoice data source with fields and enums" \
+  --featureId <feature-id> --phaseId <data-sources-phase-id> \
+  --title "Create Contact data source with fields and enums" \
   --type new-implementation --assignee agent
+```
 
-docyrus project-plan upsert-task \
-  --featureId <feature-id> --phaseId <testing-phase-id> \
-  --title "Validate Invoice schema and test record round-trip" \
-  --type api-test --assignee agent
+### Adding a topic UI phase (orders 10–89)
+
+```bash
+docyrus project-plan upsert-phase \
+  --title "Contacts UI" --slug contacts-ui \
+  --summary "Contact list, detail, and import pages" --order 10
+# ...feature + UI tasks...
+# then the mandatory closing two tasks:
+docyrus project-plan upsert-task --featureId <id> --phaseId <contacts-ui> \
+  --title "Generate dummy Contacts data" --type new-implementation --assignee agent
+docyrus project-plan upsert-task --featureId <id> --phaseId <contacts-ui> \
+  --title "E2E browser test Contacts pages" --type browser-automation-test --assignee agent
 ```
 
 ### Tracking progress
 
 ```bash
-docyrus project-plan list-phases        # phase overview with progress counts
-docyrus project-plan list-features      # feature overview with status and progress
-docyrus project-plan list-tasks --status planned --limit 5   # next planned tasks
+docyrus project-plan list-phases        # phases with progress counts
+docyrus project-plan list-features      # features with status and progress
+docyrus project-plan list-tasks --status planned --limit 5
 docyrus project-plan set-task-status --taskId <id> --status in_progress
 docyrus project-plan set-task-status --taskId <id> --status done
 ```
 
-When the last task in a phase is marked `done`, `set-task-status` detects the transition and includes `completedPhase` in its response. Use that as the trigger to run `release-phase`.
+When the last task in a phase is marked `done`, `set-task-status` returns `completedPhase` — use that as the trigger to run `release-phase`.
+
+### Listing the diagrams
+
+```bash
+docyrus project-plan list-diagrams                    # file names + titles
+docyrus project-plan list-diagrams --includeContent true
+```
+
+The dashboard renders every `.mermaid` file in `docyrus/project-plan/diagrams/`. There is no render/generate command — edit the files directly.
 
 ### Opening the project dashboard
 
-The dashboard is a local web page that polls the plan files every 2 seconds and shows phase goals, feature status, task statistics, and a type breakdown.
-
 ```bash
-# CLI — opens browser automatically (blocks until Ctrl+C)
-docyrus project-plan open-dashboard
-
-# Custom port
+docyrus project-plan open-dashboard            # opens browser (blocks until Ctrl+C)
 docyrus project-plan open-dashboard --port 3000
-
-# Server only — no auto-open (use in remote/agent contexts or to get the URL)
-docyrus project-plan open-dashboard --noOpen
+docyrus project-plan open-dashboard --noOpen   # server only; prints the URL
 ```
 
-Pi-agent: run the command with `--noOpen` to start the server and capture the printed URL, then instruct the user to open it. The server blocks until Ctrl+C; run it in a separate terminal or as a background process when needed.
+The dashboard polls the plan files every 2 seconds and has a **Diagrams** tab that lists and renders all your `.mermaid` files. Pi-agent: use `--noOpen`, capture the URL, and tell the user to open it; run it in a background process.
 
 ### Releasing a completed phase
 
-After all tasks in a phase are `done`:
-
 ```bash
-# Preview what the release will look like
 docyrus project-plan release-phase --phaseId <phase-id> --dryRun
-
-# Create the release (auto-detects bump type from task types)
-docyrus project-plan release-phase --phaseId <phase-id>
-
-# Or with an explicit bump
+docyrus project-plan release-phase --phaseId <phase-id>            # auto bump
 docyrus project-plan release-phase --phaseId <phase-id> --bump minor
 ```
 
-`release-phase` generates the changelog from the phase's task titles:
-- `new-implementation` tasks → **Added**
-- `bug-fix` tasks → **Fixed**
-- `work` tasks → **Changed**
-- `api-test` / `browser-automation-test` tasks → skipped (internal)
-
-Bump type is auto-detected: `new-implementation` present → `minor`; otherwise → `patch`.
-
-The command then bumps the version in `package.json`, updates `project-plan.json`'s `projectVersion`, commits, tags, and creates a GitHub release via `gh`.
+Changelog is generated from the phase's task titles: `new-implementation` → **Added**, `bug-fix` → **Fixed**, `work` → **Changed**; `api-test`/`browser-automation-test` are skipped. Bump auto-detects: `new-implementation` present → `minor`, else `patch`. It then bumps `package.json`, stamps `project-plan.json`'s `projectVersion`, commits, tags, and creates a GitHub release via `gh`.
 
 ### Syncing from planning artifacts
 
-If you used `/plan` or `/architect` during a planning session:
-
 ```bash
-# Sync a /plan artifact
 docyrus project-plan upsert-from-plan --artifactPath .docyrus/plans/<timestamp>-<slug>.md
-
-# Sync an /architect artifact directory
 docyrus project-plan upsert-from-architect --artifactDir .docyrus/plans/<timestamp>-<slug>/
-```
-
-### Updating diagram files
-
-```bash
-# Regenerate FEATURES.mermaid (always safe, fully derived from the plan graph)
-docyrus project-plan render-diagrams
-
-# Also regenerate DATA_SOURCES.mermaid (overwrites manual edits)
-docyrus project-plan render-diagrams --forceDataSources
-```
-
-`DATA_SOURCES.mermaid` is only auto-created on first run. Extend it manually with field definitions and relationships. Run `--forceDataSources` only to reinitialize from scratch.
-
-## CLI Command Reference
-
-Full command surface for `docyrus project-plan`:
-
-| Command | Purpose |
-|---------|---------|
-| `init` | Initialise a new project plan: creates the graph, all 8 standard phases, and diagram stubs. No-op if already initialised. |
-| `ensure` | Internal: guarantee the graph file exists (used by write commands). Prefer `init` for manual setup. |
-| `show` | Show full hierarchy (phases + features + tasks with linked todos) |
-| `check` | Validate the graph for integrity errors |
-| `config` | Show resolved paths (graph, markdown, diagram files) |
-| `summary` | Aggregate stats: task counts by status, phase + feature progress |
-| `upsert-phase` | Create or update a phase (`--title`, `--slug`, `--summary`, `--order`) |
-| `upsert-feature` | Create or update a feature (`--title`, `--summary`, `--version`, `--featureGroupId`, `--order`) |
-| `upsert-task` | Create or update a task (`--featureId`, `--phaseId`, `--title`, `--type`, `--assignee`, `--status`, `--acceptanceCriteria`, `--order`) |
-| `list-phases` | Slim phase list with per-phase progress (token-efficient) |
-| `list-features` | Slim feature list with status and progress |
-| `list-tasks` | Filtered task list (`--phaseId`, `--featureId`, `--status`, `--limit`, `--includeSummary`) |
-| `find-tasks` | Search tasks by title, summary, type, assignee, status, or exact ID |
-| `get-task` | Single task detail with linked local subtodos |
-| `set-task-status` | Update task status (`planned` / `in_progress` / `blocked` / `done`); response includes `completedPhase` when a phase just became fully done |
-| `release-phase` | Create a semver release from a completed phase's tasks (`--phaseId`, `--bump`, `--version`, `--dryRun`, `--skipTag`, `--skipGithubRelease`) |
-| `set-order` | Set display order on a phase, feature, or task |
-| `create-linked-todo` | Create a `.pi/todos` subtask linked to a canonical task |
-| `upsert-from-plan` | Sync a `/plan` artifact markdown file into the graph |
-| `upsert-from-architect` | Sync an `/architect` artifact directory into the graph |
-| `render-diagrams` | Write `FEATURES.mermaid` and (if missing) `DATA_SOURCES.mermaid`; `--forceDataSources` to overwrite |
-| `open-dashboard` | Start a local HTTP dashboard that polls plan files every 2 s (`--port`, `--noOpen`) |
-
-See [references/command-reference.md](references/command-reference.md) for full flag details and examples.
-
-## Diagram Files
-
-### FEATURES.mermaid
-
-Auto-generated flowchart. Each phase becomes a subgraph; each feature node shows title, version, derived status, and task progress. Regenerated every time `render-diagrams` runs. Do not edit manually — changes will be overwritten.
-
-### DATA_SOURCES.mermaid
-
-ER diagram stub. Auto-populated from `newDataSources` entries found in `/architect` artifacts (`.docyrus/plans/*/data-sources.plan.json`). Falls back to a commented skeleton when no artifacts exist. **Edit manually** to add field definitions and relationships — the file is preserved across `render-diagrams` runs unless `--forceDataSources` is passed.
-
-Example of a hand-extended `DATA_SOURCES.mermaid`:
-
-```mermaid
-erDiagram
-    %% Data sources for this project
-    Invoice {
-        string id PK
-        string customerId FK
-        number amount
-        string status
-        date dueDate
-    }
-    Customer {
-        string id PK
-        string name
-        string email
-    }
-    Customer ||--o{ Invoice : "has"
 ```
 
 ## Key Rules
 
-- **Architecture before implementation.** Design `DATA_SOURCES.mermaid` before creating any data source in Docyrus. A wrong field type is expensive to fix after data exists.
-- **Create parent data sources first.** Relation fields reference a parent's data source ID — the parent must exist before the child.
-- **One feature = one coherent backend unit.** A feature can span phases (design task in Architecture, create task in Data Model, test task in Testing). Use `featureGroupId` to link versions of the same feature.
-- **Keep `agent` and `user` tasks separate.** `agent` tasks are automated; `user` tasks require human action (approval, manual credential setup, physical delivery). Never assign a `user` task to the agent.
-- **`render-diagrams` after major plan changes.** Keep `FEATURES.mermaid` current so it reflects actual progress. Update `DATA_SOURCES.mermaid` manually as the schema evolves.
-- **Validate every data source before moving to automations.** Automations reference field slugs — a missing or misspelled slug will silently fail at runtime.
-- **`release-phase` when a phase is complete.** When `set-task-status` returns `completedPhase`, run `release-phase --phaseId <id>` to stamp a semver release. Use `--dryRun` to preview before committing.
+- **Diagrams first.** Author the feature mindmap and data-source ER diagram (plus any others requested) into `docyrus/project-plan/diagrams/` before creating phases/features/tasks. Think the model through visually first.
+- **Data sources before anything else.** Phase 1 creates the whole data model. A wrong field type is expensive to fix after data exists. Create parent data sources before dependent ones.
+- **Shell before content.** Phase 2 builds the navigation hierarchy, dashboard slots, and per-page inner tabs (view types / multi-data-source tabs) with placeholders — before any real page content.
+- **One topic per UI phase, from Phase 3 on.** Implement real page content topic by topic. **Every UI phase ends with exactly two tasks: (1) generate dummy data for that phase's data sources, (2) e2e browser tests via docyrus-e2e-browser-testing.**
+- **Data views for every grid/table page.** Any listing page using `useDocyrusDataGrid` or `useDocyrusDataTable` needs a task to create its data views with `docyrus studio` data-view commands — before the dummy-data and e2e tasks.
+- **Tail phases last, and only if meaningful.** Dashboards → Templates → Access Control → Automations → AI Tools (Docy). Skip Templates/Automations when out of scope.
+- **Never build Workspace Settings pages.** The pages in the exclusion table are provided by the shell — skip them even when requested.
+- **Keep `agent` and `user` tasks separate.** `user` tasks require human action (approval, credentials, deploy). Never assign a `user` task to the agent.
+- **`release-phase` when a phase is complete.** When `set-task-status` returns `completedPhase`, run `release-phase --phaseId <id>` (use `--dryRun` first).
+
+## Self-validation checklist (run when the plan is finished)
+
+Once you have drafted the full plan, **stop and self-validate** against this checklist before presenting it as done. Walk each item; for anything that fails, fix the plan and re-check. Report the result to the user.
+
+**Diagrams**
+- [ ] `docyrus/project-plan/diagrams/` contains a **feature mindmap** and a **data-source ER diagram** (plus any extra diagrams the user requested).
+- [ ] Every diagram is a valid `*.mermaid` file; `docyrus project-plan list-diagrams` shows them all with sensible titles.
+- [ ] The ER diagram covers every entity referenced by the planned pages.
+
+**Phase order & shape**
+- [ ] **Phase 1** creates the entire data model (every data source, fields, enums, relations); parent data sources precede dependent ones.
+- [ ] **Phase 2** builds the navigation/layout shell with placeholders: side-nav hierarchy, dashboard slots, and per-page inner tabs (view types / multi-data-source tabs).
+- [ ] **Phase 3+** are topic-by-topic UI phases (one feature area each), ordered 10–89, before the tail phases.
+
+**Per UI phase**
+- [ ] Each `useDocyrusDataGrid` / `useDocyrusDataTable` listing page has a **create-data-views** task (`docyrus studio` data-view commands).
+- [ ] The phase's **last two tasks** are, in order: (1) generate dummy data for that phase's data sources, (2) e2e browser tests (docyrus-e2e-browser-testing).
+
+**Tail phases**
+- [ ] Present in order and only where meaningful: Dashboards → Templates → Access Control (roles, permissions, org hierarchy) → Automations → AI Tools (Docy).
+
+**Exclusions & hygiene**
+- [ ] No phase, feature, or task builds a **Workspace Settings** page from the exclusion table.
+- [ ] `agent` vs `user` assignees are correct — no human-only task assigned to the agent.
+- [ ] `docyrus project-plan check` passes (no graph integrity errors) and `list-phases` reflects the intended structure.
 
 ## Related Skills
 
-Dispatch these skills when doing the actual implementation work for each phase:
+Dispatch these for the actual implementation work in each phase:
 
-| Phase | Skill |
-|-------|-------|
-| Data Model | **docyrus-data-source-design** — full workflow: create data source → add fields → add enums → validate → test |
-| Automations | **docyrus-automation-design** _(in development)_ — create automation, trigger, and action nodes |
-| AI Agents | **docyrus-agent-design** _(in development)_ — create agent, bind tools and data sources, configure workflow steps |
-| Agent Tools | **docyrus-app-ai-tools** — author AI tools an app/agent can call (`apps ai-tools`); attach to an agent with `agent tools` |
-| Email Templates | **docyrus-email-template-design** _(in development)_ — design and publish email templates |
-| PDF/Print Templates | **docyrus-print-pdf-template-design** _(in development)_ — design and publish HTML/PDF/DOCX report templates |
-| UI Components | **docyrus-discover-ui-components** _(in development)_ — discover and configure data views, forms, webforms |
-| Platform Context | **docyrus-platform** — full platform capability reference |
-| CLI Reference | **docyrus-cli-app** — complete CLI flag and command reference |
+| Phase / topic | Skill |
+|---------------|-------|
+| Data model | **docyrus-data-source-design** — create data source → fields → enums → validate → test |
+| List/grid pages, view types, inner tabs | **docyrus-data-grid-page-design**, **docyrus-data-view-config-design** |
+| Detail / edit / inline forms | **docyrus-record-detail-form-design** |
+| React app, layout, navigation | **docyrus-app-dev-react** |
+| Dummy data | **docyrus-cli-app** (`docyrus ds create` bulk), **docyrus-dsql-query-design** |
+| E2E browser tests | **docyrus-e2e-browser-testing** |
+| Email templates | **docyrus-email-template-design** |
+| Print/PDF templates | **docyrus-print-pdf-template-design** |
+| ACL: roles, permissions, org hierarchy | **docyrus-acl-design** |
+| Automations | **docyrus-automation-design** |
+| AI tools for Docy | **docyrus-app-ai-tools** |
+| Custom AI agents | **docyrus-agent-design** |
+| Platform context | **docyrus-platform** |
+| CLI reference | **docyrus-cli-app** |

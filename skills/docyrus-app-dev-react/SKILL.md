@@ -208,7 +208,7 @@ Use `DataGridViewSelect` as the default saved-view UI for Docyrus grids, and per
 1. **Always check preferred components first** before creating anything custom.
 2. **Use `AwesomeCard` for dashboards** unless the user explicitly wants a different card style.
 3. **Use animate-ui `Sidebar` for app layouts** unless another layout is requested.
-4. **Prefer Recharts for charts**. shadcn chart primitives are the default wrapper.
+4. **Prefer Recharts for charts** in general feature UI. **Exception — dashboards/analytics/reporting:** use the **docyrus-dashboard-design** skill, which mandates Bklit UI charts, `AwesomeCard` panels, and `AwesomeStats` KPI cards.
 5. **Use icons in this order**: hugeicons, then fontawesome light, then lucide.
 6. **Use `AwesomeDialog` for item create forms**.
    - Small/simple forms: `container="sheet"` with `side="right"`
@@ -238,7 +238,8 @@ Use `DataGridViewSelect` as the default saved-view UI for Docyrus grids, and per
 | Editable grid | `Data Grid` | docyrus |
 | Grid saved views | `DataGridViewSelect` + `DataViews` | docyrus + `@docyrus/app-utils` |
 | Forms | Docyrus form fields + TanStack Form | docyrus |
-| Charts | shadcn chart + Recharts | shadcn |
+| Charts (general) | shadcn chart + Recharts | shadcn |
+| Dashboards / analytics / KPIs | Bklit charts + `AwesomeCard` + `AwesomeStats` (see **docyrus-dashboard-design**) | bklit + docyrus |
 | File upload | File Upload | diceui |
 | Gantt/project scheduling | `Gantt` | docyrus |
 | Resource scheduling | `ResourceSchedulerPanel` | docyrus |

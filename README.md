@@ -40,6 +40,7 @@ npx skills add docyrus/agent-skills
 | **Docyrus E2E Browser Testing** | Self-test a Docyrus-backed app in a real browser — sign in headlessly with `docyrus auth sso-session`, drive the UI with the docyrus browser tools, and read runtime errors/issues/console from `@docyrus/devtools`. | [SKILL.md](./skills/docyrus-e2e-browser-testing/SKILL.md) |
 | **Docyrus Browser CLI** | Browser automation via the `docyrus browser` CLI (persistent CDP daemon) — navigate, snapshot, click/fill, screenshot, eval, console/network inspection, in local Chrome or remote Cloudflare Browser Rendering. | [SKILL.md](./skills/docyrus-browser-cli/SKILL.md) |
 | **Docyrus Project Planning** | Plan, structure, and track a Docyrus-backed app with the repo-local project plan system (`docyrus project-plan`) — phases, features, tasks, diagrams. | [SKILL.md](./skills/docyrus-project-planning/SKILL.md) |
+| **Docyrus Dashboard Design** | Build dashboards, analytics, and reporting screens with a fixed stack — Bklit UI for all charts, `AwesomeCard` for all panels, `AwesomeStats` for all KPI/stat cards. | [SKILL.md](./skills/docyrus-dashboard-design/SKILL.md) |
 
 ## Repository Structure
 

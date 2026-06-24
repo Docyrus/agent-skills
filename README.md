@@ -35,6 +35,11 @@ npx skills add docyrus/agent-skills
 | **Docyrus Integrations & Connectors** | Discover and use integration connectors — call external APIs/actions through managed provider auth — with `docyrus connect`. | [SKILL.md](./skills/docyrus-integrations-and-connectors/SKILL.md) |
 | **Docyrus App AI Tools** | Create app-scoped AI tools for the system base agent ("Docy") — `data_source_query`, `custom_query`, `secure_exec`, `client_side` — with `docyrus apps ai-tools`. | [SKILL.md](./skills/docyrus-app-ai-tools/SKILL.md) |
 | **Docyrus Platform** | Architecture and building-blocks reference for the Docyrus platform, and a router to the dedicated design/CLI/API skills. | [SKILL.md](./skills/docyrus-platform/SKILL.md) |
+| **Docyrus Tenant Brand Management** | Manage tenant brand identity records (`tenant_brand`) — colors, typography, voice, content guidelines — with `docyrus account brands`, incl. the full field catalog. | [SKILL.md](./skills/docyrus-tenant-brand-management/SKILL.md) |
+| **Docyrus Account Settings** | Read/update the current user's profile and the tenant's regional & formatting preferences with `docyrus account user-profile` / `account tenant-preferences`, incl. the full field catalog. | [SKILL.md](./skills/docyrus-account-settings/SKILL.md) |
+| **Docyrus E2E Browser Testing** | Self-test a Docyrus-backed app in a real browser — sign in headlessly with `docyrus auth sso-session`, drive the UI with the docyrus browser tools, and read runtime errors/issues/console from `@docyrus/devtools`. | [SKILL.md](./skills/docyrus-e2e-browser-testing/SKILL.md) |
+| **Docyrus Browser CLI** | Browser automation via the `docyrus browser` CLI (persistent CDP daemon) — navigate, snapshot, click/fill, screenshot, eval, console/network inspection, in local Chrome or remote Cloudflare Browser Rendering. | [SKILL.md](./skills/docyrus-browser-cli/SKILL.md) |
+| **Docyrus Project Planning** | Plan, structure, and track a Docyrus-backed app with the repo-local project plan system (`docyrus project-plan`) — phases, features, tasks, diagrams. | [SKILL.md](./skills/docyrus-project-planning/SKILL.md) |
 
 ## Repository Structure
 

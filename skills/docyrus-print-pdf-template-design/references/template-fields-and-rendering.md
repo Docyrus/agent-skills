@@ -7,10 +7,11 @@ Reference for the HTML/PDF export-template fields and how a template is rendered
 1. [Field table](#field-table)
 2. [source_type / page_orientation option sets](#source_type--page_orientation-option-sets)
 3. [The render context (Handlebars)](#the-render-context-handlebars)
-4. [Render endpoints](#render-endpoints)
-5. [Worked example](#worked-example)
-6. [Validation checklist](#validation-checklist)
-7. [Test playbook](#test-playbook)
+4. [Child data source collections](#child-data-source-collections)
+5. [Render endpoints](#render-endpoints)
+6. [Worked example](#worked-example)
+7. [Validation checklist](#validation-checklist)
+8. [Test playbook](#test-playbook)
 
 ## Field table
 
@@ -49,10 +50,32 @@ The biggest trap: the flag help implies `--sourceType` picks the file format and
 `body`, `header_tmpl`, `footer_tmpl`, and `filename_tmpl` are each compiled against the **expanded record** (the object `ds get --expand` returns), with fields at the **root**:
 
 - `{{slug}}` — a field value; `{{name}}`, `{{autonumber_id}}`, `{{id}}` — built-ins.
-- `{{field.name}}` — expanded enum/relation/user field (object), e.g. `{{customer.name}}`, `{{status.name}}`.
-- `{{#each items}} … {{this.title}} … {{/each}}` — repeat over an array field (`inlineData`/child rows) for line-item tables.
+- `{{field.name}}` — a sub-field of an expanded enum/relation/user field, e.g. `{{status.name}}`, `{{customer.name}}`. For a **relation** you can pull any field of the related record, not just the label — e.g. `{{customer.tax_number}}`, `{{customer.billing_country.name}}` — because the render fetches exactly the related fields your template references (up to ~2 relation levels deep).
+- `{{#each arrayField}} … {{this.sub}} … {{/each}}` — repeat over an array. Use a **bare slug** (`{{#each line_items}}`) for an own array field (e.g. `inlineData`); use the **`child.{from}__{using}`** notation for the rows of a separate child data source — see [Child data source collections](#child-data-source-collections).
 - `{{#if field}} … {{/if}}` — conditional sections.
 - Missing keys render **empty** (Handlebars tolerates them). `{{x}}` HTML-escapes; `{{{x}}}` emits raw HTML.
+
+## Child data source collections
+
+Beyond the record's own fields and its parent relations, a template can loop over the rows of a **child data source** — another data source whose relation field points back at this record (an invoice's line items, an order's items, a project's tasks). Reference the collection with the `child.` namespace and the child's **query key** `{from}__{using}`:
+
+- **`{from}`** — the child data source's full slug, `{appSlug}_{slug}` (e.g. `base_time_material_invoice_item`).
+- **`{using}`** — the slug of the relation field **on the child** that points back to this record (e.g. `invoice`).
+
+```handlebars
+<table>
+  <tr><th>Service</th><th>Qty</th><th>Total</th></tr>
+  {{#each child.base_time_material_invoice_item__invoice}}
+    <tr><td>{{this.service_name}}</td><td>{{this.qty}}</td><td>{{this.line_total}}</td></tr>
+  {{/each}}
+</table>
+```
+
+- Inside the loop each row's columns are `{{this.<column>}}`; a child column that is itself an expanded relation is `{{this.<relation>.name}}`. Index a single row directly with `{{child.<from>__<using>.[0].<column>}}`.
+- **Auto-fetched from the template** — child references are discovered across `body`, `header_tmpl`, `footer_tmpl` and `filename_tmpl`; the render fetches and nests each collection for you, up to **100 rows** per collection. No extra configuration or field mapping.
+- **Finding the two parts:** run `docyrus studio list-fields` on the child data source — the relation field whose target is *this* record's data source is your `{using}`; the child data source's `{appSlug}_{slug}` is your `{from}`.
+- An unknown `child.…` reference (not a real child of the bound data source) is skipped and renders empty, like any missing key.
+- **Own array field vs child collection:** `{{#each line_items}}` iterates an array **stored on the record** (e.g. `inlineData`); `{{#each child.{from}__{using}}}` iterates the rows of a **separate data source**. This is the same `child.{from}__{using}` notation used by email templates and automation field mappings — one convention across all three.
 
 ## Render endpoints
 
@@ -106,7 +129,7 @@ docyrus studio get-html-template --templateId TEMPLATE_ID --json
 ## Validation checklist
 
 - [ ] `get-html-template` shows body/header/footer/styles, page options, margins, `filename_tmpl`, `is_default`, and `tenant_data_source_id` as authored.
-- [ ] Every `{{slug}}` maps to a real field in `list-fields`; `{{x.name}}` is an expanded field; `{{#each y}}` is an array field.
+- [ ] Every `{{slug}}` maps to a real field in `list-fields`; `{{x.name}}`/`{{x.other}}` is a sub-field of an expanded relation/enum/user field; `{{#each y}}` is an own array field or a `child.{from}__{using}` child collection.
 - [ ] `source_type` is either unset or a real EXPORT_SOURCE_TYPE UUID (not `"pdf"`/`"html"`).
 - [ ] `page_orientation` is `portrait`/`landscape` (string) — confirm the PDF honors it at render time.
 - [ ] `list-html-templates --dataSourceSlug quotes` lists it (and as default if `is_default`).

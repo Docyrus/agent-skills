@@ -18,6 +18,7 @@ At send time the template is compiled against the **expanded record** — the sa
 - **Bare field:** `{{slug}}` → the field's value (e.g. `{{amount}}`, `{{email}}`).
 - **Built-ins:** `{{name}}` (record title), `{{description}}` (notes), `{{autonumber_id}}`, `{{id}}`, `{{created_on}}`.
 - **Expanded enum/relation/user fields are nested objects** (`{id, name, …}`) → use a sub-path: `{{stage.name}}`, `{{account.name}}`, `{{owner.name}}`. A bare `{{stage}}` would render the object/UUID, not the label.
+- **Child data source collections** (rows of another data source that points back at this record) are available under a `child` object, keyed by `{from}__{using}` — see [Child data source collections](#child-data-source-collections).
 - **Missing keys render empty** — Handlebars does not error on an unknown placeholder. This is why you validate placeholders against `list-fields` rather than relying on a runtime failure.
 
 ## Handlebars patterns
@@ -36,9 +37,31 @@ The deal {{name}} ({{autonumber_id}}) is now {{stage.name}}.
 {{/each}}
 ```
 
-- `{{#if field}} … {{/if}}` for conditional sections; `{{#each arrayField}} … {{this.sub}} … {{/each}}` for repeaters (e.g. an `inlineData` array field).
+- `{{#if field}} … {{/if}}` for conditional sections; `{{#each arrayField}} … {{this.sub}} … {{/each}}` for repeaters. `arrayField` is either an **own array field** on the record (e.g. an `inlineData` field) or a **child data source collection** referenced with the `child.{from}__{using}` notation — see [Child data source collections](#child-data-source-collections).
 - HTML is allowed in `body`; use it for layout/styling. Handlebars HTML-escapes `{{x}}` by default — use triple-stache `{{{x}}}` only for values you intentionally want as raw HTML.
 - Keep merge fields to slugs that exist on the bound data source; expanded sub-objects need the data to actually be expanded at send time (the send path expands User/Enum/Relation).
+
+## Child data source collections
+
+Beyond the record's own fields, an email can loop over the rows of a **child data source** — another data source whose relation field points back at this record (an invoice's line items, a project's tasks, an order's items). Reference the collection with the `child.` namespace and the child's **query key** `{from}__{using}`:
+
+- **`{from}`** — the child data source's full slug, `{appSlug}_{slug}` (e.g. `base_time_material_invoice_item`).
+- **`{using}`** — the slug of the relation field **on the child** that points back to this record (e.g. `invoice`).
+
+```handlebars
+<table>
+  <tr><th>Service</th><th>Qty</th><th>Total</th></tr>
+  {{#each child.base_time_material_invoice_item__invoice}}
+    <tr><td>{{this.service_name}}</td><td>{{this.qty}}</td><td>{{this.line_total}}</td></tr>
+  {{/each}}
+</table>
+```
+
+- Inside the loop each row's columns are `{{this.<column>}}`; a child column that is itself an expanded relation is `{{this.<relation>.name}}`. You can also index a single row directly: `{{child.base_time_material_invoice_item__invoice.[0].line_total}}`.
+- **Auto-fetched from the template body** — you do **not** pre-declare the collection in the automation send-email node's field mapping. Reference `child.{from}__{using}` (in the body or subject) and the send-email render fetches and nests it for you, up to **100 rows** per collection.
+- **Finding the two parts:** run `docyrus studio list-fields` on the child data source — the relation field whose target is *this* record's data source is your `{using}`; the child data source's `{appSlug}_{slug}` is your `{from}`.
+- Only child references that resolve to a real child of the bound data source are fetched; an unknown `child.…` reference is skipped and renders empty (like any missing key).
+- This is the **same `child.{from}__{using}` notation** used by HTML/PDF export templates and automation field mappings — one convention across all three.
 
 ## Data model
 

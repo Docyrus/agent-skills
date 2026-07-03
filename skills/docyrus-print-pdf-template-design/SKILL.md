@@ -17,7 +17,7 @@ Design a printable, data-bound report template with `docyrus studio create-html-
    docyrus studio list-fields --appSlug crm --dataSourceSlug quotes --json   # the field slugs to interpolate
    ```
 
-2. **Design the document.** Decide the layout (HTML `body`), repeating sections (`{{#each}}` over an `inlineData`/child array), header/footer HTML, CSS in `styles`, the page setup (orientation, format, margins), and the output filename pattern (`filename_tmpl`). See [references/template-fields-and-rendering.md](references/template-fields-and-rendering.md).
+2. **Design the document.** Decide the layout (HTML `body`), repeating sections (`{{#each}}` over an own array field or a `child.{from}__{using}` child data source collection), header/footer HTML, CSS in `styles`, the page setup (orientation, format, margins), and the output filename pattern (`filename_tmpl`). See [references/template-fields-and-rendering.md](references/template-fields-and-rendering.md).
 
 3. **Create the template** (`create-html-template`). `--name` and a data source (`--dataSourceSlug`/`--dataSourceId`) are **required**. Add body/header/footer/styles and page options. See [Create](#create-an-export-template).
 
@@ -87,7 +87,7 @@ The HTML endpoint returns the compiled HTML (verified). The PDF endpoint compile
 - **`page_orientation` is a plain string — pass `portrait`/`landscape`.** Verified: the value is stored and rendered as the literal string (the PDF renderer checks `page_orientation === "landscape"`). Despite the studio UI modelling it as an option set, the API accepts and stores the string — use `portrait`/`landscape`.
 - **No DOCX renderer exists.** Only `/html` and `/pdf` endpoints render — there is no DOCX output path. Don't promise DOCX from these endpoints.
 - **Ownership is always `CUSTOM`** — server-set, not a flag, not returned (same as email templates).
-- **Body/header/footer/styles/filename are all Handlebars** over the **expanded record**: `{{slug}}`, `{{name}}`, `{{autonumber_id}}`, expanded `{{field.name}}`, and `{{#each arrayField}}…{{/each}}` for line items. Missing keys render empty (no error). HTML is escaped by `{{x}}` — use `{{{x}}}` for intentional raw HTML.
+- **Body/header/footer/styles/filename are all Handlebars** over the record: `{{slug}}`, `{{name}}`, `{{autonumber_id}}`, related fields `{{customer.name}}`/`{{customer.tax_number}}`, and repeats over an own array field or a **child data source collection** via `{{#each child.{from}__{using}}}` (auto-fetched from the template — see [the reference](references/template-fields-and-rendering.md#child-data-source-collections)). Missing keys render empty (no error). HTML is escaped by `{{x}}` — use `{{{x}}}` for intentional raw HTML.
 - **Unknown JSON keys are silently ignored** (`whitelist:false`). A mistyped key in `--data` neither errors nor takes effect; sending `source_type:"pdf"` (a non-UUID string) passes DTO validation but can fail at the DB uuid column. Read back to confirm.
 - **`update` is PUT-but-partial; `delete` is soft (204).** `__body_html` is server-derived — **don't write it**.
 - **Render is a separate endpoint, not a studio command.** Validate via `get`; **test** by curling the `/html` and `/pdf` render endpoints against a real record.
@@ -96,7 +96,7 @@ The HTML endpoint returns the compiled HTML (verified). The PDF endpoint compile
 ## Validate
 
 1. `docyrus studio get-html-template --templateId TEMPLATE_ID --json` — `name`, `body`, `header_tmpl`, `footer_tmpl`, `styles`, `page_format`, `page_orientation`, margins, `filename_tmpl`, `is_default`, and `tenant_data_source_id` all as intended.
-2. Cross-check every `{{placeholder}}` against `docyrus studio list-fields --appSlug crm --dataSourceSlug <bound-ds> --json` — bare `{{slug}}` = real field; `{{x.name}}` = expanded field; `{{#each y}}` = an array field.
+2. Cross-check every `{{placeholder}}` against `docyrus studio list-fields --appSlug crm --dataSourceSlug <bound-ds> --json` — bare `{{slug}}` = real field; `{{x.name}}`/`{{x.other}}` = a sub-field of an expanded relation/enum/user field; `{{#each y}}` = an own array field or a `child.{from}__{using}` collection.
 3. `docyrus studio list-html-templates --appSlug crm --dataSourceSlug <ds> --json` — the template appears under its binding (and as default if `is_default`).
 
 Checklist detail in [references/template-fields-and-rendering.md](references/template-fields-and-rendering.md#validation-checklist).

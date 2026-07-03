@@ -20,7 +20,7 @@ docyrus <command> --llms                  # machine-readable (LLM) manifest of a
 - **Selectors are exclusive pairs** — pass exactly one of each; the CLI resolves the other: `--appId | --appSlug`, `--dataSourceId | --dataSourceSlug`, `--fieldId | --fieldSlug`, etc.
 - **Write payloads:** mutating commands take convenience flags **and/or** `--data '<json>'` / `--from-file <path.json>`. Explicit flags merge over the JSON. Complex objects (nested `data`, `field_mapping`, schemas, conditions) must go through `--data`/`--from-file`.
 - **Settings scope & sessions:** settings live in a project-local `./.docyrus/` folder (ancestor-resolved from cwd); `-g`/`--global` uses `~/.docyrus/`. Auth and the active tenant are per-scope.
-- **Escape hatch:** `docyrus curl <path> [-X .. -d .. -G]` sends an authenticated request to any API path — use it for endpoints without a dedicated command (e.g. template render, webform items).
+- **Escape hatch:** `docyrus curl <path> [-X .. -d .. -G]` sends an authenticated request to any API path — use it for endpoints without a dedicated command (e.g. template render, webform items). For complex reads, pass query params as one JSON object with `-G -d '{...}'` (URL-encoded for you).
 
 ## Command index
 
@@ -81,6 +81,10 @@ Sub-resource groups (each list/get/create/update/delete): `models` · `tools` ·
 
 ### curl — raw API
 `docyrus curl <path> [-X <method>] [-d <body>] [-G] [-H <header>]` — authenticated request to any Docyrus API path.
+- **Body:** `docyrus curl -X POST /v1/apps -d '{"name":"..."}'` — a JSON `-d` is sent as the request body.
+- **Query params:** with `-G`, pass `-d` a **single JSON object** — each key becomes a query param, nested values are JSON-stringified, and every value is URL-encoded for you. This is the way to send complex reads (`columns`, `filters`, `childQueries`) without escaping:
+  `docyrus curl "/v1/apps/<app>/data-sources/<ds>/items/<id>" -G -d '{"columns":"id,rel(id,name),app_child__ref","childQueries":[{"alias":"app_child__ref","from":"app_child","using":"ref","columns":"name"}]}'`
+- `-d` is a single value (not repeatable) and there is no `--data-urlencode` — the `-G` JSON-object form above replaces both.
 
 ### AI agents & runtime
 `docy "<prompt>"` (chat with the platform's main AI agent) · `opsy` (pi Cowork agent) · `cody` / `coder` (pi Coding agent) · `server` (HTTP bridge from a pi agent to AI SDK `useChat`)

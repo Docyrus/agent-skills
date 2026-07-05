@@ -37,6 +37,7 @@ Run `docyrus <command> --help` for flags. Groups marked **(group)** have their o
 
 ### dsql — logical SQL querying
 `query` (read-only SELECT over `appSlug.dataSourceSlug`) · `ask` (NL → query → run) · `generate` (NL → query, no run) · `schema` (group: schema discovery). See **docyrus-dsql-query-design**.
+Custom query records (saved, parameterized query templates): `list-custom-query` · `get-custom-query` · `create-custom-query` · `update-custom-query` · `delete-custom-query` · `run-custom-query` (execute; `--debug` = compiled SQL, `--simulate` = EXPLAIN ANALYZE). See **docyrus-custom-query**.
 
 ### studio — dev app schema CRUD
 Data sources: `create-data-source` · `get-data-source` · `update-data-source` · `delete-data-source` · `restore-data-source` · `permanent-delete-data-source` · `list-data-sources` · `bulk-create-data-sources`
@@ -109,4 +110,4 @@ Sub-resource groups (each list/get/create/update/delete): `models` · `tools` ·
 
 ## Related skills
 
-For *designing* the things these commands manage, use the dedicated skills: **docyrus-data-source-design**, **docyrus-automation-design**, **docyrus-agent-design**, **docyrus-app-ai-tools**, **docyrus-email-template-design**, **docyrus-print-pdf-template-design**, **docyrus-webform-design**, **docyrus-acl-design** (`docyrus acl`), **docyrus-tenant-brand-management** (`docyrus account brands`), **docyrus-account-settings** (`docyrus account user-profile` / `tenant-preferences`), **docyrus-dsql-query-design**. For platform architecture/concepts: **docyrus-platform**. For the REST API in app code: **docyrus-api-dev**.
+For *designing* the things these commands manage, use the dedicated skills: **docyrus-data-source-design**, **docyrus-automation-design**, **docyrus-agent-design**, **docyrus-app-ai-tools**, **docyrus-email-template-design**, **docyrus-print-pdf-template-design**, **docyrus-webform-design**, **docyrus-acl-design** (`docyrus acl`), **docyrus-tenant-brand-management** (`docyrus account brands`), **docyrus-account-settings** (`docyrus account user-profile` / `tenant-preferences`), **docyrus-dsql-query-design**, **docyrus-custom-query** (saved query records via `docyrus dsql *-custom-query`). For platform architecture/concepts: **docyrus-platform**. For the REST API in app code: **docyrus-api-dev**.

@@ -30,6 +30,7 @@ npx skills add docyrus/agent-skills
 | **Docyrus Webform Design** | Design public webforms that collect submissions into records, bound to a data source, with `docyrus studio`. | [SKILL.md](./skills/docyrus-webform-design/SKILL.md) |
 | **Docyrus ACL Design** | Design, configure, and validate tenant ACL — roles, permissions, role queries, hierarchy units — with `docyrus acl`. | [SKILL.md](./skills/docyrus-acl-design/SKILL.md) |
 | **Docyrus DSQL Query Design** | Write, discover, and run DSQL queries against logical data sources (incl. `docyrus dsql ask`). | [SKILL.md](./skills/docyrus-dsql-query-design/SKILL.md) |
+| **Docyrus Custom Query** | CRUD, run, and consume saved custom query records — reusable, parameterized DSQL query templates — via `docyrus dsql *-custom-query` and `RestApiClient.runCustomQuery`. | [SKILL.md](./skills/docyrus-custom-query/SKILL.md) |
 | **Docyrus Integrations & Connectors** | Discover and use integration connectors — call external APIs/actions through managed provider auth — with `docyrus connect`. | [SKILL.md](./skills/docyrus-integrations-and-connectors/SKILL.md) |
 | **Docyrus App AI Tools** | Create app-scoped AI tools for the system base agent ("Docy") — `data_source_query`, `custom_query`, `secure_exec`, `client_side` — with `docyrus apps ai-tools`. | [SKILL.md](./skills/docyrus-app-ai-tools/SKILL.md) |
 | **Docyrus Platform** | Architecture and building-blocks reference for the Docyrus platform, and a router to the dedicated design/CLI/API skills. | [SKILL.md](./skills/docyrus-platform/SKILL.md) |

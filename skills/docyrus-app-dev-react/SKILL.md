@@ -357,6 +357,7 @@ For deep dives, read:
 - `references/README.md` — merged reference map for app development and UI design
 - `references/api-client-and-auth.md`
 - `references/collections-and-patterns.md`
+- the **docyrus-app-settings** skill — designing and using app-scoped (`AppConfig`) and per-user (`UserAppConfig`) settings documents with `createAppConfigClient` / `createUserAppConfigClient`: scope choice, wholesale-replace and empty-document gotchas, and the REST/CLI contract
 - the **docyrus-acl-design** skill — ACL roles, permissions, and role-queries (`docyrus acl`); plus the ACL REST endpoints in **docyrus-api-dev**'s SKILL.md
 - `../docyrus-api-dev/references/data-source-query-guide.md`
 - `../docyrus-api-dev/references/formula-design-guide-llm.md`

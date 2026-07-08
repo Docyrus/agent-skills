@@ -103,7 +103,7 @@ Sub-resource groups (each list/get/create/update/delete): `models` · `tools` ·
 `new-version` · `status`
 
 ### tui — terminal UI
-`docyrus tui` — launch the OpenTUI terminal UI (requires Bun).
+`docyrus tui` — launch the OpenTUI terminal UI (requires Bun; if Bun is missing, offers to install it in an interactive terminal).
 
 ### Built-ins
 `docyrus completions` (shell completion) · `docyrus mcp add` (register as MCP server) · `docyrus skills add` (sync skill files) · global `--mcp` (start as MCP stdio server).

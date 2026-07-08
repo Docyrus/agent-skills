@@ -23,24 +23,26 @@ Repo provisioning runs **asynchronously** after the app record is created — `g
 
 ## Create an app
 
+The CLI **requires** `--slug` (unlike the UI, which auto-generates one). Check a slug is free first with `docyrus apps check-slug` (see below).
+
 ```bash
 # React web app from the techstack starter (defaults: type=external-app, techstack=react-spa)
-docyrus apps create --name "My CRM" --json
+docyrus apps create --name "My CRM" --slug my-crm --json
 
 # Pick a techstack (react-spa | vue-spa | svelte-spa | nextjs)
-docyrus apps create --name "My Site" --techstack nextjs
+docyrus apps create --name "My Site" --slug my-site --techstack nextjs
 
 # Empty repo (no starter code)
-docyrus apps create --name "Blank" --empty-repo
+docyrus apps create --name "Blank" --slug blank --empty-repo
 
 # Remix an existing template app (discover one with `apps templates`)
-docyrus apps create --name "From Template" --from-template crm-starter
+docyrus apps create --name "From Template" --slug my-copy --from-template crm-starter
 ```
 
 Key flags (`docyrus apps create --help` for the full list):
 
 - `--name <name>` — required.
-- `--slug <slug>` — omit to auto-generate.
+- `--slug <slug>` — **required** (lowercase letters/numbers/`-`/`_`, must start with a letter). Verify it's free first with `docyrus apps check-slug --slug <slug>`.
 - `--type <appType>` — defaults to `external-app` (the only creatable type today).
 - `--techstack <id>` — defaults to `react-spa`. **The id is `react-spa`, not `react-ts`.**
 - `--description`, `--route-path </crm>`.
@@ -48,6 +50,16 @@ Key flags (`docyrus apps create --help` for the full list):
 - `--local-development` — after create, clone the repo and write a dev `.env` (see below); pair with `--dir <path>` and `--client-id <id>`.
 
 `--empty-repo` and `--from-template` are mutually exclusive.
+
+## Check a slug is available
+
+Slugs are unique per tenant, so check before you create:
+
+```bash
+docyrus apps check-slug --slug my-crm     # → { "available": true }
+```
+
+If a slug is taken, `apps create` fails with a 409 — pick another or add a suffix (e.g. `my-crm-2`).
 
 ## Set up local development (`--local-development` and `apps clone`)
 
@@ -97,6 +109,7 @@ Use a listed `id` or `slug` with `apps create --from-template`.
 - **Private repos clone with a managed token.** You do not need your own GitHub access to the `docyrus-apps` org — the CLI fetches a short-lived, repo-scoped token and embeds it in the clone remote. The token is never printed or stored in output.
 - **OAuth client is provisioned by default**, so local sign-in works out of the box; remixed apps inherit one too. If you pass `--no-api-app` (or clone an app that has no client), `VITE_OAUTH2_CLIENT_ID` in `.env` is empty — pass `--client-id <id>` to supply one.
 - **There is no "create from an arbitrary git URL" mode** — the three modes above are the supported repo sources.
+- **The CLI requires `--slug`** (all modes, including `--from-template`). The platform itself auto-generates a slug when one is omitted (slugified app name, truncated to 30 chars, with a random 4-char suffix if that base is already taken) — but the CLI intentionally makes you pass one explicitly.
 
 ## Validate
 

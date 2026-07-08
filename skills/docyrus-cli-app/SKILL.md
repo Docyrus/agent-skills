@@ -30,7 +30,7 @@ Run `docyrus <command> --help` for flags. Groups marked **(group)** have their o
 `login` · `logout` · `who` · `tenant` · `set-tokens` · `sso-session` · `github` · `sandbox` · `git-credential` · `accounts` (group) · `tenants` (group)
 
 ### apps — apps & app-scoped resources
-`create` · `clone` · `templates` (app creation + local-dev bootstrap — see **docyrus-create-app**) · `list` · `update` · `delete` · `restore` · `permanent-delete` · `set-agent-context` · `actions` (group: action CRUD + run) · `ai-tools` (group: app-scoped AI tool CRUD — see **docyrus-app-ai-tools**)
+`create` (requires `--slug`) · `clone` · `templates` · `check-slug` (app creation + local-dev bootstrap — see **docyrus-create-app**) · `list` · `update` · `delete` · `restore` · `permanent-delete` · `set-agent-context` · `actions` (group: action CRUD + run) · `ai-tools` (group: app-scoped AI tool CRUD — see **docyrus-app-ai-tools**)
 
 ### ds — data records (CRUD + sub-objects)
 `get` (data source metadata) · `list` (query records) · `create` · `update` · `delete` · `comments` (group: record comments) · `files` (group: record file attachments, incl. `upload`)

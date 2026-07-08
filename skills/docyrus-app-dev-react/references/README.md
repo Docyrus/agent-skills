@@ -13,6 +13,14 @@ Read these files for data access, auth, query design, and collection patterns:
 - `../../docyrus-api-dev/references/formula-design-guide-llm.md`
 - `../../docyrus-api-dev/references/query-guide.md`
 
+## Package READMEs
+
+Full, mirrored READMEs of the core Docyrus frontend packages. Each is published on npm and lives in `docyrus-devkit/packages/*`:
+
+- `signin-readme.md` — `@docyrus/signin`: auth provider, `useDocyrusAuth`/`useDocyrusClient`, standalone/iframe/Electron/React Native/Next.js SSR modes, host bridge, roles & permissions. Note: signin auto-fetches the signed-in user from `/v1/users/me`.
+- `app-utils-readme.md` — `@docyrus/app-utils`: tenant preferences, date/number formatting, template/formula engine, app/user config, data views/forms, data-source metadata, and the **Inventory Cache** (`createInventoryClient` + `load()` warm-up after sign-in).
+- `devtools-readme.md` — `@docyrus/devtools`: in-app developer panel, request/console/iframe-message instrumentation, OpenAPI request explorer, DOM element picker, and the CDP/agent in-page API.
+
 ## UI Design References
 
 Read these files for component selection, design patterns, and UI library guidance:

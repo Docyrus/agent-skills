@@ -1,18 +1,19 @@
 ---
 name: docyrus-app-dev-react
-description: Build Docyrus React TypeScript web applications end-to-end, combining authentication, API access, @docyrus/app-utils runtime helpers, generated collections, TanStack Query/Form patterns, and production-grade UI implementation with preferred component libraries. Use when creating or modifying Docyrus-backed apps that use @docyrus/api-client, @docyrus/signin, @docyrus/app-utils, Docyrus collections, queries, dashboards, forms, tables, layouts, or Docyrus UI components.
+description: Build Docyrus React TypeScript web applications end-to-end, combining authentication, API access, @docyrus/app-utils runtime helpers, @docyrus/devtools in-app debugging, generated collections, TanStack Query/Form patterns, and production-grade UI implementation with preferred component libraries. Use when creating or modifying Docyrus-backed apps that use @docyrus/api-client, @docyrus/signin, @docyrus/app-utils, @docyrus/devtools, Docyrus collections, queries, dashboards, forms, tables, layouts, or Docyrus UI components.
 ---
 
 # Docyrus App Dev React
 
 Build Docyrus React TypeScript applications end-to-end. This skill combines app architecture, authentication, data access, query patterns, and production-grade UI guidance in one place.
 
-## Tech Stack
+## Recommended Tech Stack
 
 - React 19 + TypeScript + Vite
 - TanStack Router (code-based), TanStack Query (server state), TanStack Form
 - Tailwind CSS v4, shadcn/ui components
 - `@docyrus/api-client` + `@docyrus/signin` + `@docyrus/app-utils`
+- `@docyrus/devtools` — recommended in-app developer panel for every Docyrus app during development (network, errors, issues, console, iframe messages, OpenAPI request explorer, DOM element picker); gate it to non-production builds
 - Auto-generated collections from OpenAPI spec
 - Preferred UI libraries: shadcn, diceui, animate-ui, docyrus-ui, reui
 
@@ -32,14 +33,16 @@ Use this skill when you are:
 
 ## End-to-End Feature Workflow
 
-1. Set up app auth, routing, and query providers.
-2. Bootstrap `TenantPreferences`, date/number utilities, and shared app runtime helpers from `@docyrus/app-utils`.
-3. Use generated Docyrus collection hooks or the REST client for data access.
-4. Define `columns`, filters, formulas, child queries, and mutations correctly.
-5. Use `AppConfig` for per-app persisted settings, `UserAppConfig` for per-user per-app settings, and `DataViews` for saved grid views.
-6. Check preferred UI components before building anything custom.
-7. Use Docyrus form and detail patterns for create, edit, item detail, and editable grid flows.
-8. Connect UI actions to TanStack Query mutations and invalidate relevant queries.
+1. Set up app auth, routing, and query providers. `@docyrus/signin` already fetches the signed-in user from `/v1/users/me` — read it from `useDocyrusAuth().user`, do not add your own user call.
+2. Mount `@docyrus/devtools` near the root (dev builds only) and register the authenticated client so requests, errors, and console are instrumented from the start.
+3. After sign-in, create **one** shared `InventoryClient` (`createInventoryClient`) and `load()` it behind a progress bar to warm apps, data sources, users, brands, preferences, and this app's config.
+4. Bootstrap `TenantPreferences`, date/number utilities, and shared app runtime helpers from `@docyrus/app-utils`, wiring the shared inventory into every app-utils client.
+5. Use generated Docyrus collection hooks or the REST client for data access.
+6. Define `columns`, filters, formulas, child queries, and mutations correctly.
+7. Use `AppConfig` for per-app persisted settings, `UserAppConfig` for per-user per-app settings, and `DataViews` for saved grid views.
+8. Check preferred UI components before building anything custom.
+9. Use Docyrus form and detail patterns for create, edit, item detail, and editable grid flows.
+10. Connect UI actions to TanStack Query mutations and invalidate relevant queries.
 
 ## Quick Start: App Bootstrap
 
@@ -73,6 +76,61 @@ if (status === 'unauthenticated') return <SignInButton />
 // hasRole('super_admin') — check role by slug or uid
 // hasPermission('edit', dataSourceId) — check ACL permission on a data source
 ```
+
+**`@docyrus/signin` already fetches the signed-in user.** On authentication it calls `/v1/users/me` once and exposes the result (roles, permissions, `aclRules`, identity) as `useDocyrusAuth().user`. Read the current user and do all auth/role/permission checks from there — **never add your own `/v1/users/me` request**. Call `refreshUser()` to re-fetch after a role change. Only reach for `useUsersCollection().getMyInfo()` when you need profile fields that are not on the auth user.
+
+### Inventory cache warm-up after sign-in
+
+Right after `@docyrus/signin` reports an authenticated session, create **one** shared `InventoryClient` from `@docyrus/app-utils` and `load()` it behind a progress bar. The inventory is a tenant-wide in-memory cache of apps, data sources (with embedded views/forms/fields), users, brands, tenant preferences, and this app's config/user-config. Warming it once turns nearly every later metadata read across the app into a cache hit (no network), and the same instance backs every app-utils client you pass it to.
+
+Create the single instance at bootstrap and wire every app-utils client to it:
+
+```ts
+// services/docyrus.ts — one cache, shared by every client
+import {
+  createInventoryClient,
+  createDataSourceClient,
+  createBrandClient,
+  createAppConfigClient,
+  createUserAppConfigClient,
+  createDataViewClient,
+} from '@docyrus/app-utils'
+
+const appId = import.meta.env.VITE_APP_ID
+
+export const inventory = createInventoryClient(apiClient)
+
+export const dataSources = createDataSourceClient(apiClient, { inventory })
+export const brands = createBrandClient(apiClient, { inventory })
+export const appConfig = createAppConfigClient(apiClient, appId, { inventory })
+export const userAppConfig = createUserAppConfigClient(apiClient, appId, { inventory })
+
+// View/form clients are per data source — construct on demand, always sharing `inventory`
+export const viewsFor = (appSlug: string, dsSlug: string) =>
+  createDataViewClient(apiClient, appSlug, dsSlug, { inventory })
+```
+
+Warm the cache once, after sign-in, before routing to the home page:
+
+```ts
+// Runs after useDocyrusAuth() reports an authenticated session.
+async function bootstrapAfterSignIn(setProgress: (p: { label: string; value: number }) => void) {
+  await inventory.load({
+    // Drop 'users' from `include` if the signed-in user may lack the Users.Read.All scope.
+    onProgress: ({ message, ratio, phase }) => {
+      setProgress({ label: message, value: Math.round(ratio * 100) })
+      if (phase === 'complete') setProgress({ label: 'Ready', value: 100 })
+    },
+  })
+}
+```
+
+- Create the inventory **after** sign-in — it needs the authenticated `apiClient`.
+- Pass the **same** `inventory` to every app-utils client so they share one cache; mutations through those clients patch the cache automatically.
+- `load()` warms apps, data sources, users, brands, and preferences, plus this app's config/user-config when `VITE_APP_ID` is set; it emits progress events for a post-sign-in progress bar.
+- A full page reload starts cold — that is why `load()` runs after each sign-in. On a **tenant switch** without reload, call `inventory.refresh()` so the new tenant's data replaces the old.
+
+See `references/app-utils-readme.md` (the "createInventoryClient" section) for `load()` options, scope handling, and cache-invalidation helpers.
 
 ### Tenant-aware app utilities
 
@@ -126,6 +184,8 @@ Use this runtime to:
 - Read and upsert the current user's `UserAppConfig` document (per-user per-app settings).
 - Read and persist saved grid views through `DataViews`.
 
+When you have warmed a shared inventory (see above), pass `{ inventory }` to each of these clients and read `preferences` from `inventory.getPreferences()` instead of a fresh `getTenantPreferences(client)` call — every read then resolves from the warmed cache.
+
 ### Data fetching with generated collections
 
 ```tsx
@@ -178,6 +238,42 @@ Use `DataGridViewSelect` as the default saved-view UI for Docyrus grids, and per
 - Back `views`, `onViewCreate`, `onViewSave`, `onViewDelete`, `onViewHide`, and `onViewUnhide` with `DataViews` CRUD.
 - Use `DataGridViewEditor` separately only when you need a standalone editor outside the selector.
 
+### Dev tooling with `@docyrus/devtools`
+
+Wire `@docyrus/devtools` into every Docyrus app. It mounts a floating trigger and a docked panel with `Network`, `Errors`, `Issues`, `Explore`, `Console`, and `Messages` tabs — instrumenting `@docyrus/api-client` requests (with duplicate/slow detection), TanStack Query issues, console output, and iframe ↔ host `postMessage` traffic, plus an OpenAPI-driven request explorer that replays endpoints through the app's authenticated client.
+
+```tsx
+import { DocyrusDevtools, useRegisterDocyrusClient } from '@docyrus/devtools'
+import { DocyrusAuthProvider, useDocyrusClient } from '@docyrus/signin'
+
+function RegisterDevtoolsClient() {
+  // Register the auth-managed client once it exists so requests are instrumented.
+  useRegisterDocyrusClient(useDocyrusClient())
+  return null
+}
+
+export function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {/* enabled gates ALL instrumentation — keep devtools out of production */}
+      <DocyrusDevtools enabled={import.meta.env.DEV} queryClient={queryClient} openApiSpecPath="/openapi-spec.json">
+        <DocyrusAuthProvider apiUrl={/* … */} clientId={/* … */}>
+          <RegisterDevtoolsClient />
+          <YourRoutes />
+        </DocyrusAuthProvider>
+      </DocyrusDevtools>
+    </QueryClientProvider>
+  )
+}
+```
+
+- Gate it with `enabled={import.meta.env.DEV}` (or ship it dormant behind `activationShortcut` for on-demand use in production). When `enabled` is `false`, it only renders children — no listeners, no UI.
+- Pass the existing `queryClient` so TanStack Query issues surface in the `Issues` tab.
+- Call `useRegisterDocyrusClient(useDocyrusClient())` after mount so the auth-managed client is instrumented as soon as it exists.
+- Point `openApiSpecPath` at the served spec to enable the request explorer.
+
+See `references/devtools-readme.md` for the full prop list, host bridge, iframe-message tap, DOM element picker, and the CDP/agent in-page API.
+
 ## Critical App/Data Rules
 
 1. **Always send `columns`** in `.list()` and `.get()` calls. Without it, only `id` is returned.
@@ -186,7 +282,7 @@ Use `DataGridViewSelect` as the default saved-view UI for Docyrus grids, and per
 4. **Use `id` for `count` calculations**. Use actual field slugs for `sum`, `avg`, `min`, and `max`.
 5. **Child query keys must appear in `columns`**.
 6. **Formula keys must appear in `columns`**.
-7. **Use `useUsersCollection().getMyInfo()`** for current user profile instead of making a direct profile call.
+7. **Read the signed-in user from `useDocyrusAuth().user`** — `@docyrus/signin` already fetches it from `/v1/users/me` on sign-in (roles, permissions, `aclRules`, identity). Never add your own `/v1/users/me` call; use `refreshUser()` after a role change, and `useUsersCollection().getMyInfo()` only for profile fields not on the auth user.
 8. **Initialize `TenantPreferences` once per app runtime** and create shared `dateUtils` / `numberUtils` instances from `@docyrus/app-utils`.
 9. **Formatting functions from `@docyrus/app-utils` are regionalized** — do not hardcode locale, date format, decimal separator, thousand separator, or decimal precision when tenant preferences should drive them.
 10. **Use `createAppConfigClient(client, appId)`** for the app's single persisted config document; `upsert` is the default write path.
@@ -202,6 +298,8 @@ Use `DataGridViewSelect` as the default saved-view UI for Docyrus grids, and per
 20. **Treat `PUT /v1/users/acl/users/:userId/roles` as full replacement** and `POST /v1/users/acl/users/:userId/roles` as additive.
 21. **Send role-query `query` as raw JSON** and omit `tenantAppId` when `dataSourceId` is present; backend derives it.
 22. **After deleting a role, invalidate dependent app queries** for role lists, user-role lists, role-query lists, and any UI that renders primary-role labels.
+23. **Create one shared `InventoryClient` after sign-in and `load()` it** — pass that single instance to every app-utils client so they share the warmed cache; call `inventory.refresh()` on tenant switch.
+24. **Mount `@docyrus/devtools` in dev builds** gated by `enabled={import.meta.env.DEV}`, pass the app's `queryClient`, and register the auth client with `useRegisterDocyrusClient(useDocyrusClient())`.
 
 ## Critical UI/UX Rules
 
@@ -357,6 +455,9 @@ For deep dives, read:
 - `references/README.md` — merged reference map for app development and UI design
 - `references/api-client-and-auth.md`
 - `references/collections-and-patterns.md`
+- `references/signin-readme.md` — full `@docyrus/signin` package README (auth provider, hooks, iframe/host bridge, SSR, roles & permissions). Published on npm as `@docyrus/signin`; source at `docyrus-devkit/packages/signin`
+- `references/app-utils-readme.md` — full `@docyrus/app-utils` package README (tenant preferences, date/number formatting, app/user config, data views/forms, data-source metadata, and the Inventory Cache). Published on npm as `@docyrus/app-utils`; source at `docyrus-devkit/packages/app-utils`
+- `references/devtools-readme.md` — full `@docyrus/devtools` package README (in-app dev panel, request/console/message instrumentation, OpenAPI explorer, element picker, CDP/agent API). Published on npm as `@docyrus/devtools`; source at `docyrus-devkit/packages/devtools`
 - the **docyrus-app-settings** skill — designing and using app-scoped (`AppConfig`) and per-user (`UserAppConfig`) settings documents with `createAppConfigClient` / `createUserAppConfigClient`: scope choice, wholesale-replace and empty-document gotchas, and the REST/CLI contract
 - the **docyrus-acl-design** skill — ACL roles, permissions, and role-queries (`docyrus acl`); plus the ACL REST endpoints in **docyrus-api-dev**'s SKILL.md
 - `../docyrus-api-dev/references/data-source-query-guide.md`

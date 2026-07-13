@@ -8,6 +8,8 @@ Read these files for data access, auth, query design, and collection patterns:
 
 - `api-client-and-auth.md`
 - `collections-and-patterns.md`
+- `host-communication-integration.md` — embedded-app ↔ host shell `postMessage` integration (all directions **except** Guidy): host→app navigation & notifications, app→host route sync (`syncRouteToHost` / `notifyRouteChange`) and navigation requests (`requestHostNavigation`)
+- `guidy-integration.md` — make an embedded app Guidy-compatible: `enableGuidyBridge`, targetable controls (stable ids + labels), and declared routes (`guidyRoutes` / `useDocyrusGuidyRoutes`)
 - the **docyrus-acl-design** skill — ACL roles, permissions, and role-queries (`docyrus acl`); plus the ACL REST endpoints in **docyrus-api-dev**'s SKILL.md
 - `../../docyrus-api-dev/references/data-source-query-guide.md`
 - `../../docyrus-api-dev/references/formula-design-guide-llm.md`

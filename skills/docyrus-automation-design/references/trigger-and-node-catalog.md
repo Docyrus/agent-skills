@@ -69,7 +69,7 @@ A node runs work. Created/updated **by type** (kebab `--type`), deleted type-ind
 | `generate-document` | Render a file | base only | `data`: `format` (`pdf`\|`csv`\|`excel`\|`markdown`), `fileName`, `template`, `columns`, `pageFormat`, `pageOrientation`, `margins`, `headerTemplate`, `footerTemplate`, `styles` |
 | `ai-prompt` | One LLM call | base only | `data`: `core_ai_model_id`, `systemPrompt`, `userPrompt`, `response_format` (`text`\|`json`), `output_json_schema`, `target_data_source_id`; `dynamic_field_mapping` |
 | `ai-agent` | Invoke a custom agent | base only | `data`: `tenant_ai_agent_id`; `dynamic_field_mapping` |
-| `execute-script` | Run sandboxed JS | base only | `data`: `code`, `language` (`javascript`), `timeoutMs` (1–600000), `memoryMb` (1–4096), `allowNetwork` |
+| `execute-script` | Run sandboxed JS | base only | `data`: `code`, `language` (`javascript`), `timeoutMs` (1–600000), `memoryMb` (1–4096), `allowNetwork`. The `code` runs with an injected `api`/`record`/`data` SDK — see [in-sandbox SDK](#execute-script-in-sandbox-sdk) below. |
 | `wait-for` | Delay the chain | base only | `data`: `delaySeconds` (0–2592000) **or** `delayValue`+`delayUnit` (`seconds`\|`minutes`\|`hours`\|`days`) |
 | `external-action` | Run a connector/core action | `--actionTypeId` (**required**, a `core_action` of group `externalAction`), `--sourceDataSourceId`, `--targetDataSourceId`, `--connectionId`, `--connectionAccountId`, `--webhookId` | `data` (Ajv-validated against the action's `input_json_schema`), `field_mapping`, `dynamic_field_mapping` |
 
@@ -78,6 +78,50 @@ A node runs work. Created/updated **by type** (kebab `--type`), deleted type-ind
 ### `assignees[]` item shape (send-email / send-notification / request-*)
 
 `{ "type": <ASSIGNMENT_RULE_TYPE>, "userId"?, "userIds"?[], "fieldSlug"?, "teamId"?, "roleId"?, "unitId"?, "anchorField"?, "includeDescendants"?, "immediateOnly"? }`. `type` is required; the other keys depend on the rule type.
+
+### `execute-script` in-sandbox SDK
+
+The `code` you put in an `execute-script` node runs in a locked-down JS sandbox (no npm imports, no host filesystem or env). Three globals are injected:
+
+- **`record`** — the triggering/source record the action is running against.
+- **`data`** — the node's resolved input `data` (your field mappings + config).
+- **`api`** — the Docyrus SDK. The bearer token lives in a closure, so `code` can read/write data but cannot exfiltrate the token. Every method is `async` and runs as the automation's own identity (it sees only what that identity may access). Methods:
+
+| Call | Does | Returns |
+|---|---|---|
+| `api.query(dsql, params?)` | **Read-only DSQL** SELECT over logical `appSlug.dataSourceSlug` tables. With `params`, `dsql` is first rendered through a tiny Handlebars subset — `{{ path }}` = raw substitution, `{{ q path }}` = safe SQL-quoted (`'…'`, or `NULL` when missing/null). Without `params`, `dsql` is sent verbatim. | `{ data, meta }` |
+| `api.ds.list(appSlug, dsSlug, params?)` | List records (REST; `params` = same query object as `ds list`) | `{ data, … }` |
+| `api.ds.get(appSlug, dsSlug, recordId, params?)` | Read one record | the record |
+| `api.ds.create(appSlug, dsSlug, data)` | Insert a record | the created record |
+| `api.ds.update(appSlug, dsSlug, recordId, data)` | Patch a record | the updated record |
+| `api.ds.delete(appSlug, dsSlug, recordId)` | Delete a record | delete result |
+
+**Return output** by assigning `module.exports = {…}` (or `exports.x = …`). It becomes the node's output `data` — merged with a `__meta: { durationMs, stdout, stderr }` block, where `console.log` is captured into `__meta.stdout`. Downstream nodes template that output like any other node's.
+
+**Network:** with `allowNetwork` unset/`false` (default), only the Docyrus API host is reachable — `api.*` works but any other `fetch()` is blocked. Set `allowNetwork: true` in the node `data` to reach external hosts.
+
+**Prefer `api.query` for reads.** One DSQL round-trip can filter/join/aggregate across data sources, versus many `api.ds.list` calls plus JS glue. Reach for `api.ds.*` when you need to write (create/update/delete) or fetch a single record by id. For DSQL syntax (functions, table naming, row limits, rejection rules) see the **docyrus-dsql-query-design** skill.
+
+Example — from a `record`-created trigger on `crm.projects`, roll up the project's open tasks with DSQL and write the count back:
+
+```javascript
+// `record` is the project row that fired the trigger.
+const { data: byStatus } = await api.query(
+  `select status, count(*) as n
+     from crm.tasks
+    where project = {{ q record.id }} and status != 'done'
+    group by status`,
+  { record },
+);
+const openTotal = byStatus.reduce((sum, r) => sum + Number(r.n), 0);
+
+// Write the rollup back onto the triggering project.
+await api.ds.update("crm", "projects", record.id, { open_task_count: openTotal });
+
+module.exports = { openTotal, byStatus }; // → node output.data (plus __meta)
+```
+
+> `{{ q record.id }}` quotes the id as a SQL literal (never string-concatenate untrusted values into `dsql` — use `{{ q … }}`). Use `{{ path }}` (unquoted) only for values you control, e.g. a column name or a numeric literal.
 
 ## Conditions, field mappings & sequencing
 

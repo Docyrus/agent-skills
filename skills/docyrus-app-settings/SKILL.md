@@ -1,6 +1,24 @@
 ---
 name: docyrus-app-settings
-description: Design and use Docyrus app-scoped and app-user-scoped settings — developer-defined, database-backed configuration documents attached to an app — through the `@docyrus/app-utils` config clients, the REST API, or `docyrus curl`. Use when a frontend/app developer wants to persist and read settings for a Docyrus app: an app-wide config shared by every user in the tenant (AppConfig — one document per app) or a private per-user config (UserAppConfig — one document per user per app). Examples: app feature flags / defaults an admin configures, default grid filters, onboarding/setup state, per-user theme, layout, sidebar collapsed state, dismissed hints. Covers choosing the scope, the document shape, reading/upserting/deleting with `createAppConfigClient` / `createUserAppConfigClient`, the REST contract (`GET`/`PUT`/`DELETE` `/v1/tenant/apps/:appId/config` and `.../user-config`), required OAuth2 scopes, and the CLI. Triggers on "app settings", "app config", "user config", "user preferences", "per-app settings", "per-user settings", "AppConfig", "UserAppConfig", "createAppConfigClient", "createUserAppConfigClient", "save app configuration", "persist user preferences for an app". For tenant-wide regional/formatting preferences see docyrus-account-settings; for building the app UI see docyrus-app-dev-react.
+description: >-
+  Design and use Docyrus app-scoped and app-user-scoped settings -
+  developer-defined, database-backed configuration documents attached to an app
+  - through the `@docyrus/app-utils` config clients, the REST API, or `docyrus
+  curl`. Use when a frontend/app developer wants to persist and read settings
+  for a Docyrus app: an app-wide config shared by every user in the tenant
+  (AppConfig - one document per app) or a private per-user config
+  (UserAppConfig - one document per user per app). Examples: app feature flags
+  / defaults an admin configures, default grid filters, onboarding/setup state,
+  per-user theme, layout, sidebar collapsed state, dismissed hints. Covers
+  choosing the scope, the document shape, reading/upserting/deleting with
+  `createAppConfigClient` / `createUserAppConfigClient`, the REST contract
+  (`GET`/`PUT`/`DELETE` `/v1/tenant/apps/:appId/config` and `.../user-config`),
+  required OAuth2 scopes, and the CLI. Triggers on "app settings", "app
+  config", "user config", "user preferences", "per-app settings", "per-user
+  settings", "AppConfig", "UserAppConfig", "createAppConfigClient",
+  "createUserAppConfigClient", "save app configuration", "persist user
+  preferences for an app". For tenant-wide regional/formatting preferences see
+  docyrus-account-settings; for building the app UI see docyrus-app-dev-react.
 ---
 
 # Docyrus App Settings

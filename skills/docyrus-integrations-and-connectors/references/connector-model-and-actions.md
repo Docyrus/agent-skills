@@ -7,9 +7,10 @@ Reference for the Docyrus `docyrus connect` commands and the connector data mode
 1. [Data model](#data-model)
 2. [Auth types](#auth-types)
 3. [Command reference](#command-reference)
-4. [Connection resolution (run-action / curl)](#connection-resolution-run-action--curl)
-5. [run-action vs curl](#run-action-vs-curl)
-6. [Gotchas](#gotchas)
+4. [Connection accounts (API only)](#connection-accounts-api-only)
+5. [Connection resolution (run-action / curl)](#connection-resolution-run-action--curl)
+6. [run-action vs curl](#run-action-vs-curl)
+7. [Gotchas](#gotchas)
 
 ## Data model
 
@@ -19,7 +20,7 @@ Reference for the Docyrus `docyrus connect` commands and the connector data mode
 | **Action** | `core_action` (rows with `core_data_provider_id` + `key`, `status=1`) | `key`, `name`, `request_method`, `custom_endpoint`, `input_json_schema`, `output_json_schema` | Callable op; addressed by **provider slug + action `key`**. |
 | **Tenant connection** | `tenant_connection` | `id`, `name`, `core_data_provider_id`, `access_token`, `refresh_token`, `client_id`, `client_secret`, `base_url`, `archived` | Tenant-wide credentials. No status column — `archived` is the lifecycle flag. |
 | **User connection** | `tenant_connection_user` | `id`, `user_id`, `access_token`, `refresh_token`, `code`, `pkce_code_verifier`, `shared` | Per-user OAuth2 (`authorization_code`) connection. `shared=true` lets other tenant users reuse it. |
-| **Connection account** | `tenant_connection_account` | `id`, `account_id`, `account_name`, `tenant_connection_id` **or** `tenant_connection_user_id` | A sub-account within a connection (one of several external accounts); pass via `--connectionAccountId`. |
+| **Connection account** | `tenant_connection_account` | `id`, `account_id`, `account_name`, `tenant_connection_id` **or** `tenant_connection_user_id`, `archived` | A sub-account within a connection (one of several external accounts); pass its **`id`** via `--connectionAccountId`. List with `GET /v1/connectors/{slug}/connection-accounts` — see [Connection accounts](#connection-accounts-api-only). |
 | **Product provider auth** | `core_product_data_provider_auth` | `client_id`, `client_secret` | Docyrus-product-level OAuth client config (sensitive; not in CLI). |
 
 API entities use **camelCase** (`authType`, `providesActions`, `inputJsonSchema`, `requestMethod`, `apiEndpoint`, `baseUrl`, `createdOn`).
@@ -50,6 +51,41 @@ All commands are `docyrus connect <sub>`; require an active session (except `run
 
 > CLI-only nuance: the CLI's `list-connections <slug>` hits the **per-provider** route and returns `{tenantScope,userScope}`. (A tenant-wide `GET /v1/connectors/connections` exists on the backend but is not exposed by the CLI.)
 
+## Connection accounts (API only)
+
+`docyrus connect` has **no** connection-account subcommand; the listing is an API route reached with the top-level `docyrus curl` (which takes Docyrus API paths — unlike `connect curl`, which takes provider paths).
+
+```
+GET /v1/connectors/{dataProviderSlug}/connection-accounts
+    ?connectionId=<uuid>   # accounts of one connection (tenant- or user-scoped id both work)
+    &q=<keyword>           # ILIKE on account_name / account_id
+    &limit=100&offset=0
+```
+
+```bash
+docyrus curl "/v1/connectors/msgraph/connection-accounts?q=sales" --format json
+```
+
+Returns `{ data: ConnectionAccount[], meta: { total, limit, offset } }`; 404 when the slug is unknown. Scope: the connector read scope (`Connectors.Read.All`), same as the other read routes.
+
+`ConnectionAccount` (camelCase, mapped from `tenant_connection_account`):
+
+| Field | Source column | Notes |
+|---|---|---|
+| `id` | `id` | **The `--connectionAccountId` / `x-connection-account-id` value.** |
+| `accountId` | `account_id` | The account's id **at the provider**. |
+| `accountName` | `account_name` | Provider-side display name; the list is ordered by it. |
+| `connectionId` | `tenant_connection_id` | Set when the account came through a tenant connection. |
+| `userConnectionId` | `tenant_connection_user_id` | Set when it came through a user's OAuth2 connection. Exactly one of the two is non-null. |
+| `data` | `data` | Provider payload captured at fetch time (provider-specific shape). |
+| `createdOn` | `created_on` | — |
+
+Population and visibility:
+
+- Rows are written by the **tenant-accounts fetch** — `GET /v1/external/data-providers/{dataProviderId}/tenants` (that route takes the provider **id**, not the slug), which calls the provider's account endpoint per `core_data_provider.tenant_request` and upserts the results. A connection that has never been refreshed has **no** accounts; the listing is not a live provider call.
+- `archived` accounts are excluded.
+- Visibility is RLS-scoped, mirroring the connection: tenant-connection accounts are readable by the whole tenant, user-connection accounts **only by the user who connected them**. An empty result can therefore mean "belongs to another user's connection".
+
 ## Connection resolution (run-action / curl)
 
 `run-action` (`resolveActionConnection` → `DataProviderAuth.getAuthData`):
@@ -76,6 +112,7 @@ All commands are `docyrus connect <sub>`; require an active session (except `run
 
 - **Connections aren't created via the CLI.** Only `list-connections` (read). Create connections in the Docyrus UI / OAuth flow (`oauth2-auth-url` → `oauth2-callback`) or the raw API (`POST /v1/connectors/{slug}/connections`). If `list-connections` shows nothing usable, the provider isn't connected yet.
 - **`run-action` selectors are headers; `curl` selectors are body.** Don't mix them.
+- **`--connectionAccountId` is the account row's `id`**, not its provider-side `accountId` and not a connection id. Get it from `GET /v1/connectors/{slug}/connection-accounts`; it routes the call to a sub-account and never selects the credential.
 - **`curl`'s `<endpoint>` is a body field on `PUT /connectors/{slug}`**, not a URL path. Relative → appended to the connection/provider base URL; absolute (`http…`) → used verbatim.
 - **`--params` must be a JSON object** (CLI rejects arrays/primitives) and is AJV-validated server-side (400 `"Action input validation failed"`; non-object body → 400 `"Action run request body must be a JSON object"`).
 - **`--dryRun` is client-side only** — there is no server dry-run; it returns the would-be request and sends nothing. It also skips the active-session check.

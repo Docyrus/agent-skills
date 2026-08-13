@@ -1,6 +1,6 @@
 ---
 name: docyrus-integrations-and-connectors
-description: Discover and use Docyrus integration connectors from the terminal with the `docyrus connect` CLI commands — call third-party/external APIs (Microsoft Graph/Outlook, Twilio, Meta, etc.) through a connector's managed provider auth. Use when the user wants to find available connectors, inspect a connector's actions and input/output schemas, list a tenant's connections for a provider, run a connector action by provider slug + action key (e.g. send an SMS, send an email, fetch from an external API), or make a raw authenticated HTTP request through a connector's provider auth. Triggers on "list connectors", "what integrations are available", "run a connector action", "call the X API through Docyrus", "send SMS/email via a connector", "connect curl", "provider auth", `docyrus connect`, `docyrus connect run-action`, `docyrus connect curl`, or any connector/integration usage task. NOTE — connections (credentials) are created via the Docyrus UI / OAuth flow, not this CLI — this skill discovers and *uses* connectors. For app-internal AI tools use docyrus-app-ai-tools; for automations that call connectors use docyrus-automation-design.
+description: Discover and use Docyrus integration connectors from the terminal with the `docyrus connect` CLI commands — call third-party/external APIs (Microsoft Graph/Outlook, Twilio, Meta, etc.) through a connector's managed provider auth. Use when the user wants to find available connectors, inspect a connector's actions and input/output schemas, list a tenant's connections for a provider, list the connection accounts (sub-accounts — mailboxes, ad accounts, phone numbers) a connection exposes, run a connector action by provider slug + action key (e.g. send an SMS, send an email, fetch from an external API), or make a raw authenticated HTTP request through a connector's provider auth. Triggers on "list connectors", "what integrations are available", "run a connector action", "call the X API through Docyrus", "send SMS/email via a connector", "which mailbox/ad account/number can I send from", "list connection accounts", "connectionAccountId", "connect curl", "provider auth", `docyrus connect`, `docyrus connect run-action`, `docyrus connect curl`, or any connector/integration usage task. NOTE — connections (credentials) are created via the Docyrus UI / OAuth flow, not this CLI — this skill discovers and *uses* connectors. For app-internal AI tools use docyrus-app-ai-tools; for automations that call connectors use docyrus-automation-design.
 ---
 
 # Docyrus Integrations & Connectors
@@ -12,7 +12,7 @@ Use third-party integrations from the terminal with `docyrus connect`. A **conne
 - **Connector / data provider** — the integration definition (`core_data_provider`), addressed by **`slug`**. Holds the auth type, base URL, and the actions it exposes.
 - **Action** — a callable operation a connector exposes (`core_action`), addressed by **provider slug + action `key`** (e.g. `msgraph` + `sendEmailWithOutlook`). Has `inputJsonSchema` / `outputJsonSchema`.
 - **Connection** — a tenant's stored credentials for a connector (`tenant_connection`), or a per-user OAuth2 connection (`tenant_connection_user`). **Connections hold the tokens/keys.**
-- **Connection account** — an optional sub-account *within* a connection (e.g. one of several ad accounts / mailboxes), addressed by `--connectionAccountId`.
+- **Connection account** — an optional sub-account *within* a connection (e.g. one of several ad accounts / mailboxes), addressed by `--connectionAccountId`. List the available ones (and their ids) with `GET /v1/connectors/{slug}/connection-accounts` — see [Listing connection accounts](#listing-connection-accounts).
 
 > ⚠️ **Connections are NOT created by this CLI.** There is no `create-connection` command. Credentials/OAuth connections are set up in the **Docyrus UI** (OAuth flow) or via the raw API. This skill **discovers and uses** connectors; if no connection exists for a provider, the user must connect it first.
 
@@ -36,12 +36,19 @@ Use third-party integrations from the terminal with `docyrus connect`. A **conne
    ```
    If `tenantScope` is empty and `userScope.connected` is false, **stop and ask the user to connect the provider in the Docyrus UI** first.
 
-4. **Inspect the action's input schema** before calling:
+4. **List the connection's accounts** when the provider has sub-accounts (mailboxes, ad accounts, WhatsApp numbers) — this is where a `connectionAccountId` comes from:
+   ```bash
+   docyrus curl "/v1/connectors/meta/connection-accounts" --format json
+   # → { data: [{ id, accountId, accountName, connectionId, userConnectionId, data, createdOn }], meta: {...} }
+   ```
+   An empty list is normal: accounts only exist after the tenant-accounts fetch has run for that connection.
+
+5. **Inspect the action's input schema** before calling:
    ```bash
    docyrus connect get-action twilio sendSms --json    # → inputJsonSchema / outputJsonSchema / requestMethod
    ```
 
-5. **Run the action** (build `--params` to match the input schema). **Dry-run first** to preview:
+6. **Run the action** (build `--params` to match the input schema). **Dry-run first** to preview:
    ```bash
    docyrus connect run-action twilio sendSms -p '{"to":"+1555...","body":"Hi"}' --dryRun --json
    docyrus connect run-action twilio sendSms -p '{"to":"+1555...","body":"Hi"}' --json
@@ -69,6 +76,27 @@ docyrus connect curl           <slug> <endpoint> [-X <method>] [-d '<json>'] [--
 - **`run-action`**: `-p`/`--params` is a **JSON object** matching the action's `inputJsonSchema` (server-validated — AJV, 400 on mismatch). `-n`/`--dryRun` previews the request **client-side without sending**. Connection selectors (`-c`/`--connectionId`, `--connectionAccountId`) are sent as headers.
 - **`curl`**: `<endpoint>` is a **relative path** (appended to the connection/provider base URL) **or an absolute `http…` URL** (used verbatim). `-X` sets the HTTP method (default `GET`); `-d`/`--headers` are JSON. The provider auth header is injected automatically.
 
+## Listing connection accounts
+
+Sub-accounts live on the Docyrus API, not on the `connect` group — there is **no `connect list-connection-accounts` subcommand**. Reach the endpoint with the top-level `docyrus curl` (Docyrus API paths, not provider paths):
+
+```bash
+docyrus curl "/v1/connectors/{slug}/connection-accounts" --format json
+docyrus curl "/v1/connectors/msgraph/connection-accounts?connectionId=<uuid>&q=sales&limit=50" --format json
+```
+
+Query params: `connectionId` (uuid — matches a tenant **or** user connection), `q` (matches account name or provider account id), `limit` (100), `offset` (0). Response is `{ data: [...], meta: { total, limit, offset } }`; unknown slug → 404.
+
+| Field | Meaning |
+|---|---|
+| `id` | **The value to pass as `--connectionAccountId`** (header `x-connection-account-id`, or `connectionAccountId` in a `connect curl` body). |
+| `accountId` / `accountName` | The account's id and display name **at the provider** — not Docyrus ids. |
+| `connectionId` / `userConnectionId` | Which connection the account came through; exactly one is set. |
+| `data` | The provider payload captured for the account at fetch time (shape is provider-specific). |
+
+- **Accounts are discovered, not created here.** They are written when the tenant-accounts fetch runs for a connection (`GET /v1/external/data-providers/{dataProviderId}/tenants` — note that route takes the provider **id**, not the slug). A connection that has never been refreshed simply has no accounts, and archived accounts are never returned.
+- **Visibility follows the connection.** Accounts reached through a tenant connection are visible to the whole tenant; accounts reached through a user's OAuth2 connection are visible **only to that user** — so an empty list can also mean "they belong to someone else's connection".
+
 ## Critical rules
 
 - **Connectors = slug; actions = slug + key.** There is no connector id or action id in these commands. Get the slug from `list-connectors`, the action `key` from `get-connector`/`get-action`.
@@ -77,6 +105,7 @@ docyrus connect curl           <slug> <endpoint> [-X <method>] [-d '<json>'] [--
 - **`run-action --params` must be a JSON object** (not an array/primitive) — the CLI rejects otherwise — and is validated server-side against the action's `inputJsonSchema` (400 `"Action input validation failed"` with AJV errors).
 - **`run-action` needs the `Automations.Run` scope; read commands need `Connectors.Read.All`.** A session that can list connectors may not be allowed to run actions.
 - **`curl` is an RPC passthrough** (`PUT /connectors/{slug}` with the endpoint in the body) — you pass the *external* method via `-X`, not the API method. An absolute endpoint bypasses the connector's base URL.
+- **Never invent a `connectionAccountId`.** It is the `id` of a `connection-accounts` row, not the provider's own account id (`accountId`) and not a connection id. List them first when the provider has sub-accounts.
 - **Always `--dryRun` a `run-action` first** when the side effect is real (sending email/SMS, posting data) to confirm the resolved request before executing.
 - **The action must exist and be active** (provider `slug` + action `key`, `status=1`) — otherwise 404.
 
@@ -86,8 +115,9 @@ Read commands are safe to run anytime; action runs have real side effects (gate 
 
 1. **Discover round-trip:** `list-connectors` → pick a slug → `get-connector <slug>` shows its `actions[]` → `get-action <slug> <key>` shows the input schema. Confirms the connector + action exist and what params they need.
 2. **Connection check:** `list-connections <slug>` — confirm a usable connection (`tenantScope` non-empty or `userScope.connected:true`) before attempting a run.
-3. **Dry-run:** `run-action <slug> <key> -p '<params>' --dryRun` returns `{ dryRun:true, method, path, headers, body }` and sends nothing — verify the params/connection resolve as expected.
-4. **Execute** only when the dry-run looks right and the side effect is intended; inspect the returned `{ data, status }`.
+3. **Account check** (only when the run targets a sub-account): `docyrus curl "/v1/connectors/<slug>/connection-accounts" --format json` — take the `id` of the intended row as `--connectionAccountId`.
+4. **Dry-run:** `run-action <slug> <key> -p '<params>' --dryRun` returns `{ dryRun:true, method, path, headers, body }` and sends nothing — verify the params/connection resolve as expected.
+5. **Execute** only when the dry-run looks right and the side effect is intended; inspect the returned `{ data, status }`.
 
 ## References
 

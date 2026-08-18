@@ -1,0 +1,35 @@
+{
+  "gridColumns": 2,
+  "fields": [
+    {
+      "id": "n1",
+      "componentType": "field-text",
+      "dataSourceFieldId": "name",
+      "columnSpan": 2,
+      "fieldConfig": {
+        "slug": "name",
+        "type": "field-text",
+        "validations": ["required"]
+      }
+    },
+    {
+      "id": "n2",
+      "componentType": "field-email",
+      "dataSourceFieldId": "email",
+      "fieldConfig": {
+        "slug": "email",
+        "type": "field-email",
+        "validations": ["required"]
+      }
+    },
+    {
+      "id": "n3",
+      "componentType": "field-select",
+      "dataSourceFieldId": "status",
+      "fieldConfig": {
+        "slug": "status",
+        "type": "field-select"
+      }
+    }
+  ]
+}

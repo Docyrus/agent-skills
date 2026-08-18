@@ -33,6 +33,7 @@ This skill holds the *concepts*. For doing the work, use the dedicated skill:
 | Design an email template | **docyrus-email-template-design** |
 | Design an HTML/PDF print/report template | **docyrus-print-pdf-template-design** |
 | Build a public webform that collects submissions into records | **docyrus-webform-design** |
+| Design a data source's record create/edit/view form (grid, sections, conditional rules) | **docyrus-dynamic-form-design** |
 | Configure tenant ACL (roles, hierarchy units, role rules) | **docyrus-acl-design** |
 | Discover & call third-party integrations/connectors (`docyrus connect`) | **docyrus-integrations-and-connectors** |
 | Query/CRUD data, write filters/formulas, build query payloads | **docyrus-api-dev** |

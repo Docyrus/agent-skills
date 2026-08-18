@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docyrus.com/schemas/form-layout.schema.json",
+  "title": "Docyrus saved form layout (build-studio format)",
+  "description": "The `layout` document stored on a data-source form and consumed by useDocyrusFormView. Validates structure only — field slugs must additionally be checked against the data source.",
+  "type": "object",
+  "required": ["gridColumns", "fields"],
+  "additionalProperties": true,
+  "properties": {
+    "gridColumns": {
+      "description": "Column count of the form grid. Missing or non-numeric collapses to 1 at render time, so it is required here.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "labelAlign": { "enum": ["top", "left"] },
+    "labelWidth": { "enum": ["sm", "md", "lg"] },
+    "fieldSize": { "enum": ["sm", "md", "lg"] },
+    "fieldVariant": { "enum": ["outline", "filled"] },
+    "fields": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "formActions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/formAction" }
+    },
+    "formCustomValidations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/validationRule" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "oneOf": [{ "$ref": "#/$defs/sectionNode" }, { "$ref": "#/$defs/fieldNode" }]
+    },
+    "fieldNode": {
+      "type": "object",
+      "description": "Binds one data-source field into the form.",
+      "required": ["fieldConfig"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "componentType": { "type": "string" },
+        "dataSourceFieldId": { "type": "string" },
+        "columnSpan": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "hidden": { "type": "boolean" },
+        "fieldConfig": { "$ref": "#/$defs/fieldConfig" }
+      }
+    },
+    "fieldConfig": {
+      "type": "object",
+      "required": ["slug"],
+      "additionalProperties": true,
+      "properties": {
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Data-source field slug. Must exist on the bound data source or the node is dropped."
+        },
+        "type": { "type": "string" },
+        "validations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Only 'required' is enforced at runtime. Length/pattern/range tokens are inert — express them as customValidations."
+        },
+        "computedHidden": { "$ref": "#/$defs/expression" },
+        "computedRequired": { "$ref": "#/$defs/expression" },
+        "computedLabel": { "type": ["string", "null"] },
+        "computedDescription": { "type": ["string", "null"] },
+        "computedFormula": { "type": ["string", "null"] },
+        "customValidations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/validationRule" }
+        },
+        "fieldActions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fieldAction" }
+        }
+      }
+    },
+    "sectionNode": {
+      "type": "object",
+      "description": "A panel: nested members and NO field binding.",
+      "required": ["fields"],
+      "not": {
+        "anyOf": [
+          { "required": ["fieldConfig"] },
+          { "required": ["dataSourceFieldId"] }
+        ]
+      },
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "componentType": { "const": "panel" },
+        "label": { "type": "string" },
+        "title": { "type": "string" },
+        "columnSpan": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "gridColumns": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
+        }
+      }
+    },
+    "expression": {
+      "description": "JSONata expression string, Query Builder JSON, or null.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "required": ["combinator", "rules"],
+          "properties": {
+            "id": { "type": "string" },
+            "combinator": { "type": "string" },
+            "rules": { "type": "array" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "validationRule": {
+      "type": "object",
+      "required": ["id", "expression", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "expression": { "type": "string", "minLength": 1, "description": "JSONata; must return true to pass." },
+        "message": { "type": "string" }
+      }
+    },
+    "fieldAction": {
+      "type": "object",
+      "required": ["id", "triggerType", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "triggerType": { "const": "onFieldChange" },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/actionBlock" } }
+      }
+    },
+    "formAction": {
+      "type": "object",
+      "required": ["id", "triggerType", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "triggerType": { "enum": ["onFormLoad", "onFormBeforeSubmit", "onFormAfterSubmit"] },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/actionBlock" } }
+      }
+    },
+    "actionBlock": {
+      "type": "object",
+      "required": ["id", "sortOrder", "conditionalItems", "elseActions", "unconditionalActions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sortOrder": { "type": "integer", "minimum": 0 },
+        "conditionalItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "condition", "actions"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "condition": { "$ref": "#/$defs/expression" },
+              "actions": { "type": "array", "items": { "$ref": "#/$defs/actionStep" } }
+            }
+          }
+        },
+        "elseActions": { "type": "array", "items": { "$ref": "#/$defs/actionStep" } },
+        "unconditionalActions": { "type": "array", "items": { "$ref": "#/$defs/actionStep" } }
+      }
+    },
+    "actionStep": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["method", "fieldSlug", "value"],
+          "additionalProperties": false,
+          "properties": { "method": { "const": "setFieldValue" }, "fieldSlug": { "type": "string" }, "value": {} }
+        },
+        {
+          "type": "object",
+          "required": ["method", "fields"],
+          "additionalProperties": false,
+          "properties": {
+            "method": { "const": "setFieldValues" },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["fieldSlug", "value"],
+                "additionalProperties": false,
+                "properties": { "fieldSlug": { "type": "string" }, "value": {} }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["method", "fieldSlug"],
+          "additionalProperties": false,
+          "properties": {
+            "method": { "enum": ["clearFieldValue", "showField", "hideField"] },
+            "fieldSlug": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["method", "fieldSlug", "required"],
+          "additionalProperties": false,
+          "properties": { "method": { "const": "setFieldRequired" }, "fieldSlug": { "type": "string" }, "required": { "type": "boolean" } }
+        },
+        {
+          "type": "object",
+          "required": ["method", "fieldSlug", "disabled"],
+          "additionalProperties": false,
+          "properties": { "method": { "const": "setFieldDisabled" }, "fieldSlug": { "type": "string" }, "disabled": { "type": "boolean" } }
+        },
+        {
+          "type": "object",
+          "required": ["method", "fieldSlug", "readOnly"],
+          "additionalProperties": false,
+          "properties": { "method": { "const": "setFieldReadOnly" }, "fieldSlug": { "type": "string" }, "readOnly": { "type": "boolean" } }
+        }
+      ]
+    }
+  }
+}

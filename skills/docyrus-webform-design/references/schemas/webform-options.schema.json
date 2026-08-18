@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://webforms.docyrus.app/schemas/webform-options.schema.json",
+  "title": "Docyrus Webforms persisted builder options",
+  "description": "The normalized `options` JSON emitted when the Webforms studio saves a form.",
+  "type": "object",
+  "required": [
+    "layoutVariant",
+    "theme",
+    "classicGrid",
+    "conversationalFlow"
+  ],
+  "properties": {
+    "layoutVariant": {
+      "type": "string",
+      "enum": [
+        "classic-grid",
+        "conversational-flow"
+      ]
+    },
+    "theme": {
+      "$ref": "#/$defs/theme"
+    },
+    "classicGrid": {
+      "$ref": "#/$defs/classicGrid"
+    },
+    "conversationalFlow": {
+      "$ref": "#/$defs/conversationalFlow"
+    },
+    "archived": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "theme": {
+      "type": "object",
+      "required": [
+        "accentColor",
+        "surfaceStyle"
+      ],
+      "properties": {
+        "accentColor": {
+          "type": "string",
+          "description": "A CSS color value. The studio color picker emits a #RRGGBB value."
+        },
+        "surfaceStyle": {
+          "type": "string",
+          "enum": [
+            "soft",
+            "solid"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "classicGrid": {
+      "type": "object",
+      "required": [
+        "title",
+        "description",
+        "gridColumns",
+        "stepMode",
+        "showStepProgress",
+        "submitLabel",
+        "successMessage",
+        "steps"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "gridColumns": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        },
+        "stepMode": {
+          "type": "string",
+          "enum": [
+            "single-page",
+            "wizard"
+          ]
+        },
+        "showStepProgress": {
+          "type": "boolean"
+        },
+        "submitLabel": {
+          "type": "string"
+        },
+        "successMessage": {
+          "type": "string"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Optional runtime extension consumed by the embed renderer when validation fails. It is not currently exposed in the studio UI."
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "conversationalFlow": {
+      "type": "object",
+      "required": [
+        "welcomeTitle",
+        "welcomeDescription",
+        "progressStyle",
+        "autoAdvance",
+        "submitLabel",
+        "successMessage"
+      ],
+      "properties": {
+        "welcomeTitle": {
+          "type": "string"
+        },
+        "welcomeDescription": {
+          "type": "string"
+        },
+        "progressStyle": {
+          "type": "string",
+          "enum": [
+            "bar",
+            "minimal"
+          ]
+        },
+        "autoAdvance": {
+          "type": "boolean"
+        },
+        "submitLabel": {
+          "type": "string"
+        },
+        "successMessage": {
+          "type": "string"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Optional runtime extension consumed by the embed renderer when validation fails. It is not currently exposed in the studio UI."
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

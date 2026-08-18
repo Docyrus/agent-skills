@@ -1,0 +1,662 @@
+{
+  "$schema": "../schemas/webform-design-output.schema.json",
+  "schema": {
+    "version": 1,
+    "children": [
+      {
+        "type": "field-section",
+        "field": {
+          "id": "field-section-contact",
+          "name": "Contact details",
+          "slug": "contact_details_section",
+          "type": "field-section",
+          "options": {
+            "description": "Tell us how we can reach you."
+          }
+        },
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 1,
+          "stepId": "step-contact"
+        }
+      },
+      {
+        "type": "field-text",
+        "field": {
+          "id": "field-text-name",
+          "name": "Full name",
+          "slug": "full_name",
+          "type": "field-text",
+          "validations": [
+            "required",
+            "minLength:2",
+            "maxLength:100"
+          ],
+          "options": {
+            "placeholder": "Ada Lovelace",
+            "description": "Enter your legal name."
+          }
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-contact"
+        }
+      },
+      {
+        "type": "field-textarea",
+        "field": {
+          "id": "field-textarea-notes",
+          "name": "Notes",
+          "slug": "notes",
+          "type": "field-textarea",
+          "validations": [
+            "maxLength:1000"
+          ],
+          "options": {
+            "placeholder": "Add any relevant context..."
+          }
+        },
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 2,
+          "stepId": "step-contact"
+        }
+      },
+      {
+        "type": "field-email",
+        "field": {
+          "id": "field-email-email",
+          "name": "Email",
+          "slug": "email",
+          "type": "field-email",
+          "validations": [
+            "required"
+          ],
+          "options": {
+            "placeholder": "ada@example.com"
+          }
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-contact"
+        }
+      },
+      {
+        "type": "field-url",
+        "field": {
+          "id": "field-url-website",
+          "name": "Website",
+          "slug": "website",
+          "type": "field-url",
+          "options": {
+            "placeholder": "https://example.com"
+          }
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-contact"
+        }
+      },
+      {
+        "type": "field-phone",
+        "field": {
+          "id": "field-phone-mobile",
+          "name": "Mobile phone",
+          "slug": "mobile_phone",
+          "type": "field-phone",
+          "validations": [
+            "required"
+          ]
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-contact"
+        }
+      },
+      {
+        "type": "field-number",
+        "field": {
+          "id": "field-number-attendees",
+          "name": "Attendees",
+          "slug": "attendees",
+          "type": "field-number",
+          "min": 1,
+          "max": 500,
+          "validations": [
+            "required",
+            "min:1",
+            "max:500"
+          ]
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-money",
+        "field": {
+          "id": "field-money-budget",
+          "name": "Budget",
+          "slug": "budget",
+          "type": "field-money",
+          "min": 0,
+          "max": 100000,
+          "validations": [
+            "min:0"
+          ]
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-percent",
+        "field": {
+          "id": "field-percent-confidence",
+          "name": "Confidence",
+          "slug": "confidence",
+          "type": "field-percent",
+          "min": 0,
+          "max": 100
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-rating",
+        "field": {
+          "id": "field-rating-experience",
+          "name": "Experience rating",
+          "slug": "experience_rating",
+          "type": "field-rating",
+          "maxRating": 5,
+          "validations": [
+            "required",
+            "min:1",
+            "max:5"
+          ]
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-linearScale",
+        "field": {
+          "id": "field-linear-scale-recommend",
+          "name": "Likelihood to recommend",
+          "slug": "recommendation_score",
+          "type": "field-linearScale",
+          "validations": [
+            "required"
+          ],
+          "options": {
+            "scaleMin": 0,
+            "scaleMax": 10,
+            "minLabel": "Not likely",
+            "maxLabel": "Very likely"
+          }
+        },
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-duration",
+        "field": {
+          "id": "field-duration-session",
+          "name": "Session duration",
+          "slug": "session_duration",
+          "type": "field-duration"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-currency",
+        "field": {
+          "id": "field-currency-currency",
+          "name": "Currency",
+          "slug": "currency",
+          "type": "field-currency"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-select",
+        "field": {
+          "id": "field-select-priority",
+          "name": "Priority",
+          "slug": "priority",
+          "type": "field-select",
+          "validations": [
+            "required"
+          ]
+        },
+        "enumOptions": [
+          {
+            "id": "low",
+            "name": "Low",
+            "color": "#22c55e"
+          },
+          {
+            "id": "medium",
+            "name": "Medium",
+            "color": "#f59e0b"
+          },
+          {
+            "id": "high",
+            "name": "High",
+            "color": "#ef4444"
+          }
+        ],
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-tagSelect",
+        "field": {
+          "id": "field-tag-select-topics",
+          "name": "Topics",
+          "slug": "topics",
+          "type": "field-tagSelect",
+          "options": {
+            "horizontal": true
+          }
+        },
+        "enumOptions": [
+          {
+            "id": "product",
+            "name": "Product",
+            "color": "#3b82f6"
+          },
+          {
+            "id": "support",
+            "name": "Support",
+            "color": "#8b5cf6"
+          }
+        ],
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-radioGroup",
+        "field": {
+          "id": "field-radio-channel",
+          "name": "Preferred channel",
+          "slug": "preferred_channel",
+          "type": "field-radioGroup",
+          "options": {
+            "horizontal": true
+          }
+        },
+        "enumOptions": [
+          {
+            "id": "email",
+            "name": "Email"
+          },
+          {
+            "id": "phone",
+            "name": "Phone"
+          }
+        ],
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-choiceGrid",
+        "field": {
+          "id": "field-choice-grid-satisfaction",
+          "name": "Satisfaction by area",
+          "slug": "satisfaction_by_area",
+          "type": "field-choiceGrid",
+          "options": {
+            "rows": [
+              {
+                "id": "service",
+                "name": "Service"
+              },
+              {
+                "id": "quality",
+                "name": "Quality"
+              }
+            ]
+          }
+        },
+        "enumOptions": [
+          {
+            "id": "poor",
+            "name": "Poor"
+          },
+          {
+            "id": "good",
+            "name": "Good"
+          },
+          {
+            "id": "excellent",
+            "name": "Excellent"
+          }
+        ],
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 2,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-checkboxGrid",
+        "field": {
+          "id": "field-checkbox-grid-features",
+          "name": "Features used by team",
+          "slug": "features_by_team",
+          "type": "field-checkboxGrid",
+          "options": {
+            "rows": [
+              {
+                "id": "sales",
+                "name": "Sales"
+              },
+              {
+                "id": "support",
+                "name": "Support"
+              }
+            ]
+          }
+        },
+        "enumOptions": [
+          {
+            "id": "forms",
+            "name": "Forms"
+          },
+          {
+            "id": "automations",
+            "name": "Automations"
+          },
+          {
+            "id": "reports",
+            "name": "Reports"
+          }
+        ],
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 2,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-date",
+        "field": {
+          "id": "field-date-start",
+          "name": "Start date",
+          "slug": "start_date",
+          "type": "field-date"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-dateTime",
+        "field": {
+          "id": "field-datetime-meeting",
+          "name": "Meeting time",
+          "slug": "meeting_time",
+          "type": "field-dateTime"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-time",
+        "field": {
+          "id": "field-time-contact",
+          "name": "Best contact time",
+          "slug": "best_contact_time",
+          "type": "field-time"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-dateRange",
+        "field": {
+          "id": "field-date-range-availability",
+          "name": "Availability",
+          "slug": "availability",
+          "type": "field-dateRange"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-details"
+        }
+      },
+      {
+        "type": "field-switch",
+        "field": {
+          "id": "field-switch-newsletter",
+          "name": "Newsletter",
+          "slug": "newsletter",
+          "type": "field-switch",
+          "options": {
+            "description": "Send me product updates."
+          }
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-checkbox",
+        "field": {
+          "id": "field-checkbox-terms",
+          "name": "Terms accepted",
+          "slug": "terms_accepted",
+          "type": "field-checkbox",
+          "validations": [
+            "required"
+          ],
+          "options": {
+            "description": "I accept the terms."
+          }
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-file",
+        "field": {
+          "id": "field-file-brief",
+          "name": "Project brief",
+          "slug": "project_brief",
+          "type": "field-file"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-image",
+        "field": {
+          "id": "field-image-logo",
+          "name": "Logo",
+          "slug": "logo",
+          "type": "field-image"
+        },
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-userSelect",
+        "field": {
+          "id": "field-user-owner",
+          "name": "Owner",
+          "slug": "owner",
+          "type": "field-userSelect",
+          "relationDataSourceId": "base_user"
+        },
+        "enumOptions": [
+          {
+            "id": "user-1",
+            "name": "Ada Lovelace"
+          }
+        ],
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-userMultiSelect",
+        "field": {
+          "id": "field-users-reviewers",
+          "name": "Reviewers",
+          "slug": "reviewers",
+          "type": "field-userMultiSelect",
+          "relationDataSourceId": "base_user"
+        },
+        "enumOptions": [
+          {
+            "id": "user-1",
+            "name": "Ada Lovelace"
+          },
+          {
+            "id": "user-2",
+            "name": "Grace Hopper"
+          }
+        ],
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-relation",
+        "field": {
+          "id": "field-relation-company",
+          "name": "Company",
+          "slug": "company",
+          "type": "field-relation",
+          "relationDataSourceId": "base_organization"
+        },
+        "enumOptions": [
+          {
+            "id": "organization-1",
+            "name": "Analytical Engines Ltd."
+          }
+        ],
+        "layout": {
+          "colSpan": 1,
+          "rowSpan": 1,
+          "stepId": "step-feedback"
+        }
+      },
+      {
+        "type": "field-locationSelect",
+        "field": {
+          "id": "field-location-office",
+          "name": "Office location",
+          "slug": "office_location",
+          "type": "field-locationSelect"
+        },
+        "layout": {
+          "colSpan": 2,
+          "rowSpan": 2,
+          "stepId": "step-feedback"
+        }
+      }
+    ]
+  },
+  "options": {
+    "layoutVariant": "classic-grid",
+    "theme": {
+      "accentColor": "#2563eb",
+      "surfaceStyle": "soft"
+    },
+    "classicGrid": {
+      "title": "Customer discovery",
+      "description": "Tell us about your needs and experience.",
+      "gridColumns": 2,
+      "stepMode": "wizard",
+      "showStepProgress": true,
+      "submitLabel": "Send response",
+      "successMessage": "Your response has been received.",
+      "steps": [
+        {
+          "id": "step-contact",
+          "title": "Contact",
+          "description": "Your contact information"
+        },
+        {
+          "id": "step-details",
+          "title": "Details",
+          "description": "Request and scheduling details"
+        },
+        {
+          "id": "step-feedback",
+          "title": "Feedback",
+          "description": "Final questions and attachments"
+        }
+      ]
+    },
+    "conversationalFlow": {
+      "welcomeTitle": "Welcome",
+      "welcomeDescription": "Let’s go through each question one at a time.",
+      "progressStyle": "bar",
+      "autoAdvance": false,
+      "submitLabel": "Send response",
+      "successMessage": "Your response has been received."
+    }
+  }
+}

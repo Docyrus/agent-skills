@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://webforms.docyrus.app/schemas/webform-design-output.schema.json",
+  "title": "Docyrus Webforms complete design output",
+  "description": "Documentation wrapper for the two JSON documents persisted by the Webforms builder. The API stores `schema` and `options` as separate webform properties.",
+  "type": "object",
+  "required": [
+    "schema",
+    "options"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema": {
+      "$ref": "webform-builder.schema.json"
+    },
+    "options": {
+      "$ref": "webform-options.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

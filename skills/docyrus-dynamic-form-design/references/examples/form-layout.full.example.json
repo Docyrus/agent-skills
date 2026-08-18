@@ -1,0 +1,301 @@
+{
+  "gridColumns": 2,
+  "labelAlign": "top",
+  "labelWidth": "md",
+  "fieldSize": "md",
+  "fieldVariant": "outline",
+  "fields": [
+    {
+      "id": "n-ref",
+      "componentType": "field-autonumber",
+      "dataSourceFieldId": "ticket_ref",
+      "columnSpan": 2,
+      "fieldConfig": {
+        "slug": "ticket_ref",
+        "type": "field-autonumber"
+      }
+    },
+    {
+      "id": "sec-requester",
+      "componentType": "panel",
+      "label": "Requester",
+      "columnSpan": 2,
+      "gridColumns": 2,
+      "fields": [
+        {
+          "id": "n-name",
+          "componentType": "field-text",
+          "dataSourceFieldId": "full_name",
+          "fieldConfig": {
+            "slug": "full_name",
+            "type": "field-text",
+            "validations": [
+              "required"
+            ],
+            "customValidations": [
+              {
+                "id": "cv-name-length",
+                "expression": "$length(value) >= 2 and $length(value) <= 80",
+                "message": "Name must be between 2 and 80 characters."
+              }
+            ]
+          }
+        },
+        {
+          "id": "n-email",
+          "componentType": "field-email",
+          "dataSourceFieldId": "email",
+          "fieldConfig": {
+            "slug": "email",
+            "type": "field-email",
+            "validations": [
+              "required"
+            ],
+            "customValidations": [
+              {
+                "id": "cv-email-domain",
+                "expression": "$contains(value, \"@\")",
+                "message": "Enter a valid email address."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-issue",
+      "componentType": "panel",
+      "label": "Issue details",
+      "columnSpan": 2,
+      "gridColumns": 1,
+      "fields": [
+        {
+          "id": "n-priority",
+          "componentType": "field-select",
+          "dataSourceFieldId": "priority",
+          "fieldConfig": {
+            "slug": "priority",
+            "type": "field-select",
+            "validations": [
+              "required"
+            ],
+            "fieldActions": [
+              {
+                "id": "act-priority",
+                "name": "Escalation routing",
+                "triggerType": "onFieldChange",
+                "blocks": [
+                  {
+                    "id": "blk-1",
+                    "name": "Route urgent tickets",
+                    "sortOrder": 0,
+                    "conditionalItems": [
+                      {
+                        "id": "cond-urgent",
+                        "condition": "priority = \"urgent\"",
+                        "actions": [
+                          {
+                            "method": "showField",
+                            "fieldSlug": "assignee"
+                          },
+                          {
+                            "method": "setFieldRequired",
+                            "fieldSlug": "assignee",
+                            "required": true
+                          },
+                          {
+                            "method": "setFieldValue",
+                            "fieldSlug": "sla_hours",
+                            "value": 4
+                          }
+                        ]
+                      },
+                      {
+                        "id": "cond-normal",
+                        "condition": "priority = \"normal\"",
+                        "actions": [
+                          {
+                            "method": "setFieldValue",
+                            "fieldSlug": "sla_hours",
+                            "value": 24
+                          }
+                        ]
+                      }
+                    ],
+                    "elseActions": [
+                      {
+                        "method": "hideField",
+                        "fieldSlug": "assignee"
+                      },
+                      {
+                        "method": "clearFieldValue",
+                        "fieldSlug": "assignee"
+                      }
+                    ],
+                    "unconditionalActions": [
+                      {
+                        "method": "setFieldValues",
+                        "fields": [
+                          {
+                            "fieldSlug": "triaged",
+                            "value": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "n-assignee",
+          "componentType": "field-userSelect",
+          "dataSourceFieldId": "assignee",
+          "fieldConfig": {
+            "slug": "assignee",
+            "type": "field-userSelect",
+            "computedHidden": "priority != \"urgent\"",
+            "computedRequired": "priority = \"urgent\""
+          }
+        },
+        {
+          "id": "n-sla",
+          "componentType": "field-number",
+          "dataSourceFieldId": "sla_hours",
+          "fieldConfig": {
+            "slug": "sla_hours",
+            "type": "field-number",
+            "customValidations": [
+              {
+                "id": "cv-sla-range",
+                "expression": "value >= 1 and value <= 72",
+                "message": "SLA must be between 1 and 72 hours."
+              }
+            ]
+          }
+        },
+        {
+          "id": "n-description",
+          "componentType": "field-textarea",
+          "dataSourceFieldId": "description",
+          "columnSpan": 1,
+          "fieldConfig": {
+            "slug": "description",
+            "type": "field-textarea",
+            "validations": [
+              "required"
+            ],
+            "computedLabel": "priority = \"urgent\" ? \"Describe the outage\" : \"Description\"",
+            "customValidations": [
+              {
+                "id": "cv-desc-length",
+                "expression": "$length(value) >= 20",
+                "message": "Please describe the issue in at least 20 characters."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "n-triaged",
+      "componentType": "field-switch",
+      "dataSourceFieldId": "triaged",
+      "columnSpan": 2,
+      "fieldConfig": {
+        "slug": "triaged",
+        "type": "field-switch",
+        "computedHidden": "true"
+      }
+    },
+    {
+      "id": "n-attachment",
+      "componentType": "field-file",
+      "dataSourceFieldId": "attachment",
+      "columnSpan": 2,
+      "fieldConfig": {
+        "slug": "attachment",
+        "type": "field-file"
+      }
+    }
+  ],
+  "formActions": [
+    {
+      "id": "fa-load",
+      "triggerType": "onFormLoad",
+      "blocks": [
+        {
+          "id": "fa-blk-load",
+          "name": "Seed defaults",
+          "sortOrder": 0,
+          "conditionalItems": [],
+          "elseActions": [],
+          "unconditionalActions": [
+            {
+              "method": "setFieldValue",
+              "fieldSlug": "priority",
+              "value": "normal"
+            },
+            {
+              "method": "hideField",
+              "fieldSlug": "assignee"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fa-before",
+      "triggerType": "onFormBeforeSubmit",
+      "blocks": [
+        {
+          "id": "fa-blk-before",
+          "sortOrder": 0,
+          "conditionalItems": [
+            {
+              "id": "fa-cond-sla",
+              "condition": "sla_hours = null",
+              "actions": [
+                {
+                  "method": "setFieldValue",
+                  "fieldSlug": "sla_hours",
+                  "value": 24
+                }
+              ]
+            }
+          ],
+          "elseActions": [],
+          "unconditionalActions": []
+        }
+      ]
+    },
+    {
+      "id": "fa-after",
+      "triggerType": "onFormAfterSubmit",
+      "blocks": [
+        {
+          "id": "fa-blk-after",
+          "sortOrder": 0,
+          "conditionalItems": [],
+          "elseActions": [],
+          "unconditionalActions": [
+            {
+              "method": "setFieldReadOnly",
+              "fieldSlug": "description",
+              "readOnly": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "formCustomValidations": [
+    {
+      "id": "fv-assignee",
+      "expression": "priority != \"urgent\" or assignee != null",
+      "message": "Urgent tickets must have an assignee."
+    }
+  ]
+}

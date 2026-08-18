@@ -15,7 +15,7 @@ The host app fetches the form and hands its `layout` to the renderer, which tran
 
 1. **A form references fields; it never defines them.** Every field node must bind to an existing field on the data source, by `fieldConfig.slug` (preferred) or `dataSourceFieldId`. A binding that resolves to nothing is **silently dropped** from the rendered form. List the real slugs first with `studio list-fields`. To add a field, use **docyrus-data-source-design** — not this skill.
 2. **Fields you omit do not render.** A saved layout is a whitelist: the form shows exactly the fields it lists, in its own order. Omitting a required-in-the-database column produces a form that cannot be submitted successfully.
-3. **Only `required` and JSONata rules are enforced at submit.** `minLength` / `maxLength` / `pattern` / `min` / `max` tokens are accepted and stored, but **no runtime consumer reads them**. Anything beyond "must be filled" has to be a `customValidations` JSONata rule, or it will not hold. See [Validation](#validation-what-actually-runs).
+3. **Validation lives in two places, and both run at submit.** Declarative tokens (`required`, `minLength:`, `maxLength:`, `pattern:`, `min:`, `max:`) cover single-field constraints; JSONata `customValidations` cover everything else — cross-field rules, conditions, custom messages. Tokens that do not fit a value's shape are skipped, not failed. See [Validation](#validation-what-actually-runs).
 
 ## Workflow
 
@@ -76,19 +76,25 @@ The complete key-by-key contract — including every accepted alias, the exact b
 
 ## Validation: what actually runs
 
-| Surface | Where it lives | Enforced at submit? |
-|---------|----------------|---------------------|
-| `required` | `fieldConfig.validations: ["required"]` | **Yes** — blocks submit, error under the field |
-| `computedRequired` | `fieldConfig.computedRequired` (JSONata / QB JSON) | **Yes** — conditional required |
-| Field `customValidations` | `fieldConfig.customValidations[]` (JSONata, must return `true`) | **Yes** — error under the field |
-| Form `formCustomValidations` | layout root (JSONata, must return `true`) | **Yes** — banner above the form |
-| `minLength` / `maxLength` / `pattern` / `min` / `max` | `fieldConfig.validations` tokens | **No** — stored, never read |
+Every row below blocks submit. Field errors render under the field; form errors render as a banner.
 
-So: `"validations": ["required", "maxLength:80"]` gives you a required field and nothing else. Write the length rule as a custom validation instead:
+| Rule | Where it lives | Applies to |
+|------|----------------|-----------|
+| `required` | `fieldConfig.validations: ["required"]` | any value — empty string, empty array and null all count as missing |
+| `minLength:N` / `maxLength:N` | `fieldConfig.validations` tokens | strings **and** arrays (character count / item count) |
+| `pattern:RE` | `fieldConfig.validations` token | strings; raw unanchored regex, everything after the first colon |
+| `min:N` / `max:N` | `fieldConfig.validations` tokens | numbers, and numeric-typed fields whose input returns a string |
+| `computedRequired` | `fieldConfig.computedRequired` (JSONata / QB JSON) | conditional required |
+| Field `customValidations` | `fieldConfig.customValidations[]` (JSONata → `true`) | anything, incl. other fields via `values` |
+| Form `formCustomValidations` | layout root (JSONata → `true`) | cross-field rules; runs after every field rule passes |
+
+Order per field: `required` → tokens → custom validations; the first failure wins. An **empty optional value is never failed by a token** — only `required` looks at emptiness. A token that does not fit the value's shape (a `pattern` on a number, a `min` on text) is skipped, and unknown tokens or malformed bounds are ignored.
+
+Use a custom validation when a token cannot express the rule:
 
 ```jsonc
 "customValidations": [
-  { "id": "cv-1", "expression": "$length(value) <= 80", "message": "Keep it under 80 characters." }
+  { "id": "cv-1", "expression": "value >= values.min_amount", "message": "Below the configured minimum." }
 ]
 ```
 

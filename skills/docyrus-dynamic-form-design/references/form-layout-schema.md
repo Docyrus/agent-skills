@@ -80,7 +80,7 @@ Write both `fieldConfig.slug` and `dataSourceFieldId` with the same slug. It is 
 |-----|------|--------|
 | `slug` | `string` | Binding (see above). |
 | `type` | `string` | Field type mirror; see [field-type-catalog.md](field-type-catalog.md). |
-| `validations` | `string[]` | **Only `"required"` is read**, and it makes the field required for this form. Every other token is stored and ignored — see [Validation](#validation). |
+| `validations` | `string[]` | Token list enforced at submit for this form: `required`, `minLength:N`, `maxLength:N`, `pattern:RE`, `min:N`, `max:N`. **Overrides** the data-source field's own tokens — see [Validation](#validation). |
 | `computedHidden` | JSONata string or QB JSON | `true` → field hidden. |
 | `computedRequired` | JSONata string or QB JSON | `true` → field required. |
 | `computedLabel` | JSONata string | Result replaces the field label. |
@@ -126,16 +126,35 @@ Sections render as bordered fieldsets. Nested sections are supported.
 
 ## Validation
 
-What the runtime actually enforces at submit:
+What the runtime enforces at submit, per field, in this order — first failure wins:
 
-1. `required` — from `fieldConfig.validations: ["required"]`, or the data-source field's own `validations` containing `"required"`, or `computedRequired`, or an action override. (There is no separate `required` property on a field; it is always a validation token.)
-2. Field `customValidations` — JSONata expressions that must evaluate to `true`.
-3. Root `formCustomValidations` — same, evaluated after all field rules pass; failures render as a banner.
+1. **`required`** — from `fieldConfig.validations`, the data-source field's own tokens, `computedRequired`, or an action override. Empty string, whitespace-only string, empty array and null all count as missing; `false` and `0` are real values and pass.
+2. **Token constraints** — `minLength:N` / `maxLength:N` (string length or array item count), `pattern:RE` (strings; raw unanchored regex, everything after the first colon, so the pattern may contain colons), `min:N` / `max:N` (numbers, plus numeric-typed fields whose input hands back a string).
+3. **Field `customValidations`** — JSONata expressions that must evaluate to `true`.
 
-**Not enforced anywhere:** `minLength:N`, `maxLength:N`, `pattern:RE`, `min:N`, `max:N`. They are legal tokens, they round-trip, and nothing reads them. Convert each one into a custom validation:
+Then, once every field passes: **root `formCustomValidations`**, rendered as a banner.
 
-| Intent | Token (inert) | Custom validation expression |
-|--------|---------------|------------------------------|
+Rules that keep tokens predictable:
+
+- An **empty optional value is never failed by a token** — only `required` inspects emptiness. `["minLength:5"]` on a blank optional field passes.
+- A token that does not fit the value's shape is **skipped, not failed**: `pattern` on a number, `min` on free text, `minLength` on a boolean.
+- **Unknown tokens and malformed bounds are ignored** (`minLength:abc`, `weird:1`), so a stale token cannot brick a form.
+- An **unparseable `pattern` is ignored at runtime** — a broken regex can never block a user's submit. (The builder's preview does report it, as a design-time signal.)
+- A form's `validations` **replace** the data-source field's tokens for that form, exactly like `customValidations`. Restate the schema-level tokens you want to keep.
+
+Use a `customValidations` rule when a token cannot express the rule — anything conditional, cross-field, or needing its own message:
+
+| Intent | Token | Custom validation |
+|--------|-------|-------------------|
+| Length / range / format of one value | ✅ prefer the token | — |
+| Depends on another field | — | `value >= values.min_amount` |
+| Only applies in some states | — | `values.status != "final" or value != null` |
+| Needs a specific message | — | any expression + your `message` |
+| Date ordering | — | form-level: `end_date > start_date` |
+
+A rule is `{ "id": "<uuid>", "expression": "<jsonata>", "message": "<shown on failure>" }`. Inside a field rule, `value` is that field's value and `values` is the whole record; a form-level rule addresses fields as bare slugs.
+
+--------|---------------|------------------------------|
 | Minimum length | `minLength:5` | `$length(value) >= 5` |
 | Maximum length | `maxLength:80` | `$length(value) <= 80` |
 | Pattern | `pattern:^[A-Z]{2}-\d+$` | `$contains(value, /^[A-Z]{2}-\d+$/)` |

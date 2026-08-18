@@ -128,19 +128,31 @@ Sections render as bordered fieldsets. Nested sections are supported.
 
 What the runtime enforces at submit, per field, in this order — first failure wins:
 
-1. **`required`** — from `fieldConfig.validations`, the data-source field's own tokens, `computedRequired`, or an action override. Empty string, whitespace-only string, empty array and null all count as missing; `false` and `0` are real values and pass.
-2. **Token constraints** — `minLength:N` / `maxLength:N` (string length or array item count), `pattern:RE` (strings; raw unanchored regex, everything after the first colon, so the pattern may contain colons), `min:N` / `max:N` (numbers, plus numeric-typed fields whose input hands back a string).
-3. **Field `customValidations`** — JSONata expressions that must evaluate to `true`.
+1. **`required`** — from `fieldConfig.validations`, the data-source field's own tokens, `computedRequired`, or an action override. Empty string, whitespace-only string, empty array and null all count as missing; `false` and `0` are real values and pass. **Always enforced.**
+2. **Token constraints** — `minLength:N` / `maxLength:N` (string length or array item count), `pattern:RE` (strings; raw unanchored regex, everything after the first colon, so the pattern may contain colons), `min:N` / `max:N` (numbers, plus numeric-typed fields whose input hands back a string). **Enforced only when the host opts in** — see below.
+3. **Field `customValidations`** — JSONata expressions that must evaluate to `true`. **Always enforced.**
 
-Then, once every field passes: **root `formCustomValidations`**, rendered as a banner.
+Then, once every field passes: **root `formCustomValidations`**, rendered as a banner. Always enforced.
 
-Rules that keep tokens predictable:
+### Token enforcement is opt-in
+
+The form-view hooks take `validationTokens?: 'off' | 'form' | 'all'`, default **`'off'`**:
+
+| Mode | Enforces |
+|------|----------|
+| `'off'` | nothing beyond `required` — tokens are stored and shown but never block a submit |
+| `'form'` | the tokens **this form** declares for a field (`fieldConfig.validations`) |
+| `'all'` | form tokens where present, otherwise the data-source field's own tokens |
+
+The default exists because data-source fields have carried tokens for years without them ever being enforced; switching them on globally would start rejecting records that already violate a stale bound. A form you author today should still declare its tokens — they are the clearest expression of intent, the builder's preview enforces them, and they go live the moment the host sets `'form'`. When a constraint must hold regardless of the host's setting, also write it as a `customValidations` rule.
+
+Rules that keep tokens predictable once enforcement is on:
 
 - An **empty optional value is never failed by a token** — only `required` inspects emptiness. `["minLength:5"]` on a blank optional field passes.
 - A token that does not fit the value's shape is **skipped, not failed**: `pattern` on a number, `min` on free text, `minLength` on a boolean.
 - **Unknown tokens and malformed bounds are ignored** (`minLength:abc`, `weird:1`), so a stale token cannot brick a form.
 - An **unparseable `pattern` is ignored at runtime** — a broken regex can never block a user's submit. (The builder's preview does report it, as a design-time signal.)
-- A form's `validations` **replace** the data-source field's tokens for that form, exactly like `customValidations`. Restate the schema-level tokens you want to keep.
+- A form's `validations` **replace** the data-source field's tokens for that form, exactly like `customValidations`. Restate the schema-level tokens you want to keep. (In `'form'` mode only the form's own list is ever enforced, so a field the form leaves untokened is unconstrained even if the data source declares bounds.)
 
 Use a `customValidations` rule when a token cannot express the rule — anything conditional, cross-field, or needing its own message:
 

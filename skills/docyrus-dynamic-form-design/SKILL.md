@@ -15,7 +15,7 @@ The host app fetches the form and hands its `layout` to the renderer, which tran
 
 1. **A form references fields; it never defines them.** Every field node must bind to an existing field on the data source, by `fieldConfig.slug` (preferred) or `dataSourceFieldId`. A binding that resolves to nothing is **silently dropped** from the rendered form. List the real slugs first with `studio list-fields`. To add a field, use **docyrus-data-source-design** — not this skill.
 2. **Fields you omit do not render.** A saved layout is a whitelist: the form shows exactly the fields it lists, in its own order. Omitting a required-in-the-database column produces a form that cannot be submitted successfully.
-3. **Validation lives in two places, and both run at submit.** Declarative tokens (`required`, `minLength:`, `maxLength:`, `pattern:`, `min:`, `max:`) cover single-field constraints; JSONata `customValidations` cover everything else — cross-field rules, conditions, custom messages. Tokens that do not fit a value's shape are skipped, not failed. See [Validation](#validation-what-actually-runs).
+3. **`required` and JSONata rules always run; the other tokens are opt-in.** `minLength:` / `maxLength:` / `pattern:` / `min:` / `max:` are enforced only where the host app turns them on (`validationTokens: 'form' | 'all'`, default `'off'`). Write them — they are the right place for single-field constraints and they are enforced the moment a host opts in — but when a rule **must** hold today, put it in `customValidations` as well. See [Validation](#validation-what-actually-runs).
 
 ## Workflow
 
@@ -76,17 +76,19 @@ The complete key-by-key contract — including every accepted alias, the exact b
 
 ## Validation: what actually runs
 
-Every row below blocks submit. Field errors render under the field; form errors render as a banner.
+Field errors render under the field; form errors render as a banner.
 
-| Rule | Where it lives | Applies to |
-|------|----------------|-----------|
-| `required` | `fieldConfig.validations: ["required"]` | any value — empty string, empty array and null all count as missing |
-| `minLength:N` / `maxLength:N` | `fieldConfig.validations` tokens | strings **and** arrays (character count / item count) |
-| `pattern:RE` | `fieldConfig.validations` token | strings; raw unanchored regex, everything after the first colon |
-| `min:N` / `max:N` | `fieldConfig.validations` tokens | numbers, and numeric-typed fields whose input returns a string |
-| `computedRequired` | `fieldConfig.computedRequired` (JSONata / QB JSON) | conditional required |
-| Field `customValidations` | `fieldConfig.customValidations[]` (JSONata → `true`) | anything, incl. other fields via `values` |
-| Form `formCustomValidations` | layout root (JSONata → `true`) | cross-field rules; runs after every field rule passes |
+| Rule | Where it lives | Applies to | Runs at submit |
+|------|----------------|-----------|----------------|
+| `required` | `fieldConfig.validations: ["required"]` | any value — empty string, empty array and null all count as missing | **always** |
+| `computedRequired` | `fieldConfig.computedRequired` (JSONata / QB JSON) | conditional required | **always** |
+| Field `customValidations` | `fieldConfig.customValidations[]` (JSONata → `true`) | anything, incl. other fields via `values` | **always** |
+| Form `formCustomValidations` | layout root (JSONata → `true`) | cross-field rules; runs after every field rule passes | **always** |
+| `minLength:N` / `maxLength:N` | `fieldConfig.validations` tokens | strings **and** arrays (character count / item count) | when enabled |
+| `pattern:RE` | `fieldConfig.validations` token | strings; raw unanchored regex, everything after the first colon | when enabled |
+| `min:N` / `max:N` | `fieldConfig.validations` tokens | numbers, and numeric-typed fields whose input returns a string | when enabled |
+
+**"When enabled"** means the host app passes `validationTokens: 'form'` (enforce what the form declares) or `'all'` (also enforce the data source's own tokens) to the form-view hook. The default is `'off'`, which keeps a stale bound on an old data-source field from blocking records that already violate it. A form's tokens are always stored and always shown by the builder's preview — the switch only governs runtime enforcement. If you cannot confirm the host has opted in and a constraint is not optional, mirror it in `customValidations`.
 
 Order per field: `required` → tokens → custom validations; the first failure wins. An **empty optional value is never failed by a token** — only `required` looks at emptiness. A token that does not fit the value's shape (a `pattern` on a number, a `min` on text) is skipped, and unknown tokens or malformed bounds are ignored.
 

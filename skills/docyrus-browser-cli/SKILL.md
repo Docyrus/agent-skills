@@ -26,8 +26,9 @@ The daemon starts automatically on the first command and stays alive for 5 minut
 # 1. Start browser + daemon
 docyrus browser start
 
-# 2. Navigate to preview
-docyrus browser nav https://preview-url.example.com
+# 2. Navigate to the app preview (a /path resolves against the preview URL,
+#    so you never need to know the sandbox hostname)
+docyrus browser nav /
 
 # 3. Wait for page to fully load
 docyrus browser wait --idle
@@ -60,9 +61,36 @@ docyrus browser close                     # Stop daemon and disconnect
 
 ```bash
 docyrus browser nav <url>                 # Navigate active tab
+docyrus browser nav /settings             # Path → resolved against the preview origin
 docyrus browser nav <url> --new           # Open in new tab
 docyrus browser nav <url> --reload        # Navigate and force reload
 ```
+
+A target with no scheme resolves against the app preview origin (see
+[Preview URL](#preview-url)), so `/settings` and `settings` both land on the
+running app. Resolution is against the ORIGIN, not the current path, so the
+result does not depend on which page is open. `host:port` shorthand
+(`localhost:3000/foo`) is expanded to `http://`. Absolute URLs pass through
+untouched.
+
+### Preview URL
+
+```bash
+docyrus browser url                       # Where the app under development is served
+```
+
+Returns `{ previewUrl, origin, headers? }`. Needs no daemon and no open tab.
+
+In a sandbox the dev server binds to localhost *inside* the sandbox while the
+browser runs outside it, so `http://localhost:3000` is not reachable and the
+external hostname cannot be derived locally. The API injects it as
+`DOCYRUS_PREVIEW_URL` when it starts the agent server, and it is persisted in
+`.docyrus/browser.json`. `docyrus browser start` also opens the app in the first
+tab automatically, already signed in — so the usual first step is `wait --idle`
+and `snapshot`, not `nav`.
+
+If `url` reports nothing, the preview never came up: restart it rather than
+guessing a URL.
 
 ### Waiting
 
@@ -178,7 +206,7 @@ docyrus browser cookies --domain ".app.com"
 ### Page Info
 
 ```bash
-docyrus browser info                      # URL, title, viewport, scroll, page dimensions
+docyrus browser info                      # Preview URL, page URL, title, viewport, scroll, dimensions
 ```
 
 ### Tab Management
@@ -199,10 +227,12 @@ The script receives raw CDP helpers: `cdp`, `evaluate`, `navigate`, `captureScre
 ## Tips for AI Agents
 
 1. `start` auto-launches the daemon — subsequent commands are fast (no reconnection)
-2. Always `wait --idle` after `nav` before taking snapshots or screenshots
-3. Use `snapshot` → refs → `click`/`fill` for reliable element targeting
-4. Re-snapshot after interactions to get fresh refs
-5. Use coordinate `click 350 200` for elements inside iframes or shadow DOM
-6. Check `console --level error` and `network --status 5xx` to catch runtime issues
-7. Use `screenshot --base64` in remote/sandbox mode
-8. `close` stops the daemon; it auto-stops after 5 minutes idle anyway
+2. In a sandbox, `start` already opens the app you are building: `wait --idle` and `snapshot`, no `nav` needed
+3. Navigate the app by path (`nav /settings`); `browser url` shows the origin that fills in
+4. Always `wait --idle` after `nav` before taking snapshots or screenshots
+5. Use `snapshot` → refs → `click`/`fill` for reliable element targeting
+6. Re-snapshot after interactions to get fresh refs
+7. Use coordinate `click 350 200` for elements inside iframes or shadow DOM
+8. Check `console --level error` and `network --status 5xx` to catch runtime issues
+9. Use `screenshot --base64` in remote/sandbox mode
+10. `close` stops the daemon; it auto-stops after 5 minutes idle anyway

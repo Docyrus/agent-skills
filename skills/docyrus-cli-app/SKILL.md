@@ -91,7 +91,7 @@ Sub-resource groups (each list/get/create/update/delete): `models` · `tools` ·
 `docy "<prompt>"` (chat with the platform's main AI agent) · `worky` (pi Cowork agent) · `cody` / `coder` (pi Coding agent) · `server` (HTTP bridge from a pi agent to AI SDK `useChat`)
 
 ### browser — browser automation (local Chrome or remote Cloudflare)
-`start` · `nav` · `snapshot` · `click` · `fill` · `select` · `eval` · `run-script` · `screenshot` · `content` · `console` · `network` · `cookies` · `devtools` · `info` · `tabs` · `wait` · `close`
+`start` · `url` · `nav` · `snapshot` · `click` · `fill` · `select` · `eval` · `run-script` · `screenshot` · `content` · `console` · `network` · `cookies` · `devtools` · `info` · `tabs` · `wait` · `close`
 
 ### knowledge — repo knowledge graph (dev tooling)
 `search` · `section` · `locate` · `refs` · `expand` · `check` · `doctor` · `audit-staged` · `pre-commit` · `list-impacted` · `init` · `generate-initial` · `refresh` · `config` · `hook`

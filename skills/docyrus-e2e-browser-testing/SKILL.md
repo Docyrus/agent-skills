@@ -29,6 +29,10 @@ The browser tools come in two equivalent forms — use whichever your runtime ex
 
 Both drive the same browser. SSO sign-in is tool-agnostic: mint the token with the CLI, then navigate that browser to the token URL.
 
+`<appUrl>` is the app's preview origin. Don't guess it and don't assume
+`localhost` — in a sandbox the dev server is only reachable through the exposed
+preview URL, which `docyrus browser url` prints (`{ previewUrl, origin }`).
+
 ## 1. Sign in with `docyrus auth sso-session`
 
 `sso-session` exchanges your **already-authenticated CLI session** for a short-lived `sso_token` the app can redeem. No login UI, no password.

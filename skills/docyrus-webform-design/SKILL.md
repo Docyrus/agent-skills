@@ -1,127 +1,83 @@
 ---
 name: docyrus-webform-design
-description: Design, validate, and test a Docyrus webform — a public, unauthenticated form that collects external submissions into records of a data source — using the `docyrus studio` webform CLI commands. Use when the user wants a public intake/lead/contact/registration/survey form whose submissions create records (e.g. a website contact form that lands in a CRM data source), needs the form's public URL or embed snippet, wants to bind a form to a data source, or wants a submission to kick off an automation. Covers designing the form schema, binding it to a data source, activating it, getting the public/submit/embed URLs, and proving a submission creates a record. Triggers on "create a webform", "public form", "contact/lead/intake form", "form that creates records", "embed a form on a website", "form submission webhook", "studio create-webform", or any webform authoring + validation task. For the data source the form writes into, use docyrus-data-source-design; for an automation that fires on submission, use docyrus-automation-design.
+description: Use when designing, publishing, embedding, or testing a generic Docyrus webform in Webforms Studio or with docyrus studio. Covers public intake, contact, lead, and survey forms, data-source binding, builder schema and options, hosted links, CAPTCHA, server submissions, and submission-triggered automations.
 ---
 
 # Docyrus Webform Design
 
-Design a public webform with `docyrus studio create-webform`, then **validate** it and **test** that a submission lands as a record. A webform is a `tenant_webform` row, paired 1:1 with a webhook, that renders a public (no-login) form; each submission creates a record in the **bound data source** (or, if unbound, in a per-tenant `webform_record` table) and can fire an automation.
-
-## How a webform works (read first)
-
-- A webform is **bound to a data source** at create time. Each **form field's slug must match a field slug** on that data source — that's how a submission maps to record columns. Bind the data source first (see **docyrus-data-source-design**).
-- Studio/builder-compatible forms persist two JSON documents: `schema` for ordered fields and per-field layout, and `options` for layout variant, theme, grid/wizard settings, and respondent-facing copy. The authoritative contract is [references/webform-design-schema.md](references/webform-design-schema.md).
-- The public form is addressed by the **paired webhook's** short id + token, **not** the webform UUID. After create, read back `form_url` (render), `form_submit_url` (POST target), and `embed_code` (a `<script>` snippet).
-- A submission `POST`s `{ "data": { …field values… } }` to the submit URL → it's queued → an edge function **asynchronously** creates the record in the bound data source and fires any active automation `webform` trigger. So records appear a moment after submission, not synchronously.
+Design a generic Docyrus webform in Webforms Studio or with `docyrus studio`. A completed submission creates a record in the bound data source or, for an unbound form, in the tenant's webform records. Either can trigger an automation.
 
 ## Workflow
 
-1. **Confirm app + auth, and the target data source.** The form writes into one data source whose field slugs the form keys must match.
+1. **Confirm the destination.** For a bound form, identify the app and data source and list its fields. Each answer slug must match the destination field slug. For an unbound form, choose stable slugs and review responses in Studio's per-form Submissions view.
+
    ```bash
    docyrus auth who --json
    docyrus apps list --json
-   docyrus studio list-fields --appSlug crm --dataSourceSlug leads --json   # the slugs your form fields must use
+   docyrus studio list-fields --appSlug crm --dataSourceSlug leads --json
    ```
 
-2. **Design the form schema.** Decide which data-source fields the form collects, then build the separate `schema` and `options` documents. Each `schema.children[].field.slug` = the data-source field slug. Read [references/webform-design-schema.md](references/webform-design-schema.md) for the complete builder contract and start from [references/examples/webform-design.full.example.json](references/examples/webform-design.full.example.json) when a full example is useful. Use [references/schemas/webform-builder.schema.json](references/schemas/webform-builder.schema.json) and [references/schemas/webform-options.schema.json](references/schemas/webform-options.schema.json) for machine validation. Use [references/webform-model-and-submission.md](references/webform-model-and-submission.md) for the backend lifecycle and record-mapping details.
-
-3. **Create the webform** (`create-webform`) bound to the data source, `status: 1` (active). See [Create](#create-a-webform).
-
-4. **Get the public URLs** from the response/`get-webform` (`form_url`, `form_submit_url`, `embed_code`).
-
-5. **Validate** the shape + binding. See [Validate](#validate).
-
-6. **Test** a submission and confirm a record is created in the data source. See [Test](#test).
-
-A worked example (a "Leads" intake form bound to a CRM data source, submitted, record confirmed) is in [references/webform-model-and-submission.md](references/webform-model-and-submission.md#worked-example).
+2. **Design and validate.** Use separate `schema` and `options` documents. Follow the [builder specification](references/webform-design-schema.md) and check renderer support for the fields and layout you choose.
+3. **Create and verify.** Use [Create a webform](#create-a-webform), then read back the design and binding with `get-webform`. Draft is `0`, active is `1`, and inactive is `2`. Publish when the form is ready for respondents.
+4. **Share.** Copy the hosted link from **Publish** and the website embed from **Preview** (`#preview`). The hosted page uses `/w/<workspaceSlug>/<formSlug>` when both slugs exist, or `/s/<formId>/<formToken>` using the paired webhook's short ID and token. See [publishing and embed](references/webform-model-and-submission.md#publishing-and-embed) for the API handles and address behavior.
+5. **Test the respondent journey.** Open the live page or the embed on an allowed website, complete the CAPTCHA, submit, and verify the queued record. For a server integration, use the form's [server-to-server URL](references/webform-model-and-submission.md#server-to-server-submission).
 
 ## Builder schema specification (read when authoring JSON)
 
-Use the copied Webforms builder specification as the source of truth whenever the task requires a studio-compatible form design rather than only a minimal backend payload:
+Use the [Webforms builder specification](references/webform-design-schema.md) when authoring Studio-compatible JSON.
 
-1. Read [references/webform-design-schema.md](references/webform-design-schema.md) for `schema`, `options`, all 30 palette field types, validation tokens, value shapes, derived `json_schema`, submission behavior, and renderer compatibility notes.
+1. Read [references/webform-design-schema.md](references/webform-design-schema.md) for `schema`, `options`, all 30 palette field types, validation tokens, value shapes, Studio-side `json_schema`, submission behavior, and renderer compatibility notes.
 2. Validate the two persisted documents independently with [references/schemas/webform-builder.schema.json](references/schemas/webform-builder.schema.json) and [references/schemas/webform-options.schema.json](references/schemas/webform-options.schema.json).
 3. Use [references/schemas/webform-design-output.schema.json](references/schemas/webform-design-output.schema.json) only for a documentation/test wrapper containing both documents; the API stores them as separate properties.
-4. Validate the public POST wrapper with [references/schemas/webform-submission-envelope.schema.json](references/schemas/webform-submission-envelope.schema.json), then validate its `data` property against the webform-specific derived `json_schema`.
+4. Validate the public POST wrapper with [references/schemas/webform-submission-envelope.schema.json](references/schemas/webform-submission-envelope.schema.json), then check `data` against the intended field slugs and values. See [derived schemas](references/webform-design-schema.md#9-derived-json_schema) before using `json_schema` for local validation.
 5. Use [references/examples/webform-design.full.example.json](references/examples/webform-design.full.example.json) as the exhaustive palette example. Reduce it to the fields the user needs; do not copy unrelated fields into a production form.
 
-The native builder shape is `{ "version": 1, "children": [{ "type", "field", "enumOptions"?, "layout" }] }`. Do not substitute the older `FieldText` + `options.key/options.label` shape when the user asks for output compatible with the current Webforms builder.
+The native builder shape is `{ "version": 1, "children": [{ "type", "field", "enumOptions"?, "layout" }] }`. The runtime supplies the submit button and CAPTCHA.
 
 ## Command cheat-sheet
 
-Selectors: `--appId | --appSlug` (to resolve a slug), `--dataSourceId | --dataSourceSlug` (the binding), `--webformId` (the form). Write commands take camelCase flags **or** `--data`/`--from-file`; flags merge over JSON. Append `--json`.
+Use `--appId` or `--appSlug` to resolve a data-source slug. Write commands accept camelCase flags and JSON input via `--data` or `--from-file`. Flags override matching JSON fields.
 
-> ⚠️ **Webforms have no slug** — `get`/`update`/`delete` address the form only by `--webformId`. `list-webforms` can filter by data source.
+Use the admin UUID for `get`, `update`, and `delete`. The optional public slug belongs to a brand workspace. `list-webforms` can filter by data source.
 
 ### Create a webform
 
 ```bash
 docyrus studio create-webform --appSlug crm --dataSourceSlug leads \
-  --name "Website lead form" --status 1 \
+  --name "Website lead form" --status 0 \
   --schema '{"version":1,"children":[
     {"type":"field-text","field":{"id":"lead-name","name":"Name","slug":"name","type":"field-text","validations":["required"]},"layout":{"colSpan":1,"rowSpan":1}},
     {"type":"field-email","field":{"id":"lead-email","name":"Email","slug":"email","type":"field-email","validations":["required"]},"layout":{"colSpan":1,"rowSpan":1}}
-  ]}' \
-  --css "body{font-family:sans-serif}" --json
-# → capture data.id (webform UUID) and data.form_url / data.form_submit_url / data.embed_code
+  ]}' --json
+# Capture data.id (the admin UUID) for subsequent commands.
 ```
 
-- **Required:** `--name`, `--schema` (a non-empty **JSON object**), and `--status` (**1 = active, 2 = inactive**). Omitting any → validation error (the CLI marks them optional, but the backend rejects).
-- **Binding is optional but create-only:** `--dataSourceSlug`/`--dataSourceId` sets the data source. ⚠️ `update-webform` **cannot rebind** — to change the data source, recreate the form. An **unbound** form still captures submissions (into `webform_record`), just not into a data source.
-- `--webformOptions` (JSON) and `--css` are optional builder config; `--sandbox true` marks it a test form (separate sandbox URL).
-- **Each `schema.children[].field.slug` must equal a bound data-source field slug** — that's what makes a submission populate the record. Confirm with `list-fields` first. Also require non-empty unique field slugs and stable field/option/grid-row IDs as specified in [references/webform-design-schema.md](references/webform-design-schema.md#12-authoring-and-validation-checklist).
+- Create requires `name`, a JSON object for `schema`, and an explicit `status` (0, 1, or 2). The Webforms Studio UI defaults to draft.
+- Binding via `dataSourceId` is optional and create-only. Use `--dataSourceSlug` with the app selector to resolve it. Recreate the form to change the destination data source.
+- In `--data` or `--from-file`, use `dataSourceId` and `options`. The corresponding options flag is `--webformOptions`. Use a JSON payload for API fields with no dedicated flag, such as `slug`, `tenantBrandId`, and `allowedOrigins`.
 
-### Manage / inspect
+### Manage and inspect
 
 ```bash
-docyrus studio list-webforms --appSlug crm --dataSourceSlug leads --json   # filter by data source; omit to list all
-docyrus studio get-webform    --webformId <id> --json                       # full schema + form_url/form_submit_url/embed_code
-docyrus studio update-webform --webformId <id> --status 2 --json            # PATCH; partial; NO data-source rebind
-docyrus studio delete-webform --webformId <id> --json                       # 204; also deletes the paired webhook
+docyrus studio list-webforms --appSlug crm --dataSourceSlug leads --json
+docyrus studio get-webform --webformId <id> --json
+docyrus studio update-webform --webformId <id> --status 1 --json
 ```
 
-- `get`/create responses expose the public handles: `form_id`/`form_token` (the webhook short id + token), `form_url` (render), `form_submit_url` (POST target), `form_sandbox_url`, and `embed_code` (a ready `<script>` snippet).
-- `update` is PATCH (partial). `delete` returns 204 and cascades to the paired webhook.
-
-## Critical rules
-
-- **`name` + `schema` (JSON object) + `status` (1|2) are required** on create; `status` must be `1` or `2` (any other value rejected).
-- **`schema.children[].field.slug` = data-source field slug.** A submission's `data` keys are mapped to records by slug — mismatched slugs won't populate the record. Validate slugs with `list-fields` before authoring the schema and follow the builder specification's uniqueness/stability rules.
-- **Binding is create-only.** `--dataSourceSlug`/`--dataSourceId` only applies on `create-webform`; `update-webform` has no rebind. Recreate to move a form to a different data source.
-- **Two CLI casing traps:** in a raw `--data` payload, the data-source key is **`dataSourceId` (camelCase, not `tenant_data_source_id`)**, and the options key is **`options`** even though the flag is `--webformOptions`. Prefer the flags, which map correctly.
-- **Public address = webhook id + token, not the webform UUID.** Use `form_url`/`form_submit_url`/`embed_code` from the response; don't construct URLs from the webform id.
-- **Submissions create records asynchronously** (queued → edge function). Expect a short delay; a record isn't created in the same request. An empty/empty-object `data` POST is treated as a verification ping and stores nothing.
-- **Unbound webforms are valid** — submissions go to the per-tenant `webform_record` table instead of a data source (queryable via the `webforms/{id}/items` API).
-- **Submission fires automations:** an active automation `webform` trigger bound to this form (`--webformId`) runs on each submission (see **docyrus-automation-design**).
-- **Validate then test.** Confirm the schema/binding, then submit once and confirm the record. Delete throwaway forms (and the records they created).
-
-## Validate
-
-1. `docyrus studio get-webform --webformId <id> --json` — `name`, `status`, `schema`, `tenant_data_source_id` (admin field) as intended; `form_url`/`form_submit_url`/`embed_code` present.
-2. Validate `schema` and `options` against the copied machine schemas, then cross-check every `schema.children[].field.slug` against `docyrus studio list-fields --appSlug crm --dataSourceSlug leads --json` — each maps to a real field slug (unmapped slugs silently won't populate the record).
-3. `docyrus studio list-webforms --appSlug crm --dataSourceSlug leads --json` — the form appears under its bound data source.
+Updates are partial. Confirm `name`, `status`, `schema`, `options`, and `tenant_data_source_id` in the returned record. For a bound form, cross-check its answer slugs with `list-fields`. Keep existing slugs and choice IDs stable to preserve response mappings.
 
 ## Test
 
-Prove a submission becomes a record:
+1. For a respondent test, open the live hosted page or the embed on an allowed origin. Complete the CAPTCHA and submit a uniquely identifiable response on a test form. An accepted submission is queued for record creation. An empty `data` ping stores no record.
+2. Verify a bound submission in the destination data source after the queue processes it.
 
-1. **Submit** to the public endpoint (no auth needed — the id+token is the credential). Use `form_submit_url` from `get-webform`:
    ```bash
-   curl -X POST "<form_submit_url>" -H 'Content-Type: application/json' \
-     -d '{"data":{"name":"Jane Tester","email":"jane@example.com"}}'
-   # → { "id": ..., "created_at": ... }   (queued; record is created asynchronously)
-   ```
-2. **Confirm the record** lands in the bound data source (allow a moment for the queue/edge function):
-   ```bash
-   docyrus ds list crm leads --columns "name, email" \
+   docyrus ds list crm leads --columns "name,email" \
      --filters '{"rules":[{"field":"email","operator":"=","value":"jane@example.com"}]}' --json
    ```
-   For an **unbound** form, read submissions via `docyrus curl "/v1/webforms/<webformId>/items"` instead.
-3. **Clean up:** delete the test record(s), then `docyrus studio delete-webform --webformId <id> --json`.
 
-> Submission → record runs through an async queue + edge function; in a local dev environment that pipeline may not execute, so the submit may return `{id}` without a record appearing. Treat a clean `create`/`get` (with a valid `form_submit_url`) and matching field slugs as the schema-correctness check, and run the full submission round-trip in a real environment.
-
-Full submission/record lifecycle details and the `webform_record` items API are in [references/webform-model-and-submission.md](references/webform-model-and-submission.md). The current builder-generated `schema`/`options` contract is in [references/webform-design-schema.md](references/webform-design-schema.md).
+   For an unbound form, use the per-form Submissions view or `docyrus curl "/v1/webforms/<webformId>/items"`.
+3. If the form is connected to an automation, verify a run for the test submission. Use **docyrus-automation-design** to configure a `webform` trigger.
 
 ## References
 
@@ -129,7 +85,7 @@ Full submission/record lifecycle details and the `webform_record` items API are 
 - **[references/schemas/webform-builder.schema.json](references/schemas/webform-builder.schema.json)** — Draft 2020-12 schema for the persisted builder `schema` document.
 - **[references/schemas/webform-options.schema.json](references/schemas/webform-options.schema.json)** — Draft 2020-12 schema for normalized persisted `options`.
 - **[references/schemas/webform-design-output.schema.json](references/schemas/webform-design-output.schema.json)** — Documentation wrapper that references both persisted-document schemas.
-- **[references/schemas/webform-submission-envelope.schema.json](references/schemas/webform-submission-envelope.schema.json)** — Static schema for `{ data, turnstileToken? }`; validate `data` against the form-specific derived `json_schema`.
+- **[references/schemas/webform-submission-envelope.schema.json](references/schemas/webform-submission-envelope.schema.json)** — Static schema for `{ data, captchaToken? }`, including the legacy token alias.
 - **[references/examples/webform-design.full.example.json](references/examples/webform-design.full.example.json)** — Complete example containing every native builder palette type.
-- **[references/webform-model-and-submission.md](references/webform-model-and-submission.md)** — Backend webform model, CLI/API casing, public submission flow, bound vs unbound record mapping, response handles, automation linkage, and worked lifecycle example. For the current builder-generated JSON shape, defer to `webform-design-schema.md`.
+- **[references/webform-model-and-submission.md](references/webform-model-and-submission.md)** — Backend webform model, CLI/API casing, public submission flow, bound vs unbound record mapping, publishing, CAPTCHA, server submission, and automation linkage. For the current builder-generated JSON shape, defer to `webform-design-schema.md`.
 - **docyrus-data-source-design** — the data source the form writes into (its field slugs = the form field slugs). **docyrus-automation-design** — the `webform` trigger that fires on submission. **docyrus-cli-app** — CLI command index; `docyrus studio …-webform --help` for flags.

@@ -1,138 +1,66 @@
-# Webform Model & Submission Flow
+# Webform model and submission
 
-Reference for the Docyrus webform data model, schema, and the public submission → record pipeline. Source of truth: `apps/cli/src/commands/studioCommands.ts` (webform commands + `webformFlags`), `apps/api/src/dev/dto/webform.ts`, `apps/api/src/dev/app/webform.service.ts`, `apps/api/src/webform/*` (public controller/service/entity), `libs/shared/src/edge/queue-webhook/index.ts`, `database/.../tenant_webform.sql`.
+A generic webform is a `tenant_webform` row with a paired `tenant_webhook`. The Webforms Studio uses `/v1/dev/webforms` for administration. The `docyrus studio` webform commands call the same API.
 
-## Table of Contents
+## Create and update
 
-1. [Data model & casing](#data-model--casing)
-2. [The `schema` shape](#the-schema-shape)
-3. [Public submission flow](#public-submission-flow)
-4. [Response handles (URLs / embed)](#response-handles-urls--embed)
-5. [Automation `webform` trigger](#automation-webform-trigger)
-6. [Worked example](#worked-example)
-7. [Validation checklist](#validation-checklist)
-8. [Gotchas](#gotchas)
+| CLI flag | JSON body key | Behavior |
+|---|---|---|
+| `--name` | `name` | Required on create |
+| `--schema` | `schema` | Required on create. Use the [native builder JSON](webform-design-schema.md#2-canonical-persisted-design) with `version: 1` and `children[].field.slug` |
+| `--status` | `status` | Required on create. `0` = draft, `1` = active, `2` = inactive. The CLI help lists 1 and 2, and the API also accepts 0 |
+| `--dataSourceId` / `--dataSourceSlug` | `dataSourceId` | Optional, create-only. Resolve slugs using the app selector |
+| `--webformOptions` | `options` | Optional layout, theme, and copy |
+| `--css` | `css` | Stored custom CSS. The current hosted page and embed load the bundle stylesheet and use the form theme options |
+| `--sandbox` | `sandbox` | Legacy flag, defaults to false. The current Preview tab uses the hosted page on the embed origin |
 
-## Data model & casing
+`update-webform` makes a partial PATCH. `get-webform`, `update-webform`, and `delete-webform` take the administrative UUID via `--webformId`. Deleting the form also removes its paired webhook.
 
-Table `public.tenant_webform` (paired 1:1 with a `tenant_webhook`). CLI flags → API body keys:
+Use `--data` or `--from-file` for the settings below. The dedicated CLI flags override matching fields in the JSON.
 
-| CLI flag | API/body key | Required | Notes |
-|---|---|---|---|
-| `--name` | `name` | **yes** | non-empty string |
-| `--schema` | `schema` | **yes** | non-empty **JSON object** (`@IsObject`) |
-| `--status` | `status` | **yes** | `@IsIn([1,2])` — **1 = active, 2 = inactive** |
-| `--dataSourceId` / `--dataSourceSlug` | `dataSourceId` | no (create-only) | ⚠️ stays **camelCase** in `--data`; not `tenant_data_source_id` |
-| `--webformOptions` | `options` | no | ⚠️ flag is `--webformOptions`, body key is `options`; opaque builder config |
-| `--sandbox` | `sandbox` | no | marks a test form; defaults `false`; drives `form_sandbox_url` |
-| `--css` | `css` | no | custom CSS injected into the rendered form |
+- Set `tenantBrandId` and `slug` for a branded address. The brand needs a `workspace_slug`. The form slug is unique within its brand and matches `^[a-z0-9]+(?:[-_][a-z0-9]+)*$`. Check availability with `GET /v1/dev/webforms/slug/availability` using `tenantBrandId`, `slug`, and the optional current `webformId`.
+- `allowedOrigins` lists the exact website origins allowed to submit, such as `https://www.example.com`, with no page path. Studio requires at least one on create. The admin API and CLI allow it to be omitted. Use the relevant Studio origin for the live hosted page, the embed origin for hosted preview, and the website origin for an external embed when using an allowlist. An empty list clears the origin restriction. When using custom CAPTCHA keys, configure the provider for the hostnames on which the widget runs.
+- Generic public forms use the platform Turnstile by default. Set `captchaProvider` to `turnstile` or `recaptcha_v2` with `captchaSiteKey` and write-only `captchaSecretKey` to use the form's own keys. Set `captchaProvider: null` to restore the platform configuration.
 
-Server-managed (not settable via these commands): `tenant_webhook_id`, analytics/tracker fields (`ga4_event`, `docyrus_tracker_*`, `gads_*`, `gtag_*`), `archived`, audit columns. **Webforms have no slug** — addressed by `--webformId` (UUID). `update-webform` (PATCH) accepts the same fields **except `dataSourceId`** (binding is create-only).
+## Publishing and embed
 
-## The `schema` shape
+| Purpose | Where to get it | Address |
+|---|---|---|
+| Hosted link for respondents | Studio **Publish** | `/w/<workspaceSlug>/<formSlug>` when both slugs exist, otherwise `/s/<formId>/<formToken>`, on the Studio host |
+| Hosted preview and website embed | Studio **Preview** (`#preview`, also reached by old `#embed` links) | Hosted preview on the embed host. The snippet includes versioned CSS and JS, the mount div, and `data-webform-id`, `data-webform-target`, and `data-webform-api` |
+| Public API | Admin detail `form_id`, `form_token`, and `form_submit_url` | GET for the form JSON and POST for submission at `/v1/webforms/<formId>/<formToken>`. The workspace equivalent is `/v1/webforms/workspaces/<workspaceSlug>/<formSlug>` |
+| API-generated embed | Admin detail `embed_code` | Versioned CSS and JS from the API-configured embed host, with an `s/…` address |
 
-`schema` is the form's field/layout definition (jsonb). It is authored by the form-builder UI; the backend only requires a non-empty JSON object. The shape the public renderer expects (inferred from `webform.service.ts`):
+`formId` in a public address is the webhook's short ID. The API also returns environment-configured `form_url` and `form_sandbox_url` values. Use the Studio link when distributing the current hosted page.
 
-```jsonc
-{
-  "children": [
-    { "type": "<FieldComponent>", "options": { "key": "<dataSourceFieldSlug>", "label": "..." } },
-    // ...more field components...
-    { "type": "KvButton", "options": { "action": "submit", "label": "Send" } }
-  ]
-}
-```
+The readable workspace address requires an active form. The generic id/token route can still serve and accept submissions for drafts and inactive forms, subject to access settings and submission checks. Use a test form for end-to-end preview submissions. Invite-only forms use recipient links and reject the ordinary public endpoints.
 
-- `children` is an ordered array of form components plus a **submit button** (`type: "KvButton"`, `options.action: "submit"`). The renderer injects a Cloudflare Turnstile component before the submit button.
-- **Each input component's `options.key` must equal a field slug** on the bound data source — that key becomes the submission `data` key, which the data source maps to the record column by slug.
-- The concrete field-component vocabulary (`FieldText`, etc.) lives in the form-builder UI, not this repo — when in doubt, build the form in the UI and read its `schema` back with `get-webform`, or keep keys aligned to `list-fields` slugs.
+## Browser submission
 
-## Public submission flow
+1. The public GET returns `captcha` with the provider and site key. The hosted and embedded form render the challenge from this config.
+2. Submit JSON with the answer object under `data` and the solved token as top-level `captchaToken`. The API accepts legacy `turnstileToken` as an alias. A non-empty generic public submission requires a valid token. If the webhook has allowed origins, the request must also come from an allowed origin.
+3. The API queues the submission in `tenant_webhook_data` and returns `201` with `{ id, created_at }`. Missing, null, or empty-object `data` is a verification ping returning `{ ok: true }` without queuing a record.
+4. The queue writes the answers to the bound data source by slug or to the tenant's `webform_record` table. Verify the result separately from the POST response. Read unbound responses in the Studio Submissions view or with `GET /v1/webforms/<webformId>/items`.
 
-A webform is addressed publicly by its **paired webhook's short id + token**, never the webform UUID.
+Calendar booking forms follow the separate booking contract and are outside this generic intake workflow.
 
-- **Render:** `GET /v1/webforms/{id}/{token}` → `form_url`.
-- **Submit:** `POST /v1/webforms/{id}/{token}` with body `{ "data": { …field values keyed by slug… } }` → `form_submit_url`. Auth = the unguessable id+token (a `WebhookGuard`, no OAuth login). Returns `201 { id, created_at }`.
+## Server-to-server submission
 
-What happens on submit (`apps/api/src/webform/webform.service.ts` → `libs/shared/src/edge/queue-webhook`):
-1. An **empty or empty-object `data`** is treated as a provider verification ping → stored nothing, returns `{ ok: true }`.
-2. `turnstileToken` is stripped from the payload (server-side Turnstile verification exists but is currently disabled in code).
-3. The submission is written to `tenant_webhook_data` (`key_type: "WEBFORM"`), which a DB trigger hands to the `queue-webhook` edge function **asynchronously**.
-4. The edge function:
-   - **Bound webform** → loads the data source and calls `createData({ record: data })` — the submitted `data` object **is** the record, mapped field-by-field by slug.
-   - **Unbound webform** → inserts into the per-tenant `webform_record` table (`{ tenant_webform_id, data, … }`).
-   - Then fires any connected, active automation `webform` trigger.
+For an authorized server integration, enable the server submission URL in Studio or with `POST /v1/dev/webforms/<webformId>/server-submit`. Save the returned `server_submit_url` as a secret. The full URL is returned only on creation or rotation. Submit `{ "data": { … } }` to it from the server. This endpoint authenticates with its own URL secret and rejects requests carrying a browser `Origin` header. Rotation invalidates the previous URL. Revoke it with `DELETE /v1/dev/webforms/<webformId>/server-submit`.
 
-So a record (or `webform_record` row) appears a moment **after** the submit response, not synchronously.
+## Automation
 
-## Response handles (URLs / embed)
-
-`create-webform`/`get-webform` expose the public handles (computed on the entity):
-
-- `form_id` / `form_token` — the webhook short id + token used in public URLs.
-- `form_url` — the hosted render URL.
-- `form_submit_url` — the POST target (`${API}/webforms/{id}/{token}`).
-- `form_sandbox_url` — sandbox render URL (empty if the sandbox env is unset).
-- `embed_code` — a ready `<script src="https://static.docyrus.app/webform/w.js" data-webform-id="{id}/{token}">` snippet to drop on a website.
-
-## Automation `webform` trigger
-
-Wire a workflow to run on each submission (see **docyrus-automation-design**):
+An active automation `webform` trigger can run after a queued submission for a bound or unbound form.
 
 ```bash
-docyrus automation create-trigger --appSlug crm --automationId <auto-id> \
-  --type webform --webformId <webformId> --json   # maps --webformId → tenant_webform_id
+docyrus automation create-trigger --appSlug crm --automationId <automationId> \
+  --type webform --webformId <webformId> --json
 ```
 
-On submission, the queue matches active triggers where `tenant_webform_id` equals the form's id and enqueues their action nodes, passing the submitted `data` (optionally through a JSONata `transformer`) as input. This fires **even for unbound webforms**.
+The trigger binds to the admin webform UUID. Its input is the submitted data, optionally transformed with JSONata. See **docyrus-automation-design** for trigger and action configuration.
 
-## Worked example
+## Implementation sources
 
-A "Leads" intake form bound to a CRM `leads` data source.
-
-### 1. Confirm the field slugs
-
-```bash
-docyrus studio list-fields --appSlug crm --dataSourceSlug leads --json
-# slugs you'll collect: name (built-in title), email, company, message
-```
-
-### 2. Create the webform
-
-```bash
-docyrus studio create-webform --appSlug crm --dataSourceSlug leads \
-  --name "Website lead form" --status 1 \
-  --schema '{"children":[
-    {"type":"FieldText","options":{"key":"name","label":"Full name"}},
-    {"type":"FieldText","options":{"key":"email","label":"Email"}},
-    {"type":"FieldText","options":{"key":"company","label":"Company"}},
-    {"type":"FieldTextarea","options":{"key":"message","label":"Message"}},
-    {"type":"KvButton","options":{"action":"submit","label":"Send"}}
-  ]}' --json
-# → WEBFORM_ID; capture form_submit_url + embed_code
-```
-
-### 3. Read back the public handles
-
-```bash
-docyrus studio get-webform --webformId WEBFORM_ID --json   # form_url, form_submit_url, embed_code
-```
-
-## Validation checklist
-
-- [ ] `get-webform` shows `name`, `status` (1), `schema`, and the admin `tenant_data_source_id` (the binding); `form_url`/`form_submit_url`/`embed_code` present.
-- [ ] Every schema input `options.key` maps to a real field slug in `list-fields` for the bound data source.
-- [ ] The schema has exactly one submit button (`KvButton`, `action: "submit"`).
-- [ ] `list-webforms --dataSourceSlug leads` lists the form.
-
-## Gotchas
-
-- **Required:** `name`, `schema` (non-empty object), `status` (1|2). The CLI marks them optional but the backend rejects omissions.
-- **Casing:** raw `--data` must use `dataSourceId` (camelCase) and `options` (not `webform_options`). Prefer flags.
-- **Binding is create-only** — `update-webform` can't rebind; recreate to move data sources.
-- **Field keys must equal data-source slugs** — a mismatched key is accepted but silently won't populate the record.
-- **Async record creation** — submit returns `{id}`; the record is created later via the queue/edge function. In local dev that pipeline may not run, so validate schema + slugs there and test the full round-trip in a real environment.
-- **Empty `data` = verification ping** — stores nothing, returns `{ok:true}`.
-- **Unbound forms** capture into `webform_record` (read via `docyrus curl "/v1/webforms/{webformId}/items"`).
-- **Delete cascades** to the paired webhook; deleting the bound data source cascades to delete the webform.
-- **No slug** — `get`/`update`/`delete` need the webform UUID.
+- Core CLI and admin API: `apps/cli/src/commands/studioCommands.ts`, `apps/api/src/dev/dto/webform.ts`, and `apps/api/src/dev/app/webform.{controller,service}.ts`
+- Core public API and queue: `apps/api/src/webform/`, `apps/api/src/auth/strategy/webform-slug.strategy.ts`, and `libs/shared/src/edge/queue-webhook/index.ts`
+- Webforms Studio and Worker: `apps/webforms/src/lib/embed-config.ts`, `apps/webforms/src/hooks/use-webform-public-urls.ts`, and `apps/webforms/src/worker.ts`

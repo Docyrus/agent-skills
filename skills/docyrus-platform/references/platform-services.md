@@ -16,7 +16,7 @@
 
 ### Webforms (Public Data Collection)
 
-Public, unauthenticated forms whose submissions create records in a bound data source (with submission webhooks, CAPTCHA support, and response tracking). Design, validate, and test them with the **docyrus-webform-design** skill.
+Hosted or embedded forms collect submissions into a bound data source or the tenant's webform records. Public respondent submissions use CAPTCHA, and forms can also require invitations. Use **docyrus-webform-design** for authoring, publishing, and testing.
 
 ## Reporting & Analytics
 

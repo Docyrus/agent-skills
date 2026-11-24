@@ -2,8 +2,7 @@
 
 This document specifies the JSON produced by the project-owned form designer in
 `apps/webforms/src/components/webform-builder/` and the related contracts derived from it.
-It describes the implementation as it exists in this repository; it is not a generic
-Docyrus form-schema proposal.
+It describes the project-owned Webforms Studio and embed in `docyrus-app-webforms`.
 
 Machine-readable companion files:
 
@@ -21,8 +20,9 @@ A saved webform has four related JSON contracts:
 |---|---|---|
 | `schema` | `schemaFromBuilderState()` | Ordered fields, field settings, enum choices, and per-field layout |
 | `options` | `normalizeWebformOptions()` + `mergeBuilderStateIntoOptions()` | Layout variant, theme, title/copy, grid, and wizard/conversational settings |
-| `json_schema` | `webformSchemaToJsonSchema()` | Draft 2020-12 description of the submitted `data` object; regenerated whenever `schema` is sent in an admin create/update payload |
-| submission body | public app/embed runtime | `{ "data": { ... }, "turnstileToken"?: "..." }` posted to the public webform endpoint |
+| Studio-derived `json_schema` | `webformSchemaToJsonSchema()` | Draft 2020-12 description of form answers for Studio code and request generation |
+| Persisted `json_schema` | Core API `generateWebformJsonSchema()` | Server-derived schema for the bound data-source fields the Core layout resolver recognizes |
+| submission body | public app/embed runtime | `{ "data": { ... }, "captchaToken": "..." }` posted to the public webform endpoint (CAPTCHA token required for generic forms) |
 
 `schema` and `options` are separate properties on the webform API record. The combined
 `webform-design-output.schema.json` exists only to make examples and external validation easier.
@@ -125,7 +125,7 @@ interface WebformBuilderSchema {
 
 - The serializer always writes `version: 1`.
 - `children` order is rendering order.
-- A normal studio save requires at least one serialized child.
+- Saving an edited design in Studio requires at least one field. A newly created Studio form can start with an empty `children` array.
 - The serializer rebuilds the root from `BuilderState`; unknown root properties are not preserved.
 
 ### 3.2 Child
@@ -154,7 +154,7 @@ interface WebformSchemaChild {
 Semantic requirements:
 
 1. `child.type` and `child.field.type` **should be equal**. The serializer does not enforce this.
-2. `field.slug` **must be non-empty and unique within the form** for reliable rendering and submission. The inspector currently allows empty/duplicate slugs, so external validators should enforce this semantic rule.
+2. Use non-empty, case-insensitively unique `field.slug` values matching `^[A-Za-z_][A-Za-z0-9_]*$`. The Studio inspector reports invalid or duplicate slugs and locks saved slugs when submissions exist or submission status is unknown.
 3. `field.id`, step IDs, option IDs, and grid-row IDs should be stable and unique in their own scopes.
 4. Enum/grid values are submitted by `id`, never by label.
 5. A wizard `layout.stepId` should reference one of `options.classicGrid.steps[].id`. A missing value falls back to the first step at runtime.
@@ -426,6 +426,10 @@ the tokens are copied into `json_schema`.
 
 ### 8.1 Normalized defaults
 
+The full in-app renderer supports Classic Grid wizard steps. The current hosted page and external
+embed use the same lean renderer, which renders Classic Grid as a single grid even when wizard
+settings are saved. Test the intended respondent surface before sharing.
+
 ```json
 {
   "layoutVariant": "classic-grid",
@@ -482,7 +486,7 @@ normally discard the other variant's copy/settings.
 | `conversationalFlow.submitLabel` | string | `Submit` |
 | `conversationalFlow.successMessage` | string | Default receipt message |
 | `conversationalFlow.errorMessage` | string | Optional embed-only extension |
-| `archived` | boolean | Optional soft-archive flag preserved as a free-form extension |
+| `archived` | boolean | Legacy options fallback. Current admin requests use the top-level `archived` property |
 
 `WebformBuilderOptions` permits unknown properties. Normalization shallow-merges the root and
 nested theme/layout buckets, so extension keys survive studio saves. The machine schema therefore
@@ -490,13 +494,14 @@ uses `additionalProperties: true` for options and its nested buckets.
 
 ## 9. Derived `json_schema`
 
-Every admin create/update that includes `schema` passes it through:
+The Webforms Studio client derives a schema for its code view and adds it to its create/update
+request whenever the payload includes `schema`:
 
 ```ts
 webformSchemaToJsonSchema(payload.schema, { title: payload.name })
 ```
 
-The result describes the **contents of submission `data`**, not the outer submission envelope:
+That client result describes the answers inside `data`:
 
 ```json
 {
@@ -548,7 +553,12 @@ Current compatibility gaps that consumers must account for:
 - The full Date Time renderer emits a local minute-precision string; strict JSON Schema
   `date-time` validation may require a timezone/seconds depending on the validator.
 
-These are documentation of the current implementation, not recommended target behavior.
+The Core admin API independently generates the persisted `json_schema` on create and layout writes.
+Its resolver currently starts from `schema.fields` and resolves fields against the bound data source.
+The native Webforms Studio `schema.children` design can therefore yield an empty `properties` map
+in the stored schema. Use the builder contract and the intended renderer to check the design. The
+generic public submission handler verifies CAPTCHA and queues answers without enforcing the stored
+`json_schema`.
 
 ## 10. Submission contract
 
@@ -557,13 +567,13 @@ These are documentation of the current implementation, not recommended target be
 Secure public address:
 
 ```text
-POST {API_BASE}/webforms/{formId}/{formToken}
+POST {API_ORIGIN}/v1/webforms/{formId}/{formToken}
 ```
 
 Readable branded address:
 
 ```text
-POST {API_BASE}/webforms/workspaces/{workspaceSlug}/{webformSlug}
+POST {API_ORIGIN}/v1/webforms/workspaces/{workspaceSlug}/{webformSlug}
 ```
 
 Body:
@@ -580,19 +590,20 @@ Body:
       "quality": "excellent"
     }
   },
-  "turnstileToken": "optional-token"
+  "captchaToken": "solved-turnstile-or-recaptcha-token"
 }
 ```
 
 Apply [`webform-submission-envelope.schema.json`](schemas/webform-submission-envelope.schema.json)
-to the outer body and the webform record's generated `json_schema` to `body.data`.
+to the outer body. Check answer keys and values against the designed fields and renderer in use.
+The envelope accepts the legacy `turnstileToken` alias. The server requires a valid CAPTCHA token
+for non-empty generic browser submissions.
 
 ### 10.2 Data assembly
 
-The public implementations copy values only for known parsed field slugs. Consequently:
+The shared payload helper copies answers for known parsed field slugs:
 
 - untouched fields are absent rather than serialized as null;
-- unknown keys are dropped;
 - `field.options.internal === true` fields are excluded from public render, validation, and submit;
 - Section normally has no value and is absent;
 - select/radio values are option IDs;
@@ -601,12 +612,15 @@ The public implementations copy values only for known parsed field slugs. Conseq
 
 Renderer differences:
 
-- The lean embed explicitly merges Phone's `__<slug>_country` companion key into `data`.
+- The lean embed merges Phone's `__<slug>_country` companion key into `data`. It also forwards
+  extra host-provided prefill keys, such as attribution metadata, without overwriting parsed answers.
 - The in-app `buildPublicSubmissionPayload()` currently copies only real field slugs, so companion
   Phone/Money keys held by Docyrus UI controls are not merged.
-- `FieldTurnstile` handling exists in schema decorators and the in-app payload helper, but the
-  native builder does not create this child and the lean embed does not currently render a
-  Turnstile control from `hasTurnstile` alone.
+- Both renderers draw the CAPTCHA widget from the public payload's `captcha` (`{ provider:
+  "turnstile" | "recaptcha_v2", siteKey }`), not from a schema child, and send its token as
+  top-level `captchaToken`. The API rejects generic-form submissions without a valid token (`422`).
+  A `FieldTurnstile` child the API injects into `schema` only sets the
+  parser's `hasTurnstile` flag; it is never rendered as a field.
 
 ## 11. Builder-only state
 
@@ -642,7 +656,7 @@ Do not persist this object as the webform `schema`. Use `schemaFromBuilderState(
 Before accepting or importing a design:
 
 1. Validate `schema` and `options` against the machine-readable schemas.
-2. Require non-empty unique field slugs.
+2. Check the field slug pattern and case-insensitive uniqueness. Preserve saved slugs when editing a form with submissions.
 3. Require unique field IDs, enum IDs per field, grid-row IDs per grid, and step IDs.
 4. Verify `child.type === child.field.type`.
 5. Verify every wizard `stepId` references an existing step.
@@ -650,8 +664,8 @@ Before accepting or importing a design:
 7. Keep data-source-bound field slugs aligned with the destination data-source field slugs.
 8. Treat `enumOptions[].id` and grid row IDs as persisted data keys; changing them changes the
    meaning of existing submissions.
-9. Regenerate `json_schema` after every `schema` change. The app's admin API wrapper does this
-   automatically when `schema` is included.
+9. Let the Core admin API derive the persisted `json_schema`. Use the Studio-derived schema for
+   local checks where its field types match the intended renderer.
 10. Test the intended renderer. The full in-app renderer and lean external embed intentionally
     have different support levels for complex fields.
 
@@ -671,3 +685,5 @@ The contract was traced from:
 - `packages/webform-runtime/src/index.ts`
 - `packages/embed/src/webform-app.tsx`
 - `packages/docyrus-ui/src/components/docyrus/form-fields/types/index.ts`
+- Core `apps/api/src/webform/jsonSchema.ts` and `jsonSchemaLoader.ts`
+- Core `apps/api/src/dev/app/webform.service.ts`

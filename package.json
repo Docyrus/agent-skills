@@ -2,7 +2,7 @@
   "name": "agent-skills",
   "version": "1.0.0",
   "type": "module",
-  "description": "A comprehensive library of instructions and reference materials designed for AI agents (and developers) working with the Docyrus platform.",
+  "description": "A comprehensive library of instructions and reference materials designed for AI agents (and developers) working with the KIVACORE platform.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,15 +10,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Docyrus/agent-skills.git"
+    "url": "git+https://github.com/Kivacore/agent-skills.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Docyrus/agent-skills/issues"
+    "url": "https://github.com/Kivacore/agent-skills/issues"
   },
-  "homepage": "https://github.com/Docyrus/agent-skills#readme",
+  "homepage": "https://github.com/Kivacore/agent-skills#readme",
   "devDependencies": {
     "@commitlint/cli": "^20.4.1",
     "@commitlint/config-conventional": "^20.4.1",
